@@ -16,17 +16,36 @@ The compiler analyses each element in the template: its tag name, its static att
 
 The complete list is in the compiler warnings reference. Grouping them by what they protect makes them easier to remember:
 
-**ARIA validity** (the attribute or role does not exist or has the wrong value type) - `a11y_unknown_aria_attribute` (with a “did you mean” suggestion), `a11y_unknown_role`, `a11y_no_abstract_role` - `a11y_incorrect_aria_attribute_type` and its variants `_boolean`, `_id`, `_idlist`, `_integer`, `_token`, `_tokenlist`, `_tristate` - `a11y_aria_attributes` and `a11y_misplaced_role` (ARIA on elements such as `meta`, `script`, `style` that are never exposed) - `a11y_autocomplete_valid`
+**ARIA validity** (the attribute or role does not exist or has the wrong value type):
 
-**Roles and their requirements** - `a11y_role_has_required_aria_props` (a `checkbox` needs `aria-checked`; a `combobox` needs `aria-controls` and `aria-expanded`; an `option` needs `aria-selected`) - `a11y_role_supports_aria_props` and `a11y_role_supports_aria_props_implicit` (an attribute that the role, explicit or implicit, does not support) - `a11y_no_redundant_roles` (`<button role="button">`) - `a11y_no_interactive_element_to_noninteractive_role` and `a11y_no_noninteractive_element_to_interactive_role` (do not turn a `<textarea>` into a `listitem` or an `<h3>` into a `searchbox`)
+- `a11y_unknown_aria_attribute` (with a “did you mean” suggestion), `a11y_unknown_role`, `a11y_no_abstract_role`
+- `a11y_incorrect_aria_attribute_type` and its variants `_boolean`, `_id`, `_idlist`, `_integer`, `_token`, `_tokenlist`, `_tristate`
+- `a11y_aria_attributes` and `a11y_misplaced_role` (ARIA on elements such as `meta`, `script`, `style` that are never exposed)
+- `a11y_autocomplete_valid`
 
-**Interactive semantics** - `a11y_click_events_have_key_events`, `a11y_no_static_element_interactions`, `a11y_no_noninteractive_element_interactions`, `a11y_interactive_supports_focus`, `a11y_mouse_events_have_key_events`
+**Roles and their requirements**:
 
-**Labels, names and content** - `a11y_label_has_associated_control`, `a11y_consider_explicit_label` (buttons and links need text or `aria-label`/`aria-labelledby`/`title`), `a11y_missing_content` (empty headings and anchors), `a11y_missing_attribute` (`<a href>`, `<img alt>`, `<html lang>`, `<iframe title>`, `<area>`, `<object>`, `<input type="image">`) - `a11y_img_redundant_alt` (the words “image”, “picture”, “photo” in `alt`), `a11y_media_has_caption`, `a11y_invalid_attribute` (`href=""`, `#`, `javascript:`)
+- `a11y_role_has_required_aria_props` (a `checkbox` needs `aria-checked`; a `combobox` needs `aria-controls` and `aria-expanded`; an `option` needs `aria-selected`)
+- `a11y_role_supports_aria_props` and `a11y_role_supports_aria_props_implicit` (an attribute that the role, explicit or implicit, does not support)
+- `a11y_no_redundant_roles` (`<button role="button">`)
+- `a11y_no_interactive_element_to_noninteractive_role` and `a11y_no_noninteractive_element_to_interactive_role` (do not turn a `<textarea>` into a `listitem` or an `<h3>` into a `searchbox`)
 
-**Keyboard and focus** - `a11y_positive_tabindex`, `a11y_no_noninteractive_tabindex`, `a11y_aria_activedescendant_has_tabindex`, `a11y_autofocus`, `a11y_accesskey`
+**Interactive semantics**:
 
-**Document structure and distractions** - `a11y_figcaption_parent`, `a11y_figcaption_index`, `a11y_misplaced_scope`, `a11y_hidden` (do not hide headings), `a11y_distracting_elements` (`<marquee>`, `<blink>`)
+- `a11y_click_events_have_key_events`, `a11y_no_static_element_interactions`, `a11y_no_noninteractive_element_interactions`, `a11y_interactive_supports_focus`, `a11y_mouse_events_have_key_events`
+
+**Labels, names and content**:
+
+- `a11y_label_has_associated_control`, `a11y_consider_explicit_label` (buttons and links need text or `aria-label`/`aria-labelledby`/`title`), `a11y_missing_content` (empty headings and anchors), `a11y_missing_attribute` (`<a href>`, `<img alt>`, `<html lang>`, `<iframe title>`, `<area>`, `<object>`, `<input type="image">`)
+- `a11y_img_redundant_alt` (the words “image”, “picture”, “photo” in `alt`), `a11y_media_has_caption`, `a11y_invalid_attribute` (`href=""`, `#`, `javascript:`)
+
+**Keyboard and focus**:
+
+- `a11y_positive_tabindex`, `a11y_no_noninteractive_tabindex`, `a11y_aria_activedescendant_has_tabindex`, `a11y_autofocus`, `a11y_accesskey`
+
+**Document structure and distractions**:
+
+- `a11y_figcaption_parent`, `a11y_figcaption_index`, `a11y_misplaced_scope`, `a11y_hidden` (do not hide headings), `a11y_distracting_elements` (`<marquee>`, `<blink>`)
 
 ### What the warnings look like in practice
 
@@ -151,7 +170,7 @@ A governance rule that works in practice: no global filters for `a11y_*` in new 
 
 Form controls need accessible names. The three standard ways are a wrapping `<label>`, `<label for>` plus matching `id`, and `aria-labelledby`/`aria-label`. The wrapping label needs no IDs at all (`<label>Name <input></label>` warns about nothing). `for`/`id` and ARIA references need IDs that are unique per component instance, and that is a problem for reusable components: a hard-coded `id="name"` breaks as soon as two instances exist on a page.
 
-Hand-rolled counters (`let n = 0; const id =`field-\${n++}\``) break server rendering: the server and the client number components in different orders, causing a mismatch between server HTML and client output. Svelte's answer is`\$props.id()\` (since 5.20): “generates an ID that is unique to the current component instance. When hydrating a server-rendered component, the value will be consistent between server and client.”
+Hand-rolled counters (``let n = 0; const id = `field-${n++}` ``) break server rendering: the server and the client number components in different orders, causing a mismatch between server HTML and client output. Svelte’s answer is `$props.id()` (since 5.20): “generates an ID that is unique to the current component instance. When hydrating a server-rendered component, the value will be consistent between server and client.”
 
 ```html
 <!-- TextField.svelte -->
@@ -759,7 +778,7 @@ Make a list and put it in your review checklist:
 - **Contrast, target size, zoom and reflow, text spacing.** CSS concerns; the compiler’s `css_unused_selector` has nothing to say about them.
 - **Live region behaviour, timing, and announcements.**
 - **Semantics of dynamic structure.** Heading levels that skip, landmarks missing, lists built from divs; only a few structure rules exist (`figcaption` placement, `scope` misuse).
-- **Content from `{@html}`**, which is opaque markup (and a security concern as well; Chapter 18).
+- **Content from `{@html}`**, which is opaque markup (and a security concern as well; Chapter 6).
 - **Third-party components and web components.**
 
 ## Key takeaways
@@ -792,16 +811,16 @@ Make a list and put it in your review checklist:
 10. Why are hand-rolled incrementing IDs (`let n = 0; const id = 'f' + n++`) a problem for SSR, and how does `$props.id()` solve it? Where is it allowed to be called?
 11. Find the bug:
 
-```html
-<script lang="ts">
-  let { label } = $props();
-  function make() {
-    return $props.id();
-  }
-  const id = make();
-</script>
-<label for={id}>{label}</label><input {id} />
-```
+    ```html
+    <script lang="ts">
+      let { label } = $props();
+      function make() {
+        return $props.id();
+      }
+      const id = make();
+    </script>
+    <label for={id}>{label}</label><input {id} />
+    ```
 
 12. Why is `<label>Name <input></label>` accepted without any `id`?
 13. The `{#if editing}<input />{:else}<button>…</button>{/if}` toggle loses keyboard users’ place. Explain why, and give two ways to fix it.
@@ -823,9 +842,8 @@ Make a list and put it in your review checklist:
 29. What can `axe-core` detect in jsdom, and what do you need a real browser for? Write the Playwright snippet that runs axe on a page.
 30. Multiple choice: which statement about role-based queries (`getByRole`) is true?
 
-<!-- -->
+    a.  They only work for elements with an explicit `role` attribute.
+    b.  They match implicit roles and accessible names, so a passing query is evidence the element is exposed correctly.
+    c.  They are slower than test IDs, so should be avoided.
+    d.  They require Playwright.
 
-a.  They only work for elements with an explicit `role` attribute.
-b.  They match implicit roles and accessible names, so a passing query is evidence the element is exposed correctly.
-c.  They are slower than test IDs, so should be avoided.
-d.  They require Playwright.

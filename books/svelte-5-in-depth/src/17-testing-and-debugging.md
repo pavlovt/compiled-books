@@ -8,15 +8,17 @@ All examples were run against Svelte 5.57.2 with Vitest, jsdom and `@testing-lib
 
 The official FAQ describes three kinds of tests: unit, component and end-to-end. The framework-specific twist is where you draw the first line.
 
-                 few, slow, high confidence
-                      /  E2E (Playwright)  \
-                     /----------------------\
-                    /  component tests       \
-                   /  (mount + DOM assertions)\
-                  /----------------------------\
-                 /  unit tests of .svelte.ts    \
-                /  modules (no DOM, no components)\
-                 many, fast, precise
+```text
+     few, slow, high confidence
+          /  E2E (Playwright)  \
+         /----------------------\
+        /  component tests       \
+       /  (mount + DOM assertions)\
+      /----------------------------\
+     /  unit tests of .svelte.ts    \
+    /  modules (no DOM, no components)\
+     many, fast, precise
+```
 
 The docs say it plainly: “not all logic belongs within a component — this includes concerns such as data transformation, cross-component state management, and logging”. With runes this advice becomes cheap to follow, because reactive state can live in `.svelte.ts` files. A class with `$state` fields or a function returning getters is testable without mounting anything. Components then become thin: they bind that logic to markup. Your component tests only need to verify the binding, not re-verify the logic.
 
@@ -75,7 +77,7 @@ jsdom is a simulation. It has no layout engine, no real focus handling edge case
 
 ## Unit-testing reactive modules
 
-Take a module that encapsulates some state. Because it lives in a `.svelte.ts` file, the compiler turns `$state` and `$derived` into signals:
+Take a small helper in a `.svelte.ts` module. It takes a getter, so it works with whatever reactive state the caller passes in:
 
 ```ts
 // src/lib/multiplier.svelte.ts
@@ -417,7 +419,7 @@ test('bind:value flows up to the parent', () => {
 });
 ```
 
-Note that we dispatched `input` with `bubbles: true`: `input` is one of the delegated events, so Svelte’s root listener only sees it if it bubbles. Hand-built events that forget `bubbles: true` are a common reason for “my handler never fires in the test”; `click()` and Testing Library take care of this for you.
+Note that we dispatched `input` with `bubbles: true`. The listener that `bind:value` installs sits directly on the element (Chapter 8), so this particular test would pass without it, but an `oninput` attribute is delegated to the root and only fires for events that bubble. Make it a habit: hand-built events without `bubbles: true` are a common reason for “my handler never fires in the test”; `click()` and Testing Library take care of this for you.
 
 **Context.** Since 5.49 you can mount a component with context by wrapping it in a function that sets context and then calls the component. A component is just a function, so the wrapper can be too:
 
@@ -829,7 +831,7 @@ We reproduced it: mounting this component and flushing throws `state_unsafe_muta
 
 ### `ownership_invalid_mutation` and `ownership_invalid_binding`
 
-A child that mutates an object it received as a prop, when the owning parent did not mark it `bind:`/`$bindable`, triggers the warning “Mutating unbound props … is strongly discouraged”. The cure is a callback prop or an explicit `$bindable`. `ownership_invalid_binding` is the sibling: a grandparent passes `bind:value` to a parent, which forwards it as a plain prop (no `bind:`), and the child binds to it. Add the missing `bind:` in the middle component. These are dev-only and based on tracking which component created a `$state` proxy.
+A child that mutates an object it received as a prop, when the owning parent did not mark it `bind:`/`$bindable`, triggers the warning “Mutating unbound props … is strongly discouraged”. The cure is a callback prop or an explicit `$bindable`. `ownership_invalid_binding` is the sibling: a grandparent passes a value to a parent as a plain prop (no `bind:`), and the parent binds it onward into a child with `bind:`. Make the chain explicit (`$bindable` in the parent and `bind:` in the grandparent), or use a callback. These are dev-only and based on tracking which component created a `$state` proxy.
 
 ### `hydration_mismatch` and friends
 
@@ -843,8 +845,8 @@ A child that mutates an object it received as a prop, when the owning parent did
 - `snippet_without_render_tag`: you wrote `{children}` instead of `{@render children()}`.
 - `missing_context`: `get` from `createContext` ran with no matching `set` in an ancestor.
 - `props_invalid_value`: `bind:value={undefined}` against a prop with a `$bindable` fallback.
-- `props_rest_readonly`, `bind_not_bindable`, `bind_invalid_export`: binding mistakes (Chapter 7/8).
-- `each_key_duplicate` and `each_key_volatile`: keyed `{#each}` problems (Chapter 18).
+- `props_rest_readonly`, `bind_not_bindable`, `bind_invalid_export`: binding mistakes (Chapters 7 and 8).
+- `each_key_duplicate` and `each_key_volatile`: keyed `{#each}` problems (Chapter 6).
 - `derived_references_self`: a derived that reads itself.
 - `rune_outside_svelte`: runes in a plain `.ts`/`.js` file (rename to `.svelte.ts`).
 - `state_proxy_equality_mismatch`: comparing a `$state` proxy with `===` against the raw object it was created from.
@@ -868,7 +870,7 @@ A habit that pays off: when you see a Svelte error in the console, click the lin
 
 **“Why is this component re-rendering?”** Put `{@debug}` (bare) at the top of the template: it breaks whenever any state of that component changes. Or put `$inspect.trace()` inside the suspicious effect or derived.
 
-**“The UI did not update.”** Check in this order: (1) Is the variable declared with `$state`? The compiler warns `non_reactive_update` for reassigned, non-state variables read in the template. (2) Did you destructure reactive values (`let { a } = obj` copies; use `obj.a` or `$derived`)? (3) Did you reassign an exported/context-shared state variable and break the link (`state_referenced_locally`)? (4) Is a raw value (`$state.raw`) being mutated instead of reassigned? (5) Did the mutation happen on a non-proxied class instance without `$state` fields?
+**“The UI did not update.”** Check in this order: (1) Is the variable declared with `$state`? The compiler warns `non_reactive_update` for reassigned, non-state variables read in the template. (2) Did you destructure reactive values (`let { a } = obj` copies; use `obj.a` or `$derived`)? (3) Did you reassign a state object that was shared through context or an export, breaking the link (Chapter 12)? (4) Is a raw value (`$state.raw`) being mutated instead of reassigned? (5) Did the mutation happen on a non-proxied class instance without `$state` fields?
 
 **“My effect runs too often / not at all.”** `$inspect.trace()` tells you the first; for the second, remember dependencies are only those *read synchronously in the last run*: reads after an `await` or inside `setTimeout` are not tracked, and a conditionally-skipped read is not a dependency on that run.
 
@@ -907,28 +909,28 @@ A habit that pays off: when you see a Svelte error in the console, click the lin
 3.  Which of these needs `flushSync()` before you can assert on it: (a) reading a `$derived` after writing its source state, (b) the text content of a DOM node after writing state, (c) the value pushed by an `$effect`? Justify each.
 4.  What does this test print, and why?
 
-```ts
-test('x', () => {
-  const calls: number[] = [];
-  const c = mount(Counter, { target: document.body, props: { initial: 3, onchange: (n) => calls.push(n) } });
-  console.log(calls.length);
-  flushSync();
-  console.log(calls.length);
-  unmount(c);
-});
-```
+    ```ts
+    test('x', () => {
+      const calls: number[] = [];
+      const c = mount(Counter, { target: document.body, props: { initial: 3, onchange: (n) => calls.push(n) } });
+      console.log(calls.length);
+      flushSync();
+      console.log(calls.length);
+      unmount(c);
+    });
+    ```
 
 5.  Find the bug in this test and fix it:
 
-```ts
-test('logs', () => {
-  let count = $state(0);
-  const log = logger(() => count);   // logger uses $effect internally
-  count = 1;
-  flushSync();
-  expect(log).toEqual([0, 1]);
-});
-```
+    ```ts
+    test('logs', () => {
+      let count = $state(0);
+      const log = logger(() => count);   // logger uses $effect internally
+      count = 1;
+      flushSync();
+      expect(log).toEqual([0, 1]);
+    });
+    ```
 
 6.  Why must the callback in `$effect.root` be followed by a call to the returned function, and what can go wrong if an assertion inside the root throws before cleanup?
 7.  A colleague mounts a component in `beforeEach` without unmounting. Describe two kinds of cross-test contamination this can cause.
@@ -949,14 +951,10 @@ test('logs', () => {
 18. A local `transition:fade` is on an element inside an `{#if}`. You call `unmount(component, { outro: true })`. Does the outro play? How would you change that?
 19. Multiple choice: `$inspect(items)` where `items` is a `$state` array and you call `items.push(4)`. Which is correct?
 
-<!-- -->
-
-a.  `$inspect` does not re-run because the array identity is unchanged.
-b.  `$inspect` re-runs, because it tracks state deeply.
-c.  It re-runs only when you pass `.with(...)`.
-d.  It throws `state_unsafe_mutation`.
-
-<!-- -->
+    a.  `$inspect` does not re-run because the array identity is unchanged.
+    b.  `$inspect` re-runs, because it tracks state deeply.
+    c.  It re-runs only when you pass `.with(...)`.
+    d.  It throws `state_unsafe_mutation`.
 
 20. What does `$inspect(x).with((type, v) => ...)` receive as `type` values, and how can you use that for debugging?
 21. What are the placement rules for `$inspect.trace()`, and what question does it answer that `$inspect` does not?
@@ -964,13 +962,13 @@ d.  It throws `state_unsafe_mutation`.
 23. Why does `console.log(state)` of a `$state` object produce a warning, and what are the two recommended alternatives?
 24. Find the bug and explain the resulting error:
 
-```html
-<script lang="ts">
-  let count = $state(0);
-  let even = $state(true);
-  let odd = $derived.by(() => { even = count % 2 === 0; return !even; });
-</script>
-```
+    ```html
+    <script lang="ts">
+      let count = $state(0);
+      let even = $state(true);
+      let odd = $derived.by(() => { even = count % 2 === 0; return !even; });
+    </script>
+    ```
 
 25. A child component does `<input bind:value={person.name}>` on a `person` prop passed as `<Child {person} />`. Which warning appears and what are two ways to fix it?
 26. List three common causes of `hydration_mismatch` and one way to find the offending markup in development.

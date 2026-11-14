@@ -156,7 +156,7 @@ function tooltip(getContent: () => string): Attachment {
 <button {@attach tooltip(() => content)}>Hover me</button>
 ```
 
-In my test with `inner(() => n)`: the log on mount was `outer setup`, `inner n=0`; after `n++` only `inner n=1` was logged, with no second `outer setup`. Note that `tooltip(() => content)` creates a new arrow function every time the template expression re-evaluates, but because the expression itself does not read `content` (the getter is not called), it is not re-evaluated.
+In my test with `inner(() => n)`: the log on mount was `outer setup`, `inner n=0`; after `n++` only `inner n=1` was logged, with no second `outer setup`. The expression `tooltip(() => content)` reads no state itself (the getter is called only inside the nested effect), so it is never re-evaluated and the attachment is not recreated.
 
 Rules of thumb:
 
@@ -257,13 +257,14 @@ Behavioural differences to watch: actions are not reactive to argument changes (
 The pattern is always the same: create the instance in the attachment, push reactive options through nested effects, return a destroy.
 
 ```ts
-// chart.ts
+// chart.svelte.ts
+import { untrack } from 'svelte';
 import type { Attachment } from 'svelte/attachments';
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
 
 export function chart(getConfig: () => ChartConfiguration): Attachment<HTMLCanvasElement> {
   return (canvas) => {
-    const instance = new Chart(canvas, $state.snapshot(getConfig()));
+    const instance = new Chart(canvas, untrack(() => $state.snapshot(getConfig())));
     $effect(() => {
       const cfg = $state.snapshot(getConfig());   // tracks deeply, gives a plain clone
       instance.data = cfg.data;
@@ -274,7 +275,7 @@ export function chart(getConfig: () => ChartConfiguration): Attachment<HTMLCanva
 }
 ```
 
-Notes: libraries rarely tolerate Svelte state proxies, so pass `$state.snapshot(...)` (Chapter 3); creating the instance in the outer function reads `getConfig()` and would normally subscribe, so wrap that first read in `untrack` if you want the setup to be one-shot (the snippet above is deliberately explicit: if config changes shape, the instance is recreated). D3 and canvas libraries follow the same shape: `select(node)` in the outer function, join data in the effect. For libraries that need an `await`/dynamic import, import in the attachment and guard against the element being removed first (check a `destroyed` flag set in the cleanup).
+Notes: libraries rarely tolerate Svelte state proxies, so pass `$state.snapshot(...)` (Chapter 3); creating the instance in the outer function reads `getConfig()`, which would subscribe the whole attachment and recreate the chart on every change, so that first read is wrapped in `untrack` and the nested effect pushes later changes into the existing instance. The file is a `.svelte.ts` module because it uses runes. D3 and canvas libraries follow the same shape: `select(node)` in the outer function, join data in the effect. For libraries that need an `await`/dynamic import, import in the attachment and guard against the element being removed first (check a `destroyed` flag set in the cleanup).
 
 ## Special elements
 
@@ -594,6 +595,7 @@ Usage on a dialog and on a wrapper component:
 
   let open = $state(false);
   let name = $state('Ada');
+  const close = () => (open = false);
 </script>
 
 <Button onclick={() => (open = true)} {@attach label(() => `Edit ${name}`)}>Edit</Button>
@@ -608,7 +610,7 @@ Usage on a dialog and on a wrapper component:
 
 Points that this example makes concrete:
 
-- **Each attachment is a factory** with explicit inputs. `clickOutside` takes a *getter for the handler*, so changing the handler (a new closure on every render) does not tear down and rebuild the document listener. `focusTrap()` takes nothing, so its expression never re-evaluates.
+- **Each attachment is a factory** with explicit inputs. `clickOutside` takes a *getter for the handler*, so passing a new closure each time the expression is evaluated does not tear down and rebuild the document listener. `focusTrap()` takes nothing, so its expression never re-evaluates.
 - **`on()` over `addEventListener`.** Dialog content often contains declaratively attached `onclick` and `onkeydown` handlers (delegated); `on` keeps their order consistent, and the `capture: true` option is passed straight through.
 - **Cleanup does real work.** Focus is restored to the previously focused element when the dialog’s attachment is destroyed, whether the dialog closed or the whole page navigated.
 - **Wrapper-friendliness.** `label()` works on `<Button>` because `Button` spreads its rest props. Document that requirement for wrapper authors: “spread `...rest` onto the root element, last”.
@@ -726,7 +728,17 @@ Component-level tests (mount a small wrapper with `{@attach ...}` and assert on 
 
 23. Why is the cleanup in `createSubscriber` deferred by a microtask?
 
-24. Find the bug in this primitive and fix it: `ts class Online { value = $state(navigator.onLine); constructor() { window.addEventListener('online', () => (this.value = true)); window.addEventListener('offline', () => (this.value = false)); } }`
+24. Find the bug in this primitive and fix it:
+
+    ```ts
+    class Online {
+      value = $state(navigator.onLine);
+      constructor() {
+        window.addEventListener('online', () => (this.value = true));
+        window.addEventListener('offline', () => (this.value = false));
+      }
+    }
+    ```
 
 25. Implement `get current()` for a `Visibility` class based on `document.visibilityState` using `createSubscriber` and `on`.
 

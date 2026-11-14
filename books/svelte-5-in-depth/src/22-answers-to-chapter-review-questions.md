@@ -8,23 +8,23 @@
 
 3.  It prints `setup 0` exactly once, when the component instance is created. The instance script never re-runs; clicking only updates the text node inside the button through a template effect.
 
-4.  a\. `let n = 0` becomes `let n = $state(0)`; (b) `export let x` becomes `let { x } = $props()`; (c) `on:click` becomes `onclick`; (d) `new App({ target })` becomes `mount(App, { target })`.
+4.  (a) `let n = 0` becomes `let n = $state(0)`; (b) `export let x` becomes `let { x } = $props()`; (c) `on:click` becomes `onclick`; (d) `new App({ target })` becomes `mount(App, { target })`.
 
-5.  b\. Option a scaffolds SvelteKit; `create-svelte` is the old name for the SvelteKit scaffolder; c is not a real setup.
+5.  **b.** Option a scaffolds SvelteKit; `create-svelte` is the old name for the SvelteKit scaffolder; c is not a real setup.
 
 6.  Svelte 5 parses `lang="ts"` and strips type-only syntax itself, so annotations, interfaces and generics need no preprocessor. Add `vitePreprocess({ script: true })` for TypeScript features that need code generation (enums, constructor parameter properties), and add `vitePreprocess()` for `<style lang="scss">`/`postcss`-style preprocessing.
 
 7.  For example `preprocess` (preprocessor groups), `compilerOptions` (passed to `compile`), `onwarn` (warning handler), `extensions`, `vitePlugin` (plugin options). `filename`, `format` and `generate` cannot be set because the plugin controls them for each file and for client versus server builds.
 
-8.  a\. The module script runs once when the module is first evaluated; the instance script runs for every component instance. (b) Instance script and markup can reference module bindings, but module code cannot reference instance bindings. (c) `export default` is forbidden in `<script module>`, since the default export is the component.
+8.  (a) The module script runs once when the module is first evaluated; the instance script runs for every component instance. (b) Instance script and markup can reference module bindings, but module code cannot reference instance bindings. (c) `export default` is forbidden in `<script module>`, since the default export is the component.
 
 9.  Module-level variables live for the lifetime of the process and are shared by every request, so one user’s value can be read by (or leak into) another user’s render. Per-request state belongs in context or must be created inside the request.
 
 10. `state_referenced_locally`: “This reference only captures the initial value of `kind`”. Fix: `let label = $derived(kind === 'error' ? 'Error!' : 'Note')`.
 
-11. It throws `rune_outside_svelte`. The file is a plain `.ts` file that the compiler does not process, and the TypeScript types declare runes globally so the editor sees no problem. Rename it to `makeCounter.svelte.ts` (any name containing `.svelte.ts`).
+11. It throws `rune_outside_svelte` when called. The file is a plain `.ts` file that the compiler does not process, so `$state(0)` stays an ordinary call to a stub; the TypeScript types declare runes globally, so the editor sees no problem.
 
-12. Rename the file to something like `counter.svelte.ts` (or `.svelte.js`), so the Svelte plugin compiles it as a module with runes support. Import it without the `.ts` extension (`./counter.svelte`).
+12. Rename `src/lib/util.ts` to `src/lib/util.svelte.ts` (or `.svelte.js`), so the Svelte plugin compiles it as a module with runes support. Import it without the `.ts` extension (`./util.svelte`).
 
 13. `user` is reassigned and exported, so the compiler reports `state_invalid_export`: importers would see the underlying signal, because the compiler only rewrites references in the file it processes. Either export an object that you only mutate (`export const session = $state({ user: null })`) or keep the state private and export functions/getters (`export function getUser()`).
 
@@ -38,7 +38,7 @@
 
 18. `mount` returns the component’s exports object (what the component exposes with `export`). `unmount` takes that returned object (the handle returned by `mount` or `hydrate`) plus an optional `{ outro }`.
 
-19. A\. `[]`: the DOM exists but effects and `onMount` have not run. (B) `['mount', 'effect']`: both have run after the flush (in my run `onMount` logged before the initial `$effect`, as in the Vitest experiment). The point is that nothing runs synchronously inside `mount`.
+19. (A) `[]`: the DOM exists but effects and `onMount` have not run. (B) `['mount', 'effect']`: both have run after the flush (in my run `onMount` logged before the initial `$effect`, as in the Vitest experiment). The point is that nothing runs synchronously inside `mount`.
 
 20. Use it when the component has outro transitions and you want them to play before removal. The promise resolves after the transitions finish; by default it resolves immediately and the DOM is removed synchronously.
 
@@ -50,7 +50,7 @@
 
 24. Domain logic in `.svelte.ts` classes/factories per feature folder, DOM-free helpers in plain `.ts`, presentational components in `.svelte` files. For SSR, replace module-level singletons by context-scoped instances so state is not shared between requests, and keep browser-only code in effects/`onMount`.
 
-25. b\. `$state.snapshot` needs newer browsers only if you use it; `flip` needs Firefox 126; IE is unsupported.
+25. **b.** `$state.snapshot` needs newer browsers only if you use it; `flip` needs Firefox 126; IE is unsupported.
 
 26. It makes Vite/Vitest resolve the `svelte` package export to the client build (`index-client.js`) instead of the default server build. Without it `mount` is unavailable (server build throws `lifecycle_function_unavailable`) and effects do not run, so component tests would fail.
 
@@ -70,7 +70,7 @@
 
 7.  Delegated: `click`, `keydown`, `input`, `touchstart`, `pointerdown`. Not delegated: `focus`, `mouseenter`, `scroll`.
 
-8.  Delegated handlers run from a listener on the root; when the widget stops propagation in a native listener below the root, the event never reaches the root, so Svelte’s handler is not called. Fixes: use `on` from `svelte/events` (or `onclickcapture`) so ordering is preserved, or attach the widget’s listener differently or avoid `stopPropagation`; alternatively listen with a non-delegated event/capture phase.
+8.  Delegated handlers run from a listener on the root; when the widget stops propagation in a native listener below the root, the event never reaches the root, so Svelte’s handler is not called. Fixes: attach your handler to the element itself with `on(element, 'click', handler)` from `svelte/events` (for example in an attachment), so it runs before the event bubbles to the widget’s container; or use `onclickcapture`, which is not delegated and runs during the capture phase; or change the widget so it does not stop propagation.
 
 9.  Props can change over time. Reading `$$props.a` inside the effect makes the effect depend on the prop’s getter, so when the parent changes the prop only that effect re-runs. Destructuring once would capture a single value.
 
@@ -84,7 +84,7 @@
 
 14. `settings` is never reassigned and compiles to a proxy that is exported directly; importers get the proxy and property reads/writes on it are reactive without compiler help.
 
-15. A derived is accessed through its own function internally (`$.derived(() => ...)` read with `$.get`), so importers could not read it correctly; the reference to the derived value needs compiler rewriting in the file. Export a function returning the value instead.
+15. A derived is itself a signal: inside the declaring file every read is rewritten to `$.get(...)`, but an importer would receive the signal object, not its value. `const` does not help, because the problem is the signal, not reassignment. Export a function (or a getter on an object) that returns the value instead.
 
 16. `type`, `start`, `end`, `fragment`, `options`, `css`, `instance`, `module`, `comments`. Walk `ast.fragment` with `estree-walker` and collect `node.name` for nodes whose `type === 'RegularElement'`.
 
@@ -96,17 +96,17 @@
 
 20. The output gets `lang="undefined"` (the key is written with the string `undefined`). Fix: return a new attributes object without the key, e.g. `const { lang, ...rest } = attributes; return { code, attributes: rest }` (or `{}`).
 
-21. d\. `$effect.pre` does not silence a compile-time warning (and a declaration cannot sensibly live there). a, b and c all work.
+21. **d.** `$effect.pre` does not silence a compile-time warning (and a declaration cannot sensibly live there). a, b and c all work.
 
 22. Svelte scopes by adding a generated class to selectors and elements. If it kept an unmatched selector with the scope class, it would likely never match (and definitely not for content from child components or `{@html}`); if it kept it without the class, the rule would become global and affect the whole page. So it removes it and warns (`css_unused_selector`). Use `:global(...)` to opt out.
 
 23. `'injected'` embeds the CSS in the JS (`$$css` object and `$.append_styles` on the client; a `<style>` in `head` during SSR) and `result.css` is `null`. With no `css` option, `compile()` returned the CSS in `result.css` (external behaviour).
 
-24. `cssHash: ({ hash, filename }) =>`app-\${hash(filename)}\`\`. Reasons: stable, readable class names for tests, avoiding collisions when several Svelte apps (or versions) share a page, or hiding file paths.
+24. ``cssHash: ({ hash, filename }) => `app-${hash(filename)}` ``. Reasons: stable, readable class names for tests, avoiding collisions when several Svelte apps (or versions) share a page, or hiding file paths.
 
 25. It forces legacy mode for files in `node_modules` and runes mode for everything else. Returning `undefined` for a file means “infer the mode” from the component’s contents.
 
-26. c\. `$.template_effect` re-runs when a dependency it read changes, not on props identity; generated helpers are private (not importable), and server output drops effects entirely.
+26. **c.** `$.template_effect` re-runs when a dependency it read changes, not on props identity; generated helpers are private (not importable), and server output drops effects entirely.
 
 27. With `warningFilter`/`onwarn` you can only act on warnings the compiler already emits; `on:` produces `event_directive_deprecated`, and `{@html}` has no compile warning, so this covers only the first rule but is trivial to set up and exactly matches compiler semantics. With `parse` plus `estree-walker` you can detect both (`OnDirective`, `HtmlTag`) and report line numbers, at the cost of maintaining the script and depending on AST node names (modern AST; stable across the 5.x line but part of the tooling surface).
 
@@ -120,7 +120,7 @@
 
 3.  It prints `false 0`. `list[0]` is a proxy distinct from `item`, so `includes(item)` fails; `indexOf(list[0])` uses the proxy and finds it.
 
-4.  `proxy === original` warns (operators are instrumented). `list.includes(original)` silently returns false, no warning. `proxy.a === 1` compares primitives, no warning.
+4.  `proxy === original` and `list.includes(original)` both warn in dev: the compiler instruments the comparison operators, and the dev runtime patches `includes`, `indexOf` and `lastIndexOf` to warn when a search misses an element whose underlying object matches. The warning does not fix the result: `includes` still returns `false`. `proxy.a === 1` compares primitives, so there is no warning.
 
 5.  `s` is never reassigned, only mutated, so reading the proxy itself registers a dependency on nothing that changes. Read the property: `$effect(() => { s.value; })`.
 
@@ -140,17 +140,17 @@
 
 13. No re-run, because raw state has no property tracking; but the value does change (the object is mutated), so reads show the new age. Reassign to notify.
 
-14. a\. A real `Date` clone; (b) the clone of `toJSON()`’s result; (c) a plain object copy without the prototype (not `instanceof` the class); (d) the original is returned and dev logs `state_snapshot_uncloneable`.
+14. (a) A real `Date` clone; (b) the clone of `toJSON()`’s result; (c) a plain object copy without the prototype (not `instanceof` the class); (d) the original is returned and dev logs `state_snapshot_uncloneable`.
 
 15. It uses `structuredClone`, available from those versions.
 
-16. b\.
+16. **b.** `$state.eager` reads the newest value of a source while an `await` is holding the rest of the update back. It does not change batching for any other state, it is never required, and it has nothing to do with deep reactivity.
 
 17. A reassigned state variable is compiled to a signal object with `$.get`/`$.set` rewriting inside the file; importers would receive the signal and the compiler cannot rewrite them. A never-reassigned object is a proxy exported directly, whose property accesses are reactive on their own.
 
 18. Export functions (`getCount()`, `increment()`) over a private `$state` variable; or export an object (`export const counter = $state({count: 0})`) and mutate `counter.count`; or a class instance.
 
-19. It returns an object whose `value` is a snapshot of the number at creation (actually the derived’s current value read once, then constant). Use `get value() { return d; }` and pass a getter for `n` (`() => n`) so it stays live.
+19. It returns `{ value: <number> }`: the object literal reads `d` once, when it is created, so `value` never changes. There is a second problem: `n` is a plain number parameter, so the derived has no reactive dependency and could not change anyway. Take a getter (`useDouble(read: () => number)` with `$derived(read() * 2)`, called as `useDouble(() => n)`) and return `{ get value() { return d; } }`.
 
 20. The mutation works and updates the parent (it is a shared proxy), and dev warns `ownership_invalid_mutation`. Fix with a callback or `$bindable`.
 
@@ -214,7 +214,7 @@
 
 22. Wrapping the read in `untrack(() => list.push(x))` removes the dependency on `list`, so the effect no longer re-triggers itself. Downside: the effect will not re-run when `list` changes, which may hide a real dependency; also `push` is a mutation that still triggers other readers.
 
-23. c\.
+23. **c.** An effect that copies one `$state` into another is exactly the pattern the other three replace: it renders one frame with the stale value, does the work twice and can loop. Use `$derived` instead.
 
 24. It passes `'init'` or `'update'` followed by the current values of `a` and `b`, replacing the default `console.log`; it is called initially and whenever the values (deeply) change. It is a no-op in production builds.
 
@@ -242,7 +242,7 @@
 
 8.  It destroys child effects (unless block/managed) and runs the previous teardown, then runs the function. Thus child effects created inside the effect are destroyed and recreated each time.
 
-9.  a\. root; (b) branch; (c) block; (d) render effect (template effect); (e) user effect (`EFFECT | USER_EFFECT`); (f) eager effect.
+9.  (a) root; (b) branch; (c) block; (d) render effect (template effect); (e) user effect (`EFFECT | USER_EFFECT`); (f) eager effect.
 
 10. The component body runs under a branch effect, which sets `active_reaction = null`, so reads are not registered; only render/user effects and deriveds track.
 
@@ -290,7 +290,7 @@
 
 1.  Component-versus-element is decided lexically: only capitalised or dot-notation tags are components. Write `<View />` (rename the variable to a capitalised identifier) or use dot notation such as `<views.current />` / `<item.component />`. `<svelte:component this={view}>` also works but is deprecated.
 2.  `data-a="0"` (present: 0 is not nullish), `data-b="false"` (present: false is not nullish for a non-boolean attribute), `data-c` absent (null), `hidden` absent (boolean attribute, falsy), `aria-hidden="false"` (present).
-3.  b). (a) works in HTML-style only when the value is a single token without braces; `/user/{id}` mixes text and an expression unquoted and gives `attribute_unquoted_sequence`. (c) is the same error. (d) is `attribute_invalid_event_handler` because event attributes must be expressions.
+3.  **b.** (a) An unquoted value works only when the value is a single token without braces; `/user/{id}` mixes text and an expression unquoted and gives `attribute_unquoted_sequence`. (c) is the same error. (d) is `attribute_invalid_event_handler` because event attributes must be expressions.
 4.  `<C prop="{n}" />` warns (`attribute_quoted`): in Svelte 6 a quoted single expression on a component or custom element becomes a string instead of passing the number. On a plain element the DOM attribute is a string anyway, so nothing changes.
 5.  `a` is `1` (the spread comes after `a="b"` and wins) and `c` is `"d"` (the literal after the spread wins). Later attributes always take precedence.
 6.  `[][false][][0]`. In Svelte 4 `null` and `undefined` printed as the strings “null”/“undefined”; in Svelte 5 nullish values become the empty string. `false` and `0` still print.
@@ -302,34 +302,34 @@
 12. For example `focus`, `blur`, `mouseenter`, `scroll`, `submit`, `load`, media events, custom events. A delegated handler compiles to `$.delegated('click', el, fn)` plus a module-level `$.delegate(['click'])`, with no listener on the element; a non-delegated one compiles to `$.event('focus', el, fn)`, a real `addEventListener`.
 13. The native button listener runs first (target phase), then Svelte’s root listener runs declared handlers in bubbling order: the button’s `onclick`, then the div’s `onclick`. Order: native, button handler, div handler.
 14. When you need `{ passive: false }` (to call `preventDefault()` in a touch handler): `ontouchstart`/`ontouchmove` attributes are always passive, so register with `on(node, 'touchmove', fn, { passive: false })`, typically inside an attachment or action.
-15. 1.  Unescaped, so XSS if not sanitised. (2) Must be valid standalone HTML. (3) It is not compiled as Svelte (no components). (4) Content gets no scoped-style hash, so component selectors don’t match; use `:global`. (5) Hydration mismatches are not repaired (dev warning only). (6) Any change replaces the whole fragment, which is expensive.
+15. (1) Unescaped, so XSS if not sanitised. (2) Must be valid standalone HTML. (3) It is not compiled as Svelte (no components). (4) Content gets no scoped-style hash, so component selectors don’t match; use `:global`. (5) Hydration mismatches are not repaired (dev warning only). (6) Any change replaces the whole fragment, which is expensive.
 16. The compiler warns `css_unused_selector` for `article a` because it cannot see the injected nodes. Fix: `article :global { a { color: red } }` (or `article :global(a)`).
-17. b\. `each_key_duplicate` is thrown at runtime (verified in dev).
+17. **b.** `each_key_duplicate` is thrown at runtime (verified in dev).
 18. `{#each { length: 3 }, row}{#each { length: 3 }, col}<div></div>{/each}{/each}`. Each without an item was added in Svelte 5.4; `{ length: 3 }` is an array-like.
 19. An index key is equivalent to no key: inserting at the front reuses DOM and component state by position, so state sticks to the wrong data. Leaving the key off is better for lists of simple, stateless text that are replaced wholesale, since reconciliation by key costs time and gains nothing.
-20. a\. The pending branch only. (b) The `:then` branch (non-promises skip pending even on the server). (c) Nothing: the catch-only form has no pending content.
+20. (a) The pending branch only. (b) The `:then` branch (non-promises skip pending even on the server). (c) Nothing: the catch-only form has no pending content.
 21. Rendered values: `2`, `2`, then `1` (inner declaration shadows inside the div and its children; the outer `x` is visible again after the div).
 22. `{#each rows as row}{const total = row.qty * row.price}<td>{total}</td>{/each}`. Declaration tags work anywhere in markup (not only as the immediate child of a block) and may contain `$state` and `$derived`, e.g. `{let draft = $state(row.name)}`. `{@const}` is legacy and cannot hold state.
 23. `declaration_tag_invalid_type`; `declaration_duplicate`; `declaration_tag_no_legacy_mode` (declaration tags only work in runes mode, and `export let` puts the component in legacy mode).
 24. It renders `foo- bar` because whitespace at the start of a tag’s content is trimmed. Restore with `foo <span>- bar</span>` or `<span>{' '}- bar</span>`.
 25. `class="btn"` (the `active` key is falsy, and `false` in an array is skipped). If the whole value is `false`, the attribute is rendered as `class="false"` today (only `null`/`undefined` omit it); a future Svelte version will omit it.
 26. Red. `style:` directives take precedence over the `style` attribute, even over `!important` declarations in it.
-27. `{#if}` chains: no runtime magic, verbose, good typing per branch, forces duplicated attributes. `<svelte:element this={`h\${level}`}>`: a single element, any props and attributes, but the tag type is a string so you lose per-tag typing and it must be a valid DOM tag; nullish hides it; no built-in bindings except `bind:this`. A lookup of component references adds an indirection and wrapper components with no benefit for plain tags. For headings, `svelte:element` is the usual choice; use branches only if each level needs different structure.
+27. `{#if}` chains: no runtime magic, verbose, good typing per branch, forces duplicated attributes. ``<svelte:element this={`h${level}`}>``: a single element, any props and attributes, but the tag type is a string so you lose per-tag typing and it must be a valid DOM tag; nullish hides it; no built-in bindings except `bind:this`. A lookup of component references adds an indirection and wrapper components with no benefit for plain tags. For headings, `svelte:element` is the usual choice; use branches only if each level needs different structure.
 28. Browsers auto-insert `<tbody>`, so the parsed DOM would differ from the DOM the compiler assumed (and from what hydration expects from the server-rendered HTML). Rejecting it at compile time prevents hydration mismatches and broken node references.
 
 ## Chapter 7: Components, Props and Snippets
 
 1.  A destructured prop is compiled to a read of the props object at each use site, but a top-level statement runs once, so `count * 2` captures only the initial value. Fix: `let doubled = $derived(count * 2)` (or compute it inside the template/closure).
 2.  It prints `2` after one click: the child may temporarily override (reassign) a prop. If the parent later provides a new value (`10`), the parent’s value wins and the button shows `10`.
-3.  a\. No UI update and no warning: a plain object is not reactive. (b) The UI updates but dev mode warns `ownership_invalid_mutation`, because the child mutates state it does not own. (c) No UI update: destructuring fallbacks are not proxied, so the mutation is invisible.
+3.  (a) No UI update and no warning: a plain object is not reactive. (b) The UI updates but dev mode warns `ownership_invalid_mutation`, because the child mutates state it does not own. (c) No UI update: destructuring fallbacks are not proxied, so the mutation is invisible.
 4.  In dev it throws `props_rest_readonly`; in production the proxy’s `set` trap returns `false`, which throws a `TypeError` in strict mode. The extra readable error is a dev-only convenience (there is a TODO in the source about enabling it in production), keeping the production bundle small.
 5.  `$props.id()` is identical on server and client, so SSR output and hydration agree. `crypto.randomUUID()` (or counters/`Math.random`) differs between server and client and causes hydration mismatches.
 6.  The name is reserved: content between the tags becomes the `children` snippet prop, so it collides with (or overwrites) your data prop. Rename the data prop.
-7.  b\. Callback props named `onsomething`. (a) works technically but breaks the naming convention; (c) does not exist; (d) `on:` on components is the legacy event API and is not available with runes-mode components’ callback props.
+7.  **b.** Callback props named `onsomething`. (a) works technically but breaks the naming convention; (c) does not exist; (d) `on:` on a component is the legacy event API: it only receives events that the child dispatches with `createEventDispatcher`, which a component taking callbacks through `$props()` never does.
 8.  The handler comes before the spread, so `props.onclick` replaces it. Put local handlers after the spread and call the incoming one: `<button {...props} onclick={(e) => { track(); props.onclick?.(e); }}>`.
 9.  Mixing old and new event syntaxes in one component is the compile error `mixed_event_handler_syntaxes`. Migrate the whole component to `onevent` attributes.
 10. The call site passes getters (e.g. `() => $$props.n`) so the snippet re-reads the value when it changes. Parameters are therefore reactive, not copies, and defaults are evaluated lazily through `$.fallback`.
-11. c\. `{#snippet c(...rest)}`: rest parameters are not supported (`snippet_invalid_rest_parameter`: use an array). Defaults, destructuring and type annotations are fine.
+11. **c.** `{#snippet c(...rest)}`: rest parameters are not supported (`snippet_invalid_rest_parameter`: use an array). Defaults, destructuring and type annotations are fine.
 12. It prevents a snippet declared inside component tags from silently replacing an attribute prop of the same name: `<C header={1}>{#snippet header()}x{/snippet}</C>` is an error because the implicit prop and the explicit attribute collide.
 13. Explicit: declare snippets and pass them by name (`{header}`). Implicit: snippets declared directly inside component tags become props of the same name. `children`: non-snippet content becomes the `children` snippet. `$$slots` in the compiled output is bookkeeping for interop with components that use legacy slots.
 14. `{@render header()}` throws `invalid_snippet` (expression is `undefined`). Fix with optional chaining `{@render header?.()}` or an `{#if header}` block with fallback content; type the prop as optional (`header?: Snippet`).
@@ -351,23 +351,23 @@
 ## Chapter 8: Bindings and Forms
 
 1.  A listener on the element’s `input` event reads the DOM value and calls the setter (DOM to state), and a render effect reads the getter and assigns the DOM property when it differs (state to DOM). After the handler, `await tick()` lets the setter’s result propagate; if the getter now returns something different from what was typed (validation or transformation), the DOM value is rewritten and the caret restored.
-2.  `null` in 5.57.2 (`to_number` returns `null` for `''`). The prose docs say `undefined`; the source is authoritative, so type the state `number | null` and avoid `=== undefined` checks.
+2.  `null` in 5.57.2 (`to_number` returns `null` for `''`). The prose docs say `undefined`; the source is authoritative, so type the state `number | null` and test with `== null` rather than `=== undefined`.
 3.  It shows `ab` in the paragraph and the input is rewritten to `ab`. The setter stores the lowercase value; after the tick the getter differs from the typed `Ab`, so Svelte writes `ab` back to the input.
 4.  In practice the binding updates first, so `oninput` sees the new value (basic-markup doc: event attributes fire after bindings). The `bind:` doc statement (“an existing listener for the same event fires before the bound value is updated”) covers listeners registered before the binding, such as earlier native listeners or legacy `on:` handlers.
-5.  b). `bind:checked` and `bind:group` on checkboxes are the supported forms.
+5.  **b.** `bind:checked` and `bind:group` on checkboxes are the supported forms; `bind:value` would read the static `value` attribute.
 6.  `bind:group` coordinates inputs within the same component only. Split a group by having a parent own the value and pass it down with a callback prop (`checked={v === x}` and `onchange={() => select(x)}`), or bind a `$bindable` prop in each child.
 7.  `const dt = new DataTransfer(); [...files].forEach((f, i) => i !== 1 && dt.items.add(f)); files = dt.files;`. `FileList` is immutable and cannot be constructed directly, so `DataTransfer` is the only way to produce a new one.
 8.  `DataTransfer` does not exist in server runtimes, so evaluating it during SSR throws. Leave the state uninitialised (`$state<FileList | undefined>()`) and create `DataTransfer` only in handlers.
 9.  It is the identical object (same reference, not a copy), because Svelte stores the JS value on the option. You can compare with `===` or use it as a Map key.
 10. `undefined` or `null`: the current selection is kept. A string (non-array): the runtime warns `select_multiple_invalid_value` and keeps the selection.
-11. a\. The binding wins on first render: `typed`. (b) After reset the field shows `x` (the default) and the state becomes `x` one microtask later, because the reset listener waits a microtask for the DOM to update, then re-reads the control.
+11. (a) The binding wins on first render: `typed`. (b) After reset the field shows `x` (the default) and the state becomes `x` one microtask later, because the reset listener waits a microtask for the DOM to update, then re-reads the control.
 12. Capture phase on `document` means `stopPropagation` elsewhere cannot hide the event; the microtask delay exists because the control’s properties have not been reset yet when the event fires. A `defaultPrevented` reset event cancels the resync (as it cancels the reset).
 13. Yes: controls associated with `form="f"` are in `form.elements`, so they are resynced. A control with no association is not part of `elements` and is not touched.
 14. Two-way: `currentTime`, `playbackRate`, `paused`, `volume`, `muted`. Read-only: `duration`, `buffered`, `seekable`, `seeking`, `ended`, `readyState`, `played` (plus `videoWidth`/`videoHeight` for video). `duration` is `NaN` until metadata loads, so start from `0` and guard.
 15. The binding takes full control of the contents, so expressions inside do not update (migration guide). `bind:innerHTML` is not safe to render elsewhere unsanitised: user or pasted content controls the HTML, same XSS concerns as `{@html}`.
 16. Inline elements have no box size and cannot be observed by `ResizeObserver`. Fix: `display: inline-block` (or another non-inline display), or use an element with intrinsic dimensions. `devicePixelContentBoxSize` does not work in Safari; the others (`clientWidth`, `offsetWidth`, `contentRect`, …) are fine.
 17. `el` is `undefined` while `show` is false (and during init), so `el.focus()` throws a TypeError on the first effect run. Use `el?.focus()` and make `el` `$state` so the effect re-runs when the element mounts.
-18. a\. `undefined`, (b) the element/exports, (c) `null`. With a function binding the getter lets Svelte check that the variable still holds this element before nulling it, so it does not null a value that another element has taken over.
+18. (a) `undefined`, (b) the element/exports, (c) `null`. With a function binding the getter lets Svelte check that the variable still holds this element before nulling it, so it does not null a value that another element has taken over.
 19. `<input bind:value={() => name, (v) => (name = v.trim().slice(0, 20))} />`. The effect version writes state after DOM updates (a transient wrong value, an extra flush, and a loop risk); the function binding transforms at the moment of input and Svelte rewrites the field.
 20. It is a read-only binding with a `null` getter: nothing is stored, and `redraw` is called whenever the width changes. Use it to run a side effect on measurements without keeping state.
 21. `Own.svelte` forwards the prop `data` into `bind:value` of the child, but the parent passed it one-way, so a mutation in the child changes state owned by the parent through an intermediary that did not declare a binding. Fixes: declare `data` as `$bindable()` in `Own` and use `<Own bind:data={d} />`; or give the child a callback and let the owner mutate.
@@ -377,17 +377,17 @@
 25. Each effect writes the state the other one reads, so they re-trigger each other (rounding eventually stops them, or `effect_update_depth_exceeded` fires). With one source of truth (`celsius`) and a function binding for Fahrenheit, there is only one piece of state and nothing to ping-pong.
 26. After each keystroke the getter returns the formatted string, which differs from what was typed, so Svelte rewrites the field. Fix: keep a `draft` string while editing (show `draft ?? formatted`) and clear it on `blur`.
 27. `bind:value={pin}` with `pin` undefined throws `props_invalid_value` (a bindable with a fallback requires a defined parent value). Fixes: initialise `let pin = $state('0')`, or remove the fallback (or do not bind).
-28. a\. `bind_invalid_expression`; (b) `bind_invalid_target` (`bind:value` only on input/textarea/select); (c) `constant_binding` (“Cannot bind to import”); (d) `bind_invalid_expression` (a getter without a setter is not a valid `{get, set}` pair).
+28. (a) `bind_invalid_expression`; (b) `bind_invalid_target` (`bind:value` only on input/textarea/select); (c) `constant_binding` (“Cannot bind to import”); (d) `bind_invalid_expression` (a getter without a setter is not a valid `{get, set}` pair).
 
 ## Chapter 9: Actions, Attachments, Special Elements and Browser APIs
 
-1.  1.  Actions run once, untracked, and ignore argument changes (unless they use effects or the legacy `update`); attachments run in an effect and re-run when state read in the function or factory expression changes. (2) Actions cannot be used on components (`component_invalid_directive`); attachments become Symbol-keyed props that flow through spread. (3) Both run after mount and not on the server, but an attachment’s cleanup also runs before each re-run, not only on removal.
+1.  (1) Actions run once, untracked, and ignore argument changes (unless they use effects or the legacy `update`); attachments run in an effect and re-run when state read in the function or factory expression changes. (2) Actions cannot be used on components (`component_invalid_directive`); attachments become Symbol-keyed props that flow through spread. (3) Both run after mount and not on the server, but an attachment’s cleanup also runs before each re-run, not only on removal.
 2.  Only `run 0` at mount; nothing after `n++`. The action is invoked once and untracked; the argument change does not call it again (it has no `update` method).
 3.  `run 0` at mount, then `run 1` after `n++`. The expression `track(n)` is evaluated in an effect and yields a new function, so the old attachment is destroyed (cleanup runs) and the new one runs.
 4.  `function tooltip(getContent: () => string): Attachment { return (el) => { const inst = tippy(el); $effect(() => inst.setContent(getContent())); return inst.destroy; }; }` used as `<button {@attach tooltip(() => content)}>`. The instance is created once; only the nested effect tracks `content`.
 5.  The template expression `tooltip(() => content)` never reads `content` itself (the getter is only called inside the nested effect), so nothing the expression read changed and it is not re-evaluated. The arrow function is created once per evaluation, not per change.
 6.  A prop keyed by a Symbol holding the attachment. `Button` must spread its rest props onto an element (`<button {...rest}>`). Named destructuring ignores symbol keys, and `...rest` carries them through, so a component that only picks named props drops the attachment.
-7.  c\. No attachment and no error. Falsy values are treated as no attachment.
+7.  **c.** No attachment and no error. Falsy values are treated as no attachment.
 8.  `<div {@attach fromAction(foo, () => bar)}>`. `fromAction(foo, bar)` is wrong because the second argument must be a function returning the argument, not the argument itself.
 9.  The action body runs untracked, so it never re-runs. Fixes: read the state in a nested `$effect` inside the action; or convert it to an attachment (factory re-runs, or getter plus nested effect); or implement the legacy `update`.
 10. Actions run in an effect after mount, and effects never run on the server. Therefore `window`/`document` access inside an action (or a nested effect) is safe without `typeof window` guards; code in the component’s top-level script is not.
@@ -415,14 +415,14 @@
 1.  The selector becomes `p.a.svelte-hash { color: red }` and the `<p>` gets `class="a svelte-hash"`. The hash class adds 0-1-0 specificity, so the rule is more specific than the source selector (here 0-2-1 instead of 0-1-1) and beats an equal global rule regardless of load order.
 2.  The first compound gets the plain hash class (+0-1-0); repeats use `:where(.svelte-x)`, which has zero specificity, so scoping does not compound. Using the plain class twice would add 0-2-0 and make rules’ specificity grow with selector length, making overrides unpredictable.
 3.  It cannot be disabled. Keeping the selector with the scoping class would not match what the author expects (elements it cannot see); keeping it without the class would make it a global style. The correct escape is an explicit `:global`.
-4.  a\. kept (dynamic class could be anything); (b) pruned (`class="bar"` can never carry `foo`); (c) kept (spread may add any class); (d) kept; (e) pruned.
+4.  (a) kept (dynamic class could be anything); (b) pruned (`class="bar"` can never carry `foo`); (c) kept (spread may add any class); (d) kept; (e) pruned.
 5.  `{@html}` content gets no scoping class, so the compiler sees no `<a>` inside the article and prunes the rule. Rewrites: `article :global a { }` or the block form `article :global { a { } }`. The block form is preferred (documented), since it keeps the anchor `article` scoped and groups the rules.
 6.  `div :global(strong)` gives `div.svelte-x strong` (scoped div, any strong inside it); `:global(div) strong` gives `div strong.svelte-x` (any div, but only this component’s strong); `:global(div strong)` gives `div strong` entirely unscoped. The last one leaks to the whole page.
 7.  `.a :global(b) .c`: `css_global_invalid_placement` (global in the middle). `:global { color: red }`: `css_global_block_invalid_declaration` (declarations in a top-level block). `:global, x { y {} }`: `css_global_block_invalid_list`.
 8.  With `@keyframes -global-spin`, the prefix is stripped from the rule (`@keyframes spin`) and `animation: spin 1s` stays unscoped and matches it. With `@keyframes spin` both the rule and the reference are rewritten to the hashed name (`svelte-hash-spin`).
 9.  The reference is left unchanged (`animation: fade 1s`), because the keyframes are not defined in this component. It will only work if some global `@keyframes fade` exists; otherwise nothing animates.
 10. Selectors inside `:is`, `:where` and `:has` used to be treated as global; Svelte 5 analyses them in component context, so ones that relied on that (elements from children or `{@html}`) are now reported unused and pruned. Fix with `:global(...)` inside the pseudo-class.
-11. c\. Only the `.zzz` alternative is pruned; `:is(.a:where(.svelte-x)) .b.svelte-x` remains.
+11. **c.** Only the `.zzz` alternative is pruned; `:is(.a:where(.svelte-x)) .b.svelte-x` remains.
 12. It compiles to `<svelte-css-wrapper style="display: contents; --track-color: black">` around the component. Consequences: it is a real DOM node, so child combinators (`>`), `:first-child` and sibling selectors across the boundary see the wrapper rather than the component’s root; it does not affect layout because of `display: contents`.
 13. The wrapper’s style is set by `$.css_props(node, () => ({...}))`, which re-runs when the expressions’ dependencies change. Inside an SVG a `<g>` is used instead.
 14. Custom properties are an explicit, stable API that does not depend on the child’s internal markup and does not leak. `:global` is the only option when the child exposes no tokens (typically a third-party component), and then it should be anchored on an element you own.
@@ -453,7 +453,7 @@
 
 5.  Because the function and parameters are evaluated when the transition starts (and cached while it runs), not when the component renders. Parameters can therefore read current state, for instance `y: prefersReducedMotion.current ? 0 : 200`, and each transition starts with fresh values.
 
-6.  c\. Svelte calls `css(t, u)` ahead of time, about `ceil(duration / 16.67) + 1` times, applying the easing itself, and passes the resulting keyframes to `element.animate`. It is not called per frame.
+6.  **c.** Svelte calls `css(t, u)` ahead of time, about `ceil(duration / 16.67) + 1` times, applying the easing itself, and passes the resulting keyframes to `element.animate`. It is not called per frame.
 
 7.  `backOut` overshoots, so `t` can exceed 1 near the end, yielding `opacity` above 1 (invalid or clamped inconsistently) for some frames. Clamp with `Math.min(1, t)` or use a non-overshooting easing.
 
@@ -467,7 +467,7 @@
 
 12. The deferred function finds no counterpart, removes its own entry from the map and returns `fallback(node, params, intro)`, or `undefined` if there is no fallback (no outro runs). For `send` (an out transition) the third argument `intro` is `false`; for `receive` it is `true`.
 
-13. a\. A keyed each block is required (`animation_missing_key`). Being the only immediate child is required, reordering is what triggers it, and parameters are allowed.
+13. **a.** A keyed each block is required (`animation_missing_key`). Being the only immediate child is required, reordering is what triggers it, and parameters are allowed.
 
 14. Neither animates. `animate:` runs only when an existing item’s position changes; additions and removals do not trigger it, and appending leaves existing items where they were (`apply()` finds identical rectangles and skips).
 
@@ -481,7 +481,7 @@
 
 19. The first `await` never settles: the superseded task is removed from the scheduler without resolving its promise. For `Spring`, the earlier call’s promise is rejected with `Error('Aborted')`, so an awaiting caller must catch it.
 
-20. ``` {.sourceCode .html}
+20. ```html
     <script lang="ts">
         import { Tween } from 'svelte/motion';
         let { score }: { score: number } = $props();
@@ -496,57 +496,63 @@
 
 22. `preserveMomentum`, in milliseconds: the spring behaves as if it had infinite mass for that long, continuing along its trajectory before the spring force takes over.
 
-23. b\. Transitions are driven by the Web Animations API, so the CSS rule does not affect them. Use `prefersReducedMotion.current` to adapt.
+23. **b.** Transitions are driven by the Web Animations API, so the CSS rule does not affect them. Use `prefersReducedMotion.current` to adapt.
 
-24. \`\`\`ts import { prefersReducedMotion } from ‘svelte/motion’; import { fade, slide, type SlideParams, type TransitionConfig } from ‘svelte/transition’;
+24. ```ts
+    import { prefersReducedMotion } from 'svelte/motion';
+    import { fade, slide, type SlideParams, type TransitionConfig } from 'svelte/transition';
 
-export function safeSlide(node: Element, params: SlideParams = {}): TransitionConfig { return prefersReducedMotion.current ? fade(node, { duration: 100 }) : slide(node, params); }
+    export function safeSlide(node: Element, params: SlideParams = {}): TransitionConfig {
+        return prefersReducedMotion.current ? fade(node, { duration: 100 }) : slide(node, params);
+    }
+    ```
 
-    `SlideParams` is exported from `svelte/transition`.
+    `SlideParams` and `TransitionConfig` are exported from `svelte/transition`.
 
-    25. `mount`: `intro` defaults to `true`; `hydrate`: the runtime defaults it to `false`. Use `unmount(app, { outro: true })` (since 5.13); it returns a promise that resolves after the outros finish (immediately if `outro` is not set).
+25. `mount`: `intro` defaults to `true`; `hydrate`: the runtime defaults it to `false`. Use `unmount(app, { outro: true })` (since 5.13); it returns a promise that resolves after the outros finish (immediately if `outro` is not set).
 
-    26. During the overlap the old and new spans coexist in the DOM, so inline layout puts them side by side or shifts the surrounding content. Put both in the same grid cell (`display: inline-grid` with both children in `grid-area: 1 / 1`) or give the container a fixed width.
+26. During the overlap the old and new spans coexist in the DOM, so inline layout puts them side by side or shifts the surrounding content. Put both in the same grid cell (`display: inline-grid` with both children in `grid-area: 1 / 1`) or give the container a fixed width.
 
-    27. Pass a `duration` of 0 (via prop) and no delay, then assert immediately after `flushSync()`. The runtime completes transitions with neither duration nor delay synchronously (calling start and finish callbacks directly), and an outro's finish callback is what removes the DOM.
+27. Pass a `duration` of 0 (via prop) and no delay, then assert immediately after `flushSync()`. The runtime completes transitions with neither duration nor delay synchronously (calling start and finish callbacks directly), and an outro's finish callback is what removes the DOM.
 
-    28. The first call creates a dummy animation of length `delay` (often 0), the second the real animation. The dummy lets the runtime wait a microtask so sibling transitions all measure before styles are applied, holds the `t = 0` styles of an intro during the delay (`fill: 'forwards'`), and its `onfinish` starts the real animation.
+28. The first call creates a dummy animation of length `delay` (often 0), the second the real animation. The dummy lets the runtime wait a microtask so sibling transitions all measure before styles are applied, holds the `t = 0` styles of an intro during the delay (`fill: 'forwards'`), and its `onfinish` starts the real animation.
 
-    ## Chapter 12: Context, Stores and Shared-State Architecture
+## Chapter 12: Context, Stores and Shared-State Architecture
 
-    1. `[get, set, has]`. `has` was added in 5.57 (the original 5.40 API returned only `[get, set]`).
+1.  `[get, set, has]`. `has` was added in 5.57 (the original 5.40 API returned only `[get, set]`).
 
-    2. The key is a private object created per call, so there are no collisions between libraries and no key to export; and `get` is typed (`createContext<T>()`) and throws `missing_context` when the context is absent, instead of silently returning `undefined`.
+2.  The key is a private object created per call, so there are no collisions between libraries and no key to export; and `get` is typed (`createContext<T>()`) and throws `missing_context` when the context is absent, instead of silently returning `undefined`.
 
-    3. `lifecycle_outside_component` ("`getContext(...)` can only be used during component initialisation"). Call `getUser()` once at the top level of the `<script>` and use the result inside the handler.
+3.  `lifecycle_outside_component` ("`getContext(...)` can only be used during component initialisation"). Call `getUser()` once at the top level of the `<script>` and use the result inside the handler.
 
-    4. It throws `missing_context` ("Context was not set in the current component or any of its ancestors"). Use `has` when the provider is optional, for example `hasTheme() ? getTheme() : defaultTheme`.
+4.  It throws `missing_context` ("Context was not set in the current component or any of its ancestors"). Use `has` when the provider is optional, for example `hasTheme() ? getTheme() : defaultTheme`.
 
-    5. Child shows `2`. The reset replaces the provider's `counter` with a new proxy, but context still holds the old object that Child reads, so the link is broken. Reset by mutating: `counter.count = 0`.
+5.  Child shows `2`. The reset replaces the provider's `counter` with a new proxy, but context still holds the old object that Child reads, so the link is broken. Reset by mutating: `counter.count = 0`.
 
-    6. The context holds a copied string. Provide a getter: `setTheme({ get mode() { return mode; }, toggle })`, so consumers read the current value on each access (or provide a `$state` object/class instance and mutate its properties).
+6.  The context holds a copied string. Provide a getter: `setTheme({ get mode() { return mode; }, toggle })`, so consumers read the current value on each access (or provide a `$state` object/class instance and mutate its properties).
 
-    7. It returns the entire context map visible to the current component. Call `const context = getAllContexts()` during initialisation and pass `mount(Comp, { target, props, context })`; the mounted root then sees the same providers.
+7.  It returns the entire context map visible to the current component. Call `const context = getAllContexts()` during initialisation and pass `mount(Comp, { target, props, context })`; the mounted root then sees the same providers.
 
-    8. The first context call in a component creates its map as `new Map(nearestAncestorMap)`, a copy. A child that touches context sees the parent's entries as they were at that moment; a `setContext` in the parent is only visible to `getContext` calls that run after it, and the child can shadow entries by setting its own.
+8.  The first context call in a component creates its map as `new Map(nearestAncestorMap)`, a copy. A child that touches context sees the parent's entries as they were at that moment; a `setContext` in the parent is only visible to `getContext` calls that run after it, and the child can shadow entries by setting its own.
 
-    9. ```ts
+9.  ```ts
     function Wrapper(...args: Parameters<typeof Badge>) {
         setCart(new Cart());
         return Badge(...args);
     }
     const app = mount(Wrapper, { target: document.body });
     flushSync();
+    ```
 
-The keys created by `createContext` are private objects, so you cannot build the `context` map by hand; calling the setter inside a wrapper component writes to the right key.
+    The keys created by `createContext` are private objects, so you cannot build the `context` map by hand; calling the setter inside a wrapper component writes to the right key.
 
-10. b\. A module-level `$state` object is shared by all renders in the process. Context, props and instances created inside components are per render.
+10. **b.** A module-level `$state` object is shared by all renders in the process. Context, props and instances created inside components are per render.
 
 11. It is safe only if the state is never written during SSR (or no SSR exists) and you never need two instances (tests, stories, multiple roots). Reject it if the app might be server-rendered or if tests need isolation; use a context-scoped instance.
 
 12. The setter runs after an `await`, so it is not at initialisation; with `experimental.async` it throws `set_context_after_init`. Call `setUser` first with a holder, for example `const state = $state({ user: null }); setUser(state); state.user = await fetchUser();`, or provide a getter or promise.
 
-13. 1.  `subscribe(fn)` calls `fn` immediately and synchronously with the current value, and synchronously on each change; (2) it returns an unsubscribe function after which `fn` is not called; (3) an optional `set` synchronously notifies subscribers. For RxJS, `subscribe` may return an object with `.unsubscribe()`. If it does not emit synchronously, the value is `undefined` until the first emission.
+13. (1) `subscribe(fn)` calls `fn` immediately and synchronously with the current value, and synchronously on each change; (2) it returns an unsubscribe function after which `fn` is not called; (3) an optional `set` synchronously notifies subscribers. For RxJS, `subscribe` may return an object with `.unsubscribe()`. If it does not emit synchronously, the value is `undefined` until the first emission.
 
 14. a: compile error `store_invalid_scoped_subscription`. b: compile error `store_invalid_subscription` (“Cannot reference store value inside `<script module>`”). c: compile error `store_invalid_subscription_module` (“outside a `.svelte` file”). d: compile error `dollar_prefix_invalid` (the `$` prefix is reserved).
 
@@ -558,12 +564,12 @@ The keys created by `createContext` are private objects, so you cannot build the
 
 18. By `fn.length`: a callback declaring fewer than two parameters is auto (its return value is `set`); two or more means manual. Debounce:
 
-```ts
-const debounced = derived(a, ($a, set) => {
-    const t = setTimeout(() => set($a), 300);
-    return () => clearTimeout(t);
-}, undefined as number | undefined);
-```
+    ```ts
+    const debounced = derived(a, ($a, set) => {
+        const t = setTimeout(() => set($a), 300);
+        return () => clearTimeout(t);
+    }, undefined as number | undefined);
+    ```
 
 19. A writable store whose subscribers are notified when the getter’s dependencies change and whose `set` calls your setter. It captures the effect context when called (so call it during component initialisation) and runs an internal effect root only while subscribed. Use `fromStore` for the reverse: reading an existing store as a reactive `.current` in runes code.
 
@@ -613,9 +619,9 @@ const debounced = derived(a, ($a, set) => {
 
 11. The number of pending promises in the current boundary, excluding child boundaries. In an event handler (outside an effect or derived) it throws `effect_pending_outside_reaction`.
 
-12. b\. `await tick()` moves the in-flight batch out of the current slot, so `settled()` creates a fresh empty batch and resolves at once; the DOM still shows the old value.
+12. **b.** `await tick()` moves the in-flight batch out of the current slot, so `settled()` creates a fresh empty batch and resolves at once; the DOM still shows the old value.
 
-13. ``` {.sourceCode .ts}
+13. ```ts
     async function onclick() {
         updating = true;
         await tick();            // give `updating` its own batch
@@ -642,7 +648,7 @@ const debounced = derived(a, ($a, set) => {
 
 21. A root boundary with a `pending` splash around everything, inside it separate boundaries for the sidebar and the feed (each with its own skeleton and `failed`), and the cheap header outside them. `$effect.pending()` indicators must sit in the component whose nearest boundary is the one doing the waiting (inside that boundary’s content), because counts exclude child boundaries.
 
-22. ``` {.sourceCode .html}
+22. ```ts
     let serverCount = $state(initial);
     let shown = $derived(serverCount);
     async function like() {
@@ -677,7 +683,7 @@ const debounced = derived(a, ($a, set) => {
 
 3.  The properties are accessors (and `render` is lazy), so they are not own enumerable keys. Destructure `{ head, body }` instead of spreading.
 
-4.  c\. `csp.hash` together with `csp.nonce` throws `invalid_csp`.
+4.  **c.** `csp.hash` together with `csp.nonce` throws `invalid_csp`.
 
 5.  `idPrefix` must not contain `--` (it would collide with the ID format); `render` throws `invalid_id_prefix`.
 
@@ -689,7 +695,7 @@ const debounced = derived(a, ($a, set) => {
 
 9.  Hydration locates and walks nodes via these comments. Minifiers with comment removal, HTML-rewriting CDNs/proxies, and sanitisers or templating steps may remove them.
 
-10. a\. Repaired: the text is updated to the client value. (b) Not repaired: the server `src` stays, with dev warning `hydration_attribute_changed`. (c) The structure cannot be matched, so Svelte warns `hydration_mismatch`, clears the target and mounts from scratch (recovery).
+10. (a) Repaired: the text is updated to the client value. (b) Not repaired: the server `src` stays, with dev warning `hydration_attribute_changed`. (c) The structure cannot be matched, so Svelte warns `hydration_mismatch`, clears the target and mounts from scratch (recovery).
 
 11. It recovers: clears the target and runs `mount`. `recover: false` throws `hydration_failed` instead. Use it in tests/CI/dev to catch mismatches loudly.
 
@@ -739,13 +745,13 @@ const debounced = derived(a, ($a, set) => {
 
 3.  Svelte decides which imports the template uses after TypeScript tooling has run. If TypeScript elided an import used only in markup (such as a component), the component would break. `verbatimModuleSyntax` leaves imports as written; type-only imports must use `import type`.
 
-4.  d\. `experimentalDecorators` is not recommended; the docs list `target >= ES2015`, `verbatimModuleSyntax` and `isolatedModules`.
+4.  **d.** `experimentalDecorators` is not recommended; the docs list `target >= ES2015`, `verbatimModuleSyntax` and `isolatedModules`.
 
-5.  The build (Vite/esbuild) only strips types and does not type-check. `svelte-check` (`sv check`) performs the checking; add it to CI.
+5.  The build (Vite) only strips types and does not type-check. `svelte-check` (`sv check`) performs the checking; add it to CI.
 
 6.  A `<script lang="ts">` in the file (even an empty one); without it the template is parsed as plain JavaScript.
 
-7. ``` {.sourceCode .ts}
+7. ```ts
    import type { Snippet } from 'svelte';
    interface Props {
        label: string;
@@ -759,7 +765,7 @@ const debounced = derived(a, ($a, set) => {
 
 8.  `Cannot use 'bind:' with this property. It is declared as non-bindable inside the component. To mark a property as bindable: 'let { other = $bindable() } = $props()'`. Binding a `string` variable to a `number` prop gives an ordinary assignability error (`Type 'string' is not assignable to type 'number'`).
 
-9. ``` {.sourceCode .html}
+9. ```html
    <script lang="ts" generics="T">
        interface Props {
            options: T[];
@@ -787,7 +793,7 @@ const debounced = derived(a, ($a, set) => {
 
 17. It fails: `Module '"svelte"' has no exported member 'Snapshot'` (the alias is not exported, also not as `$state.Snapshot`). Let inference type the result of `$state.snapshot`, or assign it to your own plain type.
 
-18. ``` {.sourceCode .html}
+18. ```html
     <script lang="ts">
         import type { SvelteHTMLElements, ClassValue } from 'svelte/elements';
         interface Props extends SvelteHTMLElements['div'] { class?: ClassValue }
@@ -800,7 +806,7 @@ const debounced = derived(a, ($a, set) => {
 
 20. It makes the file a module so that `declare module 'svelte/elements'` augments (merges with) the existing declarations. Without it the file is ambient and the declaration replaces the module’s types.
 
-21. ``` {.sourceCode .ts}
+21. ```ts
     import type { HTMLAttributes } from 'svelte/elements';
     declare module 'svelte/elements' {
         export interface SvelteHTMLElements {
@@ -825,17 +831,17 @@ const debounced = derived(a, ($a, set) => {
 
 26. Use `@type`/`@template` JSDoc:
 
-```html
-<script>
-    /**
-     * @template T
-     * @type {{ items: T[], select: (item: T) => void }}
-     */
-    let { items, select } = $props();
-</script>
-```
+    ```html
+    <script>
+        /**
+         * @template T
+         * @type {{ items: T[], select: (item: T) => void }}
+         */
+        let { items, select } = $props();
+    </script>
+    ```
 
-with `checkJs` (or `// @ts-check`) enabled.
+    with `checkJs` (or `// @ts-check`) enabled.
 
 27. Destructuring `rest` out of a union loses the link between `href` and the other attributes, so narrowing on `rest.href` does not narrow `rest`. Options: cast `rest` to the specific attribute type in each branch, or split into separate `LinkButton`/`Button` components with a thin dispatcher.
 
@@ -849,23 +855,23 @@ with `checkJs` (or `// @ts-check`) enabled.
 
 1.  The Svelte plugin only compiles runes in `.svelte`, `.svelte.js` and `.svelte.ts` files, and “`.svelte`” must appear in the name (for example `x.svelte.test.ts`). In a plain `.test.ts`, `$state` is an undeclared identifier and the runtime throws `rune_outside_svelte`.
 2.  Under Node, `import 'svelte'` would resolve to the server entry, where `mount` is unavailable. The `browser` condition fixes this for tests, but forcing it unconditionally would also change resolution during `vite build`/dev. `process.env.VITEST` is set by Vitest, so the override applies only to test runs.
-3.  a\. No: deriveds are pull-based, so reading after the write recomputes synchronously. (b) Yes: DOM updates are scheduled in a microtask, so `flushSync()` (or `await tick()`) is needed. (c) Yes: effects run after a microtask, so the pushed value appears only after a flush.
+3.  (a) No: deriveds are pull-based, so reading after the write recomputes synchronously. (b) Yes: DOM updates are scheduled in a microtask, so `flushSync()` (or `await tick()`) is needed. (c) Yes: effects run after a microtask, so the pushed value appears only after a flush.
 4.  It prints `0` then `1`. `mount` creates DOM but does not run effects; the effect that calls `onchange(3)` runs on `flushSync()`.
 5.  The effect inside `logger` is created outside any effect root, so it throws `effect_orphan`. Wrap the body in `const cleanup = $effect.root(() => { ... }); cleanup();`, and call `flushSync()` once after creating `logger` so the initial `[0]` is recorded before the update.
 6.  An effect root has no parent to destroy it, so the cleanup is the only thing that tears the effects down. If an assertion throws first, cleanup is skipped and the live effects can react to later tests that touch the same state. Use `try/finally` or `afterEach`.
 7.  Examples: leftover DOM (queries find elements from earlier tests, `getByRole` finds multiple matches); live effects and event listeners from previous components keep running and may mutate shared module state; focus or `document.activeElement` carries over; timers or subscriptions keep going.
 8.  Make the props object reactive: `const props = $state({ show: true }); mount(C, { target, props }); props.show = false; flushSync();`. The test file must have `.svelte` in its name so `$state` is compiled.
-9.  b\. `user-event` is asynchronous and yields to the event loop, so Svelte’s microtask update has run by the time your next assertion executes. It does not bypass delegation and does not need fake timers.
+9.  **b.** `user-event` is asynchronous and yields to the event loop, so Svelte’s microtask update has run by the time your next assertion executes. It does not bypass delegation and does not need fake timers.
 10. Svelte delegates `input` (and `click`, `keydown` etc.) to a root listener, so the event must bubble. `new Event('input')` does not bubble by default; you need `{ bubbles: true }`. `HTMLElement.click()` dispatches a bubbling event.
 11. Define `function Wrapper(...args) { setUserContext(value); return Component(...args); }` and pass `Wrapper` to `mount` (also works with `hydrate` and `render`). That was added in 5.49. The context applies only to that mounted tree; each `mount` call creates its own wrapper instance, so nothing leaks into other mounts.
-12. 1.  A harness `.svelte` file that renders the component and declares `{#snippet footer(t)}...{/snippet}`: best for snippets with parameters, components, or reactive content. (2) `createRawSnippet(() => ({ render: () => '<em>x</em>' }))` passed in `props`: best for static single-element content in quick tests.
+12. (1) A harness `.svelte` file that renders the component and declares `{#snippet footer(t)}...{/snippet}`: best for snippets with parameters, components, or reactive content. (2) `createRawSnippet(() => ({ render: () => '<em>x</em>' }))` passed in `props`: best for static single-element content in quick tests.
 13. `get(store)` subscribes, reads the synchronously delivered value and unsubscribes. In hot paths this repeatedly runs start/stop notifiers and creates subscriptions. In tests it is fine.
 14. The jsdom environment makes the plugin compile the component for the client, so `render()` executes client code (including `$effect`) on the server renderer and throws `effect_orphan`. Fixes: put `// @vitest-environment node` at the top of the file; or use a separate Vitest project for SSR tests with a node environment and no `browser` condition.
 15. The output includes hydration marker comments (`<!--[-->...<!--]-->`) and other internals that may change between releases. Use `toContain`, a regex, or parse the HTML.
 16. It flushes microtasks between timers, so promise continuations run as timers fire. `await tick()` is still needed because Svelte’s DOM update for the resolved promise is itself scheduled in a microtask.
 17. jsdom has no `element.animate`, so when a transition starts the flush throws `TypeError: element.animate is not a function`. Strategies: stub `Element.prototype.animate` in a setup file; use browser mode or Playwright; or make the component testable with zero durations / `prefersReducedMotion`.
 18. No. Local transitions (default) play only when their own block is toggled, not when an ancestor is destroyed; in the chapter’s run the element disappeared immediately. Add `|global` to the directive so it plays when an ancestor block changes or the component is unmounted with `outro: true`.
-19. b\. `$inspect` tracks deeply, so `push` re-fires it, even though the array identity is unchanged.
+19. **b.** `$inspect` tracks deeply, so `push` re-fires it, even though the array identity is unchanged.
 20. `'init'` on the first run and `'update'` on later changes. Use it to run `debugger` or `console.trace` only on updates, or when a value crosses a threshold.
 21. It must be the first statement in a function body (otherwise `inspect_trace_invalid_placement`) and cannot be used in generator functions. It reports which reactive state caused the surrounding effect or derived to re-run; `$inspect` only reports the values.
 22. `{@debug user}` and `{@debug a, b}` compile, and `{@debug}` compiles. `{@debug user.name}` and `{@debug !ok}` do not (identifiers only). Bare `{@debug}` inserts a `debugger` statement triggered whenever any state in the component changes.
@@ -881,7 +887,7 @@ with `checkJs` (or `// @ts-check`) enabled.
 1.  ARIA validity (`a11y_unknown_aria_attribute`); roles and requirements (`a11y_role_has_required_aria_props`); interactive semantics (`a11y_click_events_have_key_events`); labels, names and content (`a11y_label_has_associated_control`); keyboard and focus (`a11y_positive_tabindex`); document structure and distractions (`a11y_figcaption_parent`). Other codes in each group are equally valid answers.
 2.  A `div` with a click handler triggers `a11y_click_events_have_key_events` (no keyboard equivalent) and `a11y_no_static_element_interactions` (no role). Adding `onkeydown` removes the first; the second remains until you give the element a role, which then triggers `a11y_interactive_supports_focus` until you add `tabindex`. The end state is a hand-built button, so the real fix is `<button type="button">`.
 3.  It checks that an element with an interactive role and interactive handlers is focusable. Adding `tabindex` (for example `tabindex="0"`) satisfies it.
-4.  b\. a\. lacks `tabindex` (`a11y_interactive_supports_focus`), (c) warns about a click on a non-interactive element, and (d) triggers `a11y_img_redundant_alt` because of “Photo of”.
+4.  **b.** (a) lacks `tabindex` (`a11y_interactive_supports_focus`), (c) warns about a click on a non-interactive element, and (d) triggers `a11y_img_redundant_alt` because of “Photo of”.
 5.  The element already has the implicit role `button`, so the explicit role is redundant: `a11y_no_redundant_roles`.
 6.  The compiler cannot know what a spread contains, so checks that need to know whether an attribute is present (for example `alt`) are skipped. Type `props` precisely (for example with `HTMLImgAttributes` where `alt` is required) so that TypeScript enforces what the compiler cannot.
 7.  `<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (backdrop click is a pointer convenience; Escape closes via a window handler) -->` before the element. The parenthesised text records why the ignore is justified, for reviewers and future maintainers.
@@ -907,7 +913,7 @@ with `checkJs` (or `// @ts-check`) enabled.
 27. Since 5.47 Svelte supports the browser’s customizable `<select>`: options may contain rich markup and `<selectedcontent>` mirrors the selected option inside a `<button>`. A native select still brings built-in roles, keyboard operation, form participation and platform behaviour that hand-built dropdowns must reimplement.
 28. Any five of: dynamic attribute values; spread contents; component internals; focus order and focus loss; meaningfulness of names/alt text; colour contrast and target size; live region timing; heading hierarchy and landmarks; `{@html}` content; third-party components.
 29. In jsdom axe can detect structural issues (missing names, invalid ARIA, duplicate IDs); layout and style rules such as colour contrast need a real browser. Playwright: `const results = await new AxeBuilder({ page }).analyze(); expect(results.violations).toEqual([]);` with `import AxeBuilder from '@axe-core/playwright'`.
-30. b\. `getByRole` matches explicit and implicit roles and filters by accessible name, so success indicates the element is exposed to assistive technology correctly.
+30. **b.** `getByRole` matches explicit and implicit roles and filters by accessible name, so success indicates the element is exposed to assistive technology correctly.
 
 ## Chapter 18: Performance and Production Readiness
 
@@ -923,7 +929,7 @@ with `checkJs` (or `// @ts-check`) enabled.
 10. For local repetition inside one component: a snippet creates no component boundary and passes arguments directly. Limitation: no encapsulated state/lifecycle of its own, and it is lexically scoped (module-level export only if it does not reference instance state).
 11. A spread makes the set of attributes open-ended, so the compiler cannot statically analyse them (also disables a11y attribute checks) and the runtime must re-evaluate all attributes when any prop changes. List known props explicitly and spread only the remaining rest props where pass-through is truly needed.
 12. A class expression or declaration created inside a component or function is a new class object per instantiation. Declare classes at module top level (for example in a `.svelte.ts` file) and instantiate them in the component.
-13. b\. `css` is converted to Web Animations keyframes that can run off the main thread; `tick` runs JavaScript each frame and should be used only when CSS cannot express the effect.
+13. **b.** `css` is converted to Web Animations keyframes that can run off the main thread; `tick` runs JavaScript each frame and should be used only when CSS cannot express the effect.
 14. `injected` embeds CSS in the JS and injects it at mount (and into `<head>` on SSR): fewer requests, but larger JS and no separate caching. `external` returns CSS for the bundler to emit as files, cacheable and parallel. Custom elements always use `injected`.
 15. It builds DOM nodes one by one instead of cloning parsed `<template>.innerHTML`. Enable it when a CSP with Trusted Types (`require-trusted-types-for 'script'`) forbids the `innerHTML` path, at some performance cost.
 16. `svelte/internal/*` is private API shaped for compiler output and may change in patch releases. Importing it is a compile error (`import_svelte_internal_forbidden`).
@@ -935,7 +941,7 @@ with `checkJs` (or `// @ts-check`) enabled.
 22. A function that converts a render-time error into a JSON-stringifiable value used for the `failed` snippet and hydration. Accepted by `render` (server), `mount` and `hydrate` (identity by default). It lets you log the real error and send only a redacted message to the browser.
 23. When unsanitized or user-controlled HTML is injected (XSS). Escape or sanitise with an allow-list sanitiser such as DOMPurify at the point of entry; TrustedHTML is supported. Other vectors: `javascript:` URLs in `href`/`src` from user input, and user-controlled `<svelte:element this>`.
 24. Module-level state exists once per server process, so every request shares it; a second visitor’s render can show the first visitor’s data (we observed `alice@example.com` in a later render). Keep per-request state in an instance created per request and share it with context.
-25. b\. Compile with `fragments: 'tree'`.
+25. **b.** Compile with `fragments: 'tree'`.
 26. `nonce` for dynamically rendered per-request responses (the same nonce goes into the CSP header); `hash: true` for statically generated HTML (use `hashes.script` in the policy). Setting both is an `invalid_csp` error.
 27. `$state.snapshot` needs Chrome/Edge 98, Firefox 94, Safari 15.4; `bind:devicePixelContentBoxSize` is unsupported in Safari (Firefox 93+); `flip` needs Firefox 126.
 28. Read the changelog for the range; pin with a lockfile and run all test layers; treat new warnings as work items; avoid internals; isolate experimental usage. Risk: experimental features (`experimental.async`, `fork`, `hydratable`) may change outside semver.
@@ -957,7 +963,7 @@ with `checkJs` (or `// @ts-check`) enabled.
 13. They are inlined into the JavaScript as a string and injected into the shadow root. Custom elements always behave as `css: 'injected'`.
 14. `$host().dispatchEvent(new CustomEvent('change', { detail: value, bubbles: true, composed: true }))`.
 15. A rune returning the host element, valid only in custom element components and only on the client. In a normal component the compiler reports `host_invalid_placement`.
-16. b\. Slotted content is created eagerly by the DOM; `let:` has no effect and slots need a shadow root.
+16. **b.** Slotted content is created eagerly by the DOM; `let:` has no effect and slots need a shadow root.
 17. An HTML attribute cannot carry a function/snippet and HTML consumers use slots. Provide named `<slot>`s for the element’s public API and use snippets only internally.
 18. A function receiving the generated element class and returning a class. Good for `ElementInternals`/form association (`static formAssociated`) and for methods that must exist before the component mounts.
 19. Only erasable syntax (no enums, parameter properties, namespaces); `lang="ts"` must be set on one of the scripts; `extend` is not processed by script preprocessors.
@@ -1000,6 +1006,6 @@ with `checkJs` (or `// @ts-check`) enabled.
 25. Compile warning `legacy_component_creation`; runtime error `component_api_invalid_new`.
 26. Codes were renamed from dashes to underscores; use `a11y_click_events_have_key_events`. Old names warn with `legacy_code` or `unknown_code`.
 27. Any four of: runes by default (use the `runes` function option), remove quoted single expressions (`attribute_quoted`), falsy `class` values omit the attribute, avoid `flushSync` in effects and `setContext` after `await`, modern AST in `parse`, preprocessor `name`.
-28. c\. `mount` plays transitions by default (`intro` true). It returns exports, does not run effects synchronously, and `hydrate` is the one that hydrates.
+28. **c.** `mount` plays transitions by default (`intro` true). It returns exports, does not run effects synchronously, and `hydrate` is the one that hydrates.
 29. The bundler `browser` condition requirement from v4; Vitest needs `resolve.conditions: ['browser']`.
 30. Stores remain supported and are appropriate for complex asynchronous streams, manual control over updates, and for consumers (or libraries) that rely on the store contract and `$store` syntax; you can expose both with `fromStore`/`toStore`.

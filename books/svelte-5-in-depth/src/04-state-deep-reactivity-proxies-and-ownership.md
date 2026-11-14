@@ -16,7 +16,7 @@ For a primitive, `$state` produces a *source*: a box holding a value and a list 
 
 As Chapter 2 showed, the compiler turns this into `$.state(0)`, reads into `$.get(count)` and `count++` into `$.update(count)`. If the variable is never reassigned in the file, it stays a plain variable. There is no API on the value: `count` is a number, not a wrapper.
 
-A source uses `===`-like equality (`Object.is` semantic via the internal `equals`) to decide whether a write is a change: assigning the same primitive again does nothing. For objects assigned to a plain (non-proxy) source the check is identity, which is why `$state.raw` needs reassignment, as we will see.
+A source uses strict equality (`===`, in the internal `equals` function) to decide whether a write is a change: assigning the same primitive again does nothing. For objects assigned to a plain (non-proxy) source the check is identity, which is why `$state.raw` needs reassignment, as we will see.
 
 ## Deep state: proxies for arrays and plain objects
 
@@ -44,7 +44,7 @@ The rule, read from `proxy.js`: a value is proxied only if `typeof value === 'ob
 | frozen plain object | yes (reading works; writes to it are the usual frozen-object failure) |
 | functions | no |
 
-I confirmed that a `$state({ inst, plain: Object.create({y:1}), date, map })` keeps `holder.inst === inst`: the class instance is stored as-is. Non-proxied values inside state are still stored in a source, so *replacing* `holder.inst = other` is reactive, but mutating `inst.x` is not, unless `Pt` uses `$state` fields itself.
+I confirmed that a `$state({ inst, plain: Object.create({y:1}), date, map })` keeps `holder.inst === inst`: the class instance is stored as-is. Non-proxied values inside state are still stored in a source, so *replacing* `holder.inst = other` is reactive, but mutating `inst.x` is not, unless the instance’s class uses `$state` fields itself.
 
 ### Lazily created sources
 
@@ -64,7 +64,7 @@ For arrays: after `push`, an effect reading `arr.length` and one iterating the a
 
 ### The original is not mutated
 
-`$state` copies on write in a sense: the proxy never writes to the target object it wraps for new properties. After `p.a = 5; p.nested.b = 9; p.list.push(3)` the `original` object still held `{"a":1,"nested":{"b":2},"list":[1,2]}`. This is by design, so that state can be forked (Chapter 5, 13), but it means you must stop using the original reference once you hand it to `$state`.
+The proxy never writes through to the object it wraps: it keeps the values in its own sources and leaves the original untouched. After `p.a = 5; p.nested.b = 9; p.list.push(3)` the `original` object still held `{"a":1,"nested":{"b":2},"list":[1,2]}`. This is by design, so that state can be forked (Chapter 5, 13), but it means you must stop using the original reference once you hand it to `$state`.
 
 ### Identity: `proxy !== original`
 
@@ -79,7 +79,7 @@ list[0] === item;      // false
 list.indexOf(list[0]); // 0
 ```
 
-All verified. The proxy returned when you read `list[0]` is a different object from `item`. Comparisons must use values that went through the same path. In dev, `===`, `==`, `!==`, `!=` between a proxy and its original raise the `state_proxy_equality_mismatch` warning (“Reactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `%operator%` will produce unexpected results”). I saw it fire twice for `v === p` and `p == v`. Note that `includes`/`indexOf` are not instrumented, so they silently return wrong results.
+All verified. The proxy returned when you read `list[0]` is a different object from `item`. Comparisons must use values that went through the same path. In dev, `===`, `==`, `!==`, `!=` between a proxy and its original raise the `state_proxy_equality_mismatch` warning (“Reactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `%operator%` will produce unexpected results”). I saw it fire twice for `v === p` and `p == v`. The dev runtime also patches `Array.prototype.includes`, `indexOf` and `lastIndexOf`: when a search misses but an element’s underlying object matches the value you searched for, it logs the same warning. The result is still wrong (`false`, `-1`), and production builds say nothing at all.
 
 Remedies: look items up by id (`list.find(x => x.id === item.id)`), keep the proxy reference you got back (`const added = list[list.length - 1]`), or use `$state.raw` for collections of objects whose identity matters. The same issue appears with `Set`/`Map` keys: a plain `Set` holding the original does not match the proxy.
 
@@ -167,7 +167,7 @@ Observations that I confirmed:
 
 ### The `this` pitfall
 
-Methods lose `this` when detached. `<button onclick={todo.reset}>` calls `reset` with `this` set to the button (for a prototype method), failing or mutating the wrong object. In my test, destructuring `const { bump } = t; bump()` threw `TypeError`. Two fixes: an inline closure (`onclick={() => todo.reset()}`) or an arrow-function field (`reset = () => {...}`, as above). The trade-off: arrow fields are per-instance closures (they cost memory per instance and live on the instance, not the prototype), so use them only for methods you pass around. The compiler even warns about related patterns: `perf_avoid_inline_class` and `perf_avoid_nested_class` discourage creating classes in hot code.
+Methods lose `this` when detached. If `reset` were an ordinary prototype method, `<button onclick={todo.reset}>` would call it with `this` set to the button, failing or mutating the wrong object. In my test, destructuring `const { bump } = t; bump()` threw `TypeError`. Two fixes: an inline closure (`onclick={() => todo.reset()}`) or an arrow-function field (`reset = () => {...}`, as above). The trade-off: arrow fields are per-instance closures (they cost memory per instance and live on the instance, not the prototype), so use them only for methods you pass around.
 
 ## `$state.raw`
 
@@ -193,7 +193,7 @@ What a deep proxy costs:
 - **Memory**: one `Map` and a `version` source per proxy, and one source per property that has been touched.
 - **Every write** goes through the `set` trap, which also proxifies the new value.
 
-What raw costs: one source for the whole value; reads are `get(source)`; no per-property tracking. The trade-off is that updates are coarse: any change re-runs every effect that read the value, and you must produce new objects immutably (`items = items.map(...)`, `[...items, x]`, `structuredClone`-free spreads). Raw is the right default for:
+What raw costs: one source for the whole value; reads are `get(source)`; no per-property tracking. The trade-off is that updates are coarse: any change re-runs every effect that read the value, and you must produce new objects immutably (`items = items.map(...)`, `[...items, x]`, `{ ...item, qty: 2 }`). Raw is the right default for:
 
 - data fetched from a server and replaced wholesale,
 - big read-only datasets (tables, charts, parsed files),
@@ -238,7 +238,7 @@ Under the experimental async flag, state updates that an `await` expression depe
 </nav>
 ```
 
-I verified this with the async flag on (`svelte({ compilerOptions: { experimental: { async: true } } })`). In a component with `{$state.eager(page)}`, `{page}` and `{await load(page)}` (50 ms delay), clicking the button and awaiting `tick()` gave: eager shows `2`, plain shows `1`, data shows `page 1`; after the promise resolved all showed 2. So the plain read and the async read are synchronised and lag, while the eager read is updated at once. Internally `$state.eager` creates an `eager_effect` that is run synchronously after each write (outside the batch’s deferred values) and bumps a version source to re-run the consumer (Chapter 5). Without the flag there is no pending async work, so it behaves like a plain read. When called outside a reaction it just returns `fn()`.
+I verified this with the async flag on (`svelte({ compilerOptions: { experimental: { async: true } } })`). In a component with `{$state.eager(page)}`, `{page}` and `{await load(page)}` (50 ms delay), clicking the button and awaiting `tick()` gave: eager shows `2`, plain shows `1`, data shows `page 1`; after the promise resolved all showed 2. So the plain read and the async read are synchronised and lag, while the eager read is updated at once. Internally `$state.eager` creates an `eager_effect` that is run synchronously after each write (outside the batch’s deferred values) and bumps a version source to re-run the consumer (Chapter 5). Without the flag there is no pending async work, so it behaves like a plain read. When called outside a reaction it just returns the value.
 
 Use sparingly: the docs say “only to provide feedback in response to user action”.
 
@@ -303,7 +303,7 @@ The second yields the compile error “Cannot export state from a module if it i
 
 Alternatives: keep the state private and export accessor functions (`getCount()`), or use a class and export one instance. `$derived` cannot be exported either (`derived_invalid_export`): export a function returning the value.
 
-> **Warning:** Module-level state is per module *instance*, i.e. per process in SSR. A module singleton shared across requests leaks data between users. Chapter 12 and 14 cover context-scoped alternatives.
+> **Warning:** Module-level state is per module *instance*, i.e. per process in SSR. A module singleton shared across requests leaks data between users. Chapters 12 and 14 cover context-scoped alternatives.
 
 ## Ownership: who may mutate what
 
@@ -346,7 +346,7 @@ The fix is either a callback prop (`onrename(name)`), or `$bindable`:
 </script>
 ```
 
-with `<Child bind:person />` in the parent. Binding chains must be unbroken: if `Top` does `<Middle bind:value={v}>` and `Middle` does `<Bind bind:value />` all is well (no warning in my run). If `Top` passes `value={v}` without `bind:` and `Middle` still binds it onward, you get `ownership_invalid_binding` (“`Middle.svelte` passed property `value` to `Bind.svelte` with `bind:`, but its parent component `Top2.svelte` did not declare `value` as a binding…”). A bindable prop with a fallback requires the parent to pass a non-`undefined` value when it uses `bind:` (`props_invalid_value`). Chapter 7 and 8 detail props and bindings.
+with `<Child bind:person />` in the parent. Binding chains must be unbroken: if `Top` does `<Middle bind:value={v}>` and `Middle` does `<Bind bind:value />` all is well (no warning in my run). If `Top` passes `value={v}` without `bind:` and `Middle` still binds it onward, you get `ownership_invalid_binding` (“`Middle.svelte` passed property `value` to `Bind.svelte` with `bind:`, but its parent component `Top2.svelte` did not declare `value` as a binding…”). A bindable prop with a fallback requires the parent to pass a non-`undefined` value when it uses `bind:` (`props_invalid_value`). Chapters 7 and 8 detail props and bindings.
 
 ## Reactive built-ins: `svelte/reactivity`
 
@@ -427,7 +427,7 @@ export class Inventory {
 }
 ```
 
-`items` is raw because it is replaced wholesale, and `adjust` shows the immutable-update idiom. `selected` is a `SvelteSet` held in a plain field: the instance is never reassigned, so no `$state` is required (a `$state` field would wrap a class instance, which is not proxied anyway). Note that `SvelteSet` members keep identity semantics, there is no proxy to compare against.
+`items` is raw because it is replaced wholesale, and `adjust` shows the immutable-update idiom. `selected` is a `SvelteSet` held in a plain field: the instance is never reassigned, so no `$state` is required (a `$state` field would wrap a class instance, which is not proxied anyway). Note that `SvelteSet` members keep identity semantics: there is no proxy to compare against.
 
 ## Seeding state from props
 
@@ -463,7 +463,7 @@ A second variant is state created inside deriveds or effects. Since 5.24 such st
 ## Key takeaways
 
 - `$state` of a primitive is a signal; of an array or plain object it is a lazily-populated recursive proxy; class instances, `Map`, `Set`, `Date` and `Object.create` objects are not proxied.
-- The proxy keeps one source per touched property plus `length` and a keys-version source. The original object is never mutated and has a different identity from the proxy; `includes`, `indexOf` and `===` with originals fail (and warn in dev only for operators).
+- The proxy keeps one source per touched property plus `length` and a keys-version source. The original object is never mutated and has a different identity from the proxy; `includes`, `indexOf` and `===` with originals fail (with a `state_proxy_equality_mismatch` warning in dev).
 - Destructuring copies values. Effects re-run only when what they actually read changes.
 - Class `$state` fields compile to prototype accessors over private fields: non-enumerable, absent from `JSON.stringify`, and `this` is lost on detached methods unless you use arrow fields or closures. Constructor-first-assignment is supported (5.31).
 - `$state.raw` avoids proxy cost and requires reassignment; it is the right default for large, replaced-wholesale data.
@@ -481,38 +481,38 @@ A second variant is state created inside deriveds or effects. Since 5.24 such st
 
 3.  What does this print, and why?
 
-```ts
-const item = { id: 1 };
-const list = $state<{ id: number }[]>([]);
-list.push(item);
-console.log(list.includes(item), list.indexOf(list[0]));
-```
+    ```ts
+    const item = { id: 1 };
+    const list = $state<{ id: number }[]>([]);
+    list.push(item);
+    console.log(list.includes(item), list.indexOf(list[0]));
+    ```
 
 4.  Which of these triggers `state_proxy_equality_mismatch` in dev: `proxy === original`, `list.includes(original)`, `proxy.a === 1`?
 
 5.  Why does the effect below run only once even after `s.value++`? Rewrite it so it re-runs.
 
-```ts
-const s = $state({ value: 0 });
-$effect(() => { s; });
-```
+    ```ts
+    const s = $state({ value: 0 });
+    $effect(() => { s; });
+    ```
 
 6.  Find the bug:
 
-```ts
-const todos = $state([{ done: false }]);
-let { done } = todos[0];
-todos[0].done = true;
-console.log(done);
-```
+    ```ts
+    const todos = $state([{ done: false }]);
+    let { done } = todos[0];
+    todos[0].done = true;
+    console.log(done);
+    ```
 
 7.  What is printed, and which warning appears in dev?
 
-```ts
-let o = $state<{ list: number[] | null }>({ list: null });
-(o.list ??= []).push(1);
-console.log(o.list);
-```
+    ```ts
+    let o = $state<{ list: number[] | null }>({ list: null });
+    (o.list ??= []).push(1);
+    console.log(o.list);
+    ```
 
 8.  Why does `Object.defineProperty(proxy, 'x', { value: 1, enumerable: false })` throw? Give the error code.
 
@@ -543,12 +543,12 @@ console.log(o.list);
 
 19. What does this return and why is the getter needed?
 
-```ts
-export function useDouble(n: number) {
-  const d = $derived(n * 2);
-  return { value: d };
-}
-```
+    ```ts
+    export function useDouble(n: number) {
+      const d = $derived(n * 2);
+      return { value: d };
+    }
+    ```
 
 20. A child component does `person.name = 'x'` on a prop that the parent passed as `{person}` where `person` is `$state`. What happens at runtime and in dev?
 

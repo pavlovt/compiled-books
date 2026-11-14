@@ -76,11 +76,11 @@ Mounting with `count: 1` and clicking once shows `2` (verified). The local overr
 
 Three cases, all verified:
 
-| Parent passes | Child does `obj.count++` | Result |
-|------------------------|------------------------|------------------------|
-| a plain object literal |  | no effect, the object is not reactive |
-| a `$state` proxy |  | UI updates, but dev warns `ownership_invalid_mutation` |
-| nothing, child uses a fallback `{ object = { count: 0 } }` |  | no effect: fallbacks are **not** proxied |
+| Parent passes | Result of `obj.count++` in the child |
+|------------------------------------|------------------------------------|
+| a plain object literal | no effect, the object is not reactive |
+| a `$state` proxy | UI updates, but dev warns `ownership_invalid_mutation` |
+| nothing, child uses a fallback `{ object = { count: 0 } }` | no effect: fallbacks are **not** proxied |
 
 In the second case the console shows `[svelte] ownership_invalid_mutation` (with a message naming the component that owns the state and the one that mutated it). The same ownership check powers `ownership_invalid_binding` for `bind:` chains (Chapter 8). The conclusion in the docs is blunt: “don’t mutate props. Either use callback props to communicate changes, or — if parent and child should share the same object — use the `$bindable` rune.”
 
@@ -295,7 +295,7 @@ Snippets are values, so there are three ways to give them to a child.
 </Table>
 ```
 
-The compiled output (illustrative) shows exactly this: `T($$anchor, { data: [1], row, children: ($$anchor, $$slotProps) => {...}, $$slots: { row: true, default: true } })`. The `$$slots` bookkeeping exists for interop with legacy components.
+The compiled output for a similar call with one `row` snippet (illustrative) shows exactly this: `T($$anchor, { data: [1], row, children: ($$anchor, $$slotProps) => {...}, $$slots: { row: true, default: true } })`. The `$$slots` bookkeeping exists for interop with legacy components.
 
 **Implicit `children`.** Everything inside the tags that is not a snippet declaration becomes the `children` snippet (the `"footer text"` above).
 

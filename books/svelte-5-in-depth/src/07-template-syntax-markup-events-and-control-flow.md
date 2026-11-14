@@ -170,7 +170,7 @@ Only nullish values vanish. `false`, `0` and `NaN` print. A regular-expression l
 
 Expressions in templates must be free of side effects. Writing to `$state` inside a template expression throws `state_unsafe_mutation` at runtime. Put writes in event handlers or effects (Chapter 4).
 
-Template expressions are re-evaluated individually when their dependencies change. In the compiled client output for `<p>{a} + {b}</p>`, each text node gets its own `$.template_effect`-wrapped setter (a detail you can see with `compile`; do not depend on the function names). A consequence for design: there is no “render function” that re-runs; only the expression that read the changed signal runs again.
+Template expressions are re-evaluated when their dependencies change, and only they are. In the compiled client output for `<p>{a} + {b}</p>`, the paragraph’s text is one text node set by one `$.template_effect`; expressions in separate nodes get their own setters or are grouped (Chapters 2 and 5 show the output; do not depend on the function names). A consequence for design: there is no “render function” that re-runs; only the expression that read the changed signal runs again.
 
 ### `{@html}`
 
@@ -272,7 +272,7 @@ The native listener on the target fires first (it is a real listener in the targ
 click button in A:  native A            (the button's own handler never ran)
 ```
 
-The event was stopped before it reached the root, so the delegated handler is never invoked. This is the classic “my third-party widget swallowed my click” bug. Swap the manual `addEventListener` for `on()` from `svelte/events`:
+The event was stopped before it reached the root, so the delegated handler is never invoked. This is the classic “my third-party widget swallowed my click” bug. In a second wrapper, B, I swapped the manual `addEventListener` for `on()` from `svelte/events`:
 
 ```ts
 import { on } from 'svelte/events';
@@ -289,7 +289,7 @@ Summary of rules for delegated events:
 1.  Dispatch synthetic delegated events with `bubbles: true`.
 2.  Never call `stopPropagation()` from a raw `addEventListener` inside the app root if you want declared handlers above or below to run. Use `on`.
 3.  Inside the app root, ordering between declared and raw handlers is not DOM-natural. Prefer `on` for anything you add imperatively.
-4.  Calling `event.stopPropagation()` in a **declared** handler of a delegated event works for other declared handlers: the runtime walks the event path and stops as soon as the event’s `cancelBubble` is set. Native listeners registered on elements *above the mount root* still see the event only until the root listener is reached, because that is where the declared handlers run; the event then continues from there unless it was stopped.
+4.  Calling `event.stopPropagation()` in a **declared** handler of a delegated event works for the other declared handlers: the runtime walks the event path and stops as soon as the event’s `cancelBubble` is set. Because that walk happens in the root listener, native listeners on elements inside the root have already run by then, and listeners above the mount root never see the event, since propagation was stopped at the root.
 5.  The root listener belongs to the `mount` target, so each mounted app (or shadow root) gets its own.
 
 > **Senior tip:** If a bug report says “click handler doesn’t fire inside the third-party widget”, the first thing to check is whether the widget calls `stopPropagation` on a delegated event type. If you cannot patch it, switch the handler to a non-delegated route, for example use a capture-phase attribute (`onpointerdowncapture`, a real non-delegated listener that runs before the bubble-phase `stopPropagation`), or register the handler with `on()`.
@@ -656,9 +656,26 @@ Svelte 5.47 added support for the browser’s customizable `<select>` (rich cont
 
 20. What does `{#await}` render on the server for (a) a pending promise, (b) a resolved non-promise value, (c) `{#await p catch e}`?
 
-21. Predict the output: `svelte {const x = 1} <div> {const x = 2} {x} <span>{x}</span> </div> {x}`
+21. Predict the output:
 
-22. Rewrite this with declaration tags and explain what extra capability they have: `svelte {#each rows as row} {@const total = row.qty * row.price} <td>{total}</td> {/each}`
+    ```html
+    {const x = 1}
+    <div>
+      {const x = 2}
+      {x}
+      <span>{x}</span>
+    </div>
+    {x}
+    ```
+
+22. Rewrite this with declaration tags and explain what extra capability they have:
+
+    ```html
+    {#each rows as row}
+      {@const total = row.qty * row.price}
+      <td>{total}</td>
+    {/each}
+    ```
 
 23. Which compile error is produced by `{var a = 1}`, by `{const a = 1}{const a = 2}`, and by using `{const}` in a component with `<script>` that uses `export let`?
 
@@ -668,6 +685,6 @@ Svelte 5.47 added support for the browser’s customizable `<select>` (rich cont
 
 26. `<div style:color="red" style="color: blue !important">` — what colour, and why?
 
-27. Design question: you are building `<Heading level={n}>`. Compare implementing it with `{#if}` chains, with `<svelte:element this={`h\${level}`}>`, and with a lookup of component references. State the trade-offs.
+27. Design question: you are building `<Heading level={n}>`. Compare implementing it with `{#if}` chains, with ``<svelte:element this={`h${level}`}>``, and with a lookup of component references. State the trade-offs.
 
 28. Why does Svelte refuse to compile `<table><tr>...</tr></table>`, and what category of runtime problem does this prevent?

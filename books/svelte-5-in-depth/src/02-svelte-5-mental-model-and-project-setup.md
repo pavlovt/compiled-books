@@ -32,7 +32,7 @@ If you know Svelte 4, this table is the whole delta at the syntax level. Chapter
 | Lifecycle | `beforeUpdate`, `afterUpdate`, `onMount`, `onDestroy` | `$effect.pre`, `$effect`, `onMount`, `onDestroy` |
 | Actions | `use:action` | `{@attach ...}` (5.29+; `use:` still works) |
 
-Several other facts from the facts sheet are worth having in your head from the start. Components are functions, not classes. Events are ordinary attributes (`onclick`), which means they can be spread and passed as props. State is a variable, not a store object, so `count` is a number and not something you `.get()`. And nothing in a `.svelte` file re-executes when state changes: the `<script>` runs once per instance, and *reactive constructs* (`$derived`, `$effect`, template expressions) are the only parts that re-run.
+A few more facts are worth having in your head from the start. Components are functions, not classes. Events are ordinary attributes (`onclick`), which means they can be spread and passed as props. State is a variable, not a store object, so `count` is a number and not something you `.get()`. And nothing in a `.svelte` file re-executes when state changes: the `<script>` runs once per instance, and *reactive constructs* (`$derived`, `$effect`, template expressions) are the only parts that re-run.
 
 ## Creating a project
 
@@ -326,7 +326,7 @@ for (const [name, src] of Object.entries(cases)) {
 // legacy false / runes true / forcedRunes true / noScript false
 ```
 
-The last line is the subtle one: a component with no script at all is compiled in legacy mode, which is harmless, because there is nothing to differ.
+The last line is the subtle one: a component with no script at all is compiled in legacy mode, which is harmless: with no state and no props there is nothing that would behave differently in runes mode.
 
 Why does this matter in practice? Because inference is per file and silent. A component whose only reactive declaration is `let count = 0` and that you *intended* to be runes mode compiles in legacy mode, where `count++` is implicitly reactive. It happens to work, which hides the mistake until you add `$derived` somewhere and get a mixed-mode error. The remedy is to make the mode explicit for the whole project.
 
@@ -445,7 +445,7 @@ There is no global “app” object. A page can host any number of independent r
 
 The Svelte team maintains the **Svelte for VS Code** extension (syntax highlighting, diagnostics from the compiler, type checking through the Svelte language server, and component documentation on hover). Integrations exist for other editors. A comment starting with `@component` documents a component for the language server:
 
-```html
+````html
 <!--
 @component
 A badge that shows a count.
@@ -453,65 +453,66 @@ A badge that shows a count.
 - Usage:
   ```svelte
   <Badge count={3} />
+  ```
+-->
+````
+
+### Type checking: `svelte-check` and `sv check`
+
+TypeScript’s compiler does not understand `.svelte` files, so the project needs a separate checker. `svelte-check` runs the same language-server logic from the command line and is what the Vite template’s `check` script uses (`svelte-check --tsconfig ./tsconfig.app.json`). The CLI also exposes it as `npx sv check`. Run it in CI: it reports TypeScript errors in `<script lang="ts">`, compiler warnings (including accessibility warnings), and unused CSS selectors, so it catches real problems that `vite build` ignores.
+
+### Formatting and linting
+
+Formatting is done with Prettier and `prettier-plugin-svelte`. Linting uses `eslint-plugin-svelte`; the older `eslint-plugin-svelte3` is deprecated. `sv add prettier` and `sv add eslint` configure both for you.
+
+### Debugging, briefly
+
+Dev builds (`dev: true`, which the Vite plugin sets in serve mode) add runtime checks and richer warnings, such as `ownership_invalid_mutation` and `state_proxy_equality_mismatch`. `$inspect` is dev-only and is a no-op in production builds. Chapter 4 introduces the debugging helpers and Chapter 16 collects them.
+
+## Browser support
+
+The docs give a baseline for Svelte’s own runtime, derived from the browser APIs it uses:
+
+| Browser | Minimum version |
+| --- | --- |
+| Chrome / Edge | 87 |
+| Firefox | 83 |
+| Safari | 14 |
+| Opera | 73 |
+| Opera (Android) | 62 |
+| Samsung Internet | 14.0 |
+| Android WebView | 87 |
+| Internet Explorer | not supported |
+
+This is equivalent to a Baseline 2020 target, and it covers Svelte only: your own code, your libraries, and your bundler’s output may need more. Three features need newer browsers:
+
+| Feature | Chrome/Edge | Firefox | Safari |
+| --- | --- | --- | --- |
+| `$state.snapshot` | 98 | 94 | 15.4 |
+| `bind:devicePixelContentBoxSize` | — | 93 | not supported |
+| `flip` from `svelte/animate` | — | 126 | — |
+
+The snapshot requirement comes from its use of `structuredClone`. If you must support older browsers and need snapshots, a `structuredClone` polyfill is the simplest fix; Chapter 3 shows what snapshot does with values it cannot clone.
+
+## Project layout for a framework-less app
+
+Svelte does not impose a structure. These conventions keep a Vite-based SPA easy to reason about, and they are the ones the book’s examples follow.
+
+```text
+src/
+  main.ts                  entry: mounts <App>
+  App.svelte               root component
+  app.css                  global styles
+  lib/
+    components/            presentational components
+      Button.svelte
+    features/              feature folders: components + logic together
+      todos/
+        TodoList.svelte
+        todos.svelte.ts    reactive domain logic (class or factory)
+        todos.test.ts
+    shared/                framework-agnostic helpers (plain .ts)
 ```
-
-–\>
-
-    ### Type checking: `svelte-check` and `sv check`
-
-    TypeScript's compiler does not understand `.svelte` files, so the project needs a separate checker. `svelte-check` runs the same language-server logic from the command line and is what the Vite template's `check` script uses (`svelte-check --tsconfig ./tsconfig.app.json`). The CLI also exposes it as `npx sv check`. Run it in CI: it reports TypeScript errors in `<script lang="ts">`, compiler warnings (including accessibility warnings), and unused CSS selectors, so it catches real problems that `vite build` ignores.
-
-    ### Formatting and linting
-
-    Formatting is done with Prettier and `prettier-plugin-svelte`. Linting uses `eslint-plugin-svelte`; the older `eslint-plugin-svelte3` is deprecated. `sv add prettier` and `sv add eslint` configure both for you.
-
-    ### Debugging, briefly
-
-    Dev builds (`dev: true`, which the Vite plugin sets in serve mode) add runtime checks and richer warnings, such as `ownership_invalid_mutation` and `state_proxy_equality_mismatch`. `$inspect` is dev-only and is a no-op in production builds. Chapter 4 introduces the debugging helpers and Chapter 16 collects them.
-
-    ## Browser support
-
-    The docs give a baseline for Svelte's own runtime, derived from the browser APIs it uses:
-
-    | Browser | Minimum version |
-    | --- | --- |
-    | Chrome / Edge | 87 |
-    | Firefox | 83 |
-    | Safari | 14 |
-    | Opera | 73 |
-    | Opera (Android) | 62 |
-    | Samsung Internet | 14.0 |
-    | Android WebView | 87 |
-    | Internet Explorer | not supported |
-
-    This is equivalent to a Baseline 2020 target, and it covers Svelte only: your own code, your libraries, and your bundler's output may need more. Three features need newer browsers:
-
-    | Feature | Chrome/Edge | Firefox | Safari |
-    | --- | --- | --- | --- |
-    | `$state.snapshot` | 98 | 94 | 15.4 |
-    | `bind:devicePixelContentBoxSize` | — | 93 | not supported |
-    | `flip` from `svelte/animate` | — | 126 | — |
-
-    The snapshot requirement comes from its use of `structuredClone`. If you must support older browsers and need snapshots, a `structuredClone` polyfill is the simplest fix; Chapter 3 shows what snapshot does with values it cannot clone.
-
-    ## Project layout for a framework-less app
-
-    Svelte does not impose a structure. These conventions keep a Vite-based SPA easy to reason about, and they are the ones the book's examples follow.
-
-    ```text
-    src/
-      main.ts                  entry: mounts <App>
-      App.svelte               root component
-      app.css                  global styles
-      lib/
-        components/            presentational components
-          Button.svelte
-        features/              feature folders: components + logic together
-          todos/
-            TodoList.svelte
-            todos.svelte.ts    reactive domain logic (class or factory)
-            todos.test.ts
-        shared/                framework-agnostic helpers (plain .ts)
 
 Four guidelines go with it.
 
@@ -528,19 +529,21 @@ Every example is a real file with its path in the first line, as in `// src/lib/
 
 - “I ran this” statements mean the code was executed against `svelte@5.57.2` under Vitest with jsdom. The reusable lab setup is a few lines:
 
-```ts
-// vitest.config.ts
-import { defineConfig } from 'vitest/config'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+  ```ts
+  // vitest.config.ts
+  import { defineConfig } from 'vitest/config'
+  import { svelte } from '@sveltejs/vite-plugin-svelte'
 
-export default defineConfig({
-  plugins: [svelte()],
-  resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
-  test: { environment: 'jsdom', include: ['lab/**/*.test.ts'] },
-})
-```
+  export default defineConfig({
+    plugins: [svelte()],
+    resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
+    test: { environment: 'jsdom', include: ['lab/**/*.test.ts'] },
+  })
+  ```
 
-The `browser` condition makes Svelte resolve to its client build instead of its server build, which would otherwise ignore effects and throw on `mount`. Chapter 16 explains. - Compiler output shown in Chapters 2 and 5 comes from `compile()` in 5.57.2. It is illustrative and version-specific: function names such as `$.template_effect` are private.
+  The `browser` condition makes Svelte resolve to its client build instead of its server build, which would otherwise ignore effects and throw on `mount`. Chapter 16 explains.
+
+- Compiler output shown in Chapters 2 and 5 comes from `compile()` in 5.57.2. It is illustrative and version-specific: function names such as `$.template_effect` are private.
 
 ## A complete first example
 
@@ -649,14 +652,14 @@ Before going on, make sure the following are second nature, because everything l
 
 3.  What does this component print to the console if `{x}` is clicked three times? When does the `console.log` run?
 
-```html
-<script lang="ts">
-  let x = $state(0)
-  console.log('setup', x)
-</script>
+    ```html
+    <script lang="ts">
+      let x = $state(0)
+      console.log('setup', x)
+    </script>
 
-<button onclick={() => x++}>{x}</button>
-```
+    <button onclick={() => x++}>{x}</button>
+    ```
 
 4.  List four syntax changes between Svelte 4 and Svelte 5 for (a) local state, (b) props, (c) DOM events and (d) component instantiation.
 
@@ -677,36 +680,36 @@ Before going on, make sure the following are second nature, because everything l
 
 10. Find the bug. The component compiles with a warning. What is the warning and how would you fix it so the label tracks `kind`?
 
-```html
-<script lang="ts">
-  let { kind }: { kind: 'error' | 'info' } = $props()
-  let label = kind === 'error' ? 'Error!' : 'Note'
-</script>
+    ```html
+    <script lang="ts">
+      let { kind }: { kind: 'error' | 'info' } = $props()
+      let label = kind === 'error' ? 'Error!' : 'Note'
+    </script>
 
-<strong>{label}</strong>
-```
+    <strong>{label}</strong>
+    ```
 
 11. What happens at runtime if you call this function, and why does the editor not complain?
 
-```ts
-// src/lib/util.ts
-export function makeCounter() {
-  let n = $state(0)
-  return { inc: () => n++ }
-}
-```
+    ```ts
+    // src/lib/util.ts
+    export function makeCounter() {
+      let n = $state(0)
+      return { inc: () => n++ }
+    }
+    ```
 
 12. What is the minimal change to make the previous module valid? Give the new filename.
 
 13. Why is this module rejected by the compiler, and which two patterns does the documentation offer instead?
 
-```ts
-// state.svelte.ts
-export let user = $state<{ name: string } | null>(null)
-export function login(name: string) {
-  user = { name }
-}
-```
+    ```ts
+    // state.svelte.ts
+    export let user = $state<{ name: string } | null>(null)
+    export function login(name: string) {
+      user = { name }
+    }
+    ```
 
 14. What does “the compiler sees one file at a time” imply for a function that takes a `$state` variable as an argument, such as `track(count)`? What do you pass instead?
 
@@ -725,15 +728,15 @@ export function login(name: string) {
 
 19. Predict the contents of `log` at each marked point.
 
-```ts
-const log: string[] = []
-// Component calls log.push('effect') in $effect and log.push('mount') in onMount
-const app = mount(Comp, { target: document.body })
-// (A)
-flushSync()
-// (B)
-await unmount(app)
-```
+    ```ts
+    const log: string[] = []
+    // Component calls log.push('effect') in $effect and log.push('mount') in onMount
+    const app = mount(Comp, { target: document.body })
+    // (A)
+    flushSync()
+    // (B)
+    await unmount(app)
+    ```
 
 20. When do you use `unmount(app, { outro: true })` and how does the returned promise differ from the default?
 

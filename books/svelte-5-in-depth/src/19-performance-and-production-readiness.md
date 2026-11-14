@@ -63,7 +63,7 @@ Guidelines that follow from this:
 | Immutable data updated by spreading | `$state.raw` | Matches the pattern; avoids proxies of frozen structures |
 | Things that never trigger updates (caches, timers, DOM refs read only in handlers) | plain variables | Reactivity has a cost, even when small |
 
-Two compiler-level facts help here. First, `$state` that is never reassigned or mutated in a component compiles to a plain variable (`let n = 1;`), so unneeded `$state` is free at runtime but still noise. Second, `$state` of an object literal compiles to `$.proxy({...})`, while only reassigned primitives become `$.state(...)` signals (illustrative: we saw `let items = $.proxy([{ id: 1, t: 'a' }])` in our compile output).
+Two compiler-level facts help here. First, `$state` that is never reassigned or mutated in a component compiles to a plain variable (`let n = 1;`), so unneeded `$state` is free at runtime but still noise. Second, `$state` of an object literal compiles to `$.proxy({...})`, and only a variable that is reassigned (primitive or object) is additionally wrapped in a `$.state(...)` signal (illustrative: we saw `let items = $.proxy([{ id: 1, t: 'a' }])` in our compile output).
 
 Proxies also have semantic costs that matter for performance work:
 
@@ -76,7 +76,7 @@ Proxies also have semantic costs that matter for performance work:
 `$derived` has two properties that you should design around:
 
 - **Laziness and memoisation.** A derived recomputes only when read and only if a dependency changed since the last computation.
-- **Equality cut-off.** When a derived recomputes and produces a value equal (`===` for primitives, with the usual `NaN` handling) to its previous value, dependents are *not* notified. Svelte’s own description: “if the new value is referentially identical, downstream updates are skipped.”
+- **Equality cut-off.** When a derived recomputes and produces a value equal (by `===`) to its previous value, dependents are *not* notified. Svelte’s own description: “if the new value is referentially identical, downstream updates are skipped.”
 
 We verified the cut-off. A component with `let parity = $derived(n % 2 === 0 ? 'even' : 'odd')` and an effect that reads `parity` was mounted with `n = 2`, then `n` was set to 4 and then 6: the effect ran once in total (its initial run). Setting `n = 7` changed the parity and the effect ran a second time. The practical lesson is that you can reduce downstream work by deriving *coarser* values from fast-changing ones: derive a boolean (`isNarrow`) from a continuously changing `innerWidth` and let the template depend on the boolean.
 
@@ -129,7 +129,7 @@ $effect(() => {
 
 ### Keyed each blocks
 
-`{#each items as item}` without a key. The compiler emitted `$.each(node, 17, () => items, $.index, ...)`: an unkeyed block is a block *keyed by index*. Reordering, inserting at the front or removing from the middle therefore reuses DOM and component instances by position, rewriting each row’s contents instead of moving nodes. For primitives in a static list that is fine. For lists of components or rows with internal state (inputs, focus, animations), it is wrong and slow.
+Take `{#each items as item}` without a key. The compiler emitted `$.each(node, 17, () => items, $.index, ...)`: an unkeyed block is a block *keyed by index*. Reordering, inserting at the front or removing from the middle therefore reuses DOM and component instances by position, rewriting each row’s contents instead of moving nodes. For primitives in a static list that is fine. For lists of components or rows with internal state (inputs, focus, animations), it is wrong and slow.
 
 A keyed block, `{#each items as item (item.id)}`, compiles to a block whose key function is `(it) => it.id`. The runtime keeps a `Map` from key to row (an effect, DOM range and, if needed, signals for the item and index), and on each update it walks the new array: rows whose key exists are updated and *moved* if their position changed; rows for new keys are created; rows whose keys are gone are destroyed (after outros). The cost model is O(n) for a pass, plus work proportional to what changed, with DOM moves only where necessary.
 
@@ -276,42 +276,42 @@ Svelte cleans up after itself: when a component is destroyed, its effects, their
 1.  **Unowned effects.** `$effect.root(fn)` creates effects outside any component and returns a destroy function; forgetting to call it leaks every effect, signal subscription and closed-over object inside. This includes tests (Chapter 16) and module-level code that creates effects. Pair every `$effect.root` with a destroy call in a `onDestroy`/cleanup path.
 2.  **Listeners and timers on globals.** `window.addEventListener` inside `onMount` without removal, `setInterval` without `clearInterval`. Return cleanups: from `onMount` (only if the callback is synchronous), from `$effect`, or from attachments. Prefer declarative `<svelte:window onresize={...}>`, which Svelte removes for you, and `on()` from `svelte/events` (it returns a remover) inside attachments.
 
-```html
-<script lang="ts">
-  let now = $state(Date.now());
+    ```html
+    <script lang="ts">
+      let now = $state(Date.now());
 
-  $effect(() => {
-    const id = setInterval(() => (now = Date.now()), 1000);
-    return () => clearInterval(id);   // runs before re-run and on destroy
-  });
-</script>
-```
+      $effect(() => {
+        const id = setInterval(() => (now = Date.now()), 1000);
+        return () => clearInterval(id);   // runs before re-run and on destroy
+      });
+    </script>
+    ```
 
 3.  **External subscriptions.** Observing something outside Svelte (a WebSocket, a `matchMedia` list, a third-party store) is the use case for `createSubscriber` from `svelte/reactivity`. It starts the subscription when the first effect reads it and stops it when the last one is destroyed, so you do not leak and do not do work when nobody is looking:
 
-```ts
-// src/lib/online.svelte.ts
-import { createSubscriber } from 'svelte/reactivity';
-import { on } from 'svelte/events';
+    ```ts
+    // src/lib/online.svelte.ts
+    import { createSubscriber } from 'svelte/reactivity';
+    import { on } from 'svelte/events';
 
-export class OnlineStatus {
-  #subscribe = createSubscriber((update) => {
-    const offOnline = on(window, 'online', update);
-    const offOffline = on(window, 'offline', update);
-    return () => {
-      offOnline();
-      offOffline();
-    };
-  });
+    export class OnlineStatus {
+      #subscribe = createSubscriber((update) => {
+        const offOnline = on(window, 'online', update);
+        const offOffline = on(window, 'offline', update);
+        return () => {
+          offOnline();
+          offOffline();
+        };
+      });
 
-  get current() {
-    this.#subscribe();            // registers the calling effect as a dependent
-    return navigator.onLine;
-  }
-}
-```
+      get current() {
+        this.#subscribe();            // registers the calling effect as a dependent
+        return navigator.onLine;
+      }
+    }
+    ```
 
-`#subscribe()` must be called inside a reactive context for the subscription to start. `start` is called once while at least one effect is active, and the cleanup runs when all dependents are gone. (The built-in `online` from `svelte/reactivity/window` is already implemented this way.)
+    `#subscribe()` must be called inside a reactive context for the subscription to start. `start` is called once while at least one effect is active, and the cleanup runs when all dependents are gone. (The built-in `online` from `svelte/reactivity/window` is already implemented this way.)
 
 4.  **Closures over large proxies.** A long-lived callback that closes over a component’s `$state` object keeps that object alive. Module-level caches keyed by component instances, global event buses holding handlers from destroyed components, and detached DOM nodes held in arrays are classic culprits.
 5.  **Unmounted roots.** `mount()` returns a handle; `unmount(handle)` tears down the tree. Applications that mount tooltips or portals imperatively must unmount them. Calling `unmount` twice yields the `lifecycle_double_unmount` warning (“Tried to unmount a component that was not mounted”), which is a useful signal that your ownership is muddled.
@@ -400,7 +400,7 @@ We rendered a component reading `session.user` after another request had called 
 
 Rules:
 
-- **Never put per-user data in module-level state that is touched during SSR.** Hold it in a component-scoped object and share it down the tree with context (`createContext`), created inside the root component or provided through `render(App, { context })`/`mount(..., { context })`.
+- **Never put per-user data in module-level state that is touched during SSR.** Hold it in a component-scoped object and share it down the tree with context (`createContext`), created inside the root component or provided through a wrapper component around the root (Chapter 12).
 - Module-level state is fine for truly global, immutable or per-process data (feature flags loaded once, constants).
 - Be careful with module-level *caches* (memoised fetches) and `hydratable` keys: key by request-specific values.
 - Test it. A two-request SSR test (see Chapter 16) that asserts the second render does not contain the first user’s data is cheap insurance.
@@ -484,23 +484,23 @@ Upgrade policy that has served teams well:
 5.  Explain what the proxy created by `$state` costs on reads and what it costs on identity. Give two situations where `$state.raw` is the better choice.
 6.  Rewrite this to avoid an effect chain and explain the performance difference:
 
-```html
-<script lang="ts">
-  let items = $state<{ price: number }[]>([]);
-  let total = $state(0);
-  $effect(() => { total = items.reduce((a, i) => a + i.price, 0); });
-</script>
-```
+    ```html
+    <script lang="ts">
+      let items = $state<{ price: number }[]>([]);
+      let total = $state(0);
+      $effect(() => { total = items.reduce((a, i) => a + i.price, 0); });
+    </script>
+    ```
 
 7.  What does this print and why? (`n` is a prop changed from 2 to 4 to 6 and then to 7.)
 
-```html
-<script lang="ts">
-  let { n }: { n: number } = $props();
-  let parity = $derived(n % 2 === 0 ? 'even' : 'odd');
-  $effect(() => { console.log(parity); });
-</script>
-```
+    ```html
+    <script lang="ts">
+      let { n }: { n: number } = $props();
+      let parity = $derived(n % 2 === 0 ? 'even' : 'odd');
+      $effect(() => { console.log(parity); });
+    </script>
+    ```
 
 8.  Why does `let visible = $derived(items.filter(...))` notify its dependents even if the filtered result contains the same members as before?
 9.  A teammate says “I’ll split this component into ten smaller ones so that Svelte re-renders less.” Evaluate the claim.
@@ -509,14 +509,10 @@ Upgrade policy that has served teams well:
 12. What do `perf_avoid_inline_class` and `perf_avoid_nested_class` warn about, and what is the fix?
 13. Multiple choice: for a custom transition, which is preferred and why?
 
-<!-- -->
-
-a.  `tick`, because it gives per-frame control.
-b.  `css`, because it is compiled into a Web Animation that can run off the main thread.
-c.  Both are identical.
-d.  Neither; transitions must use CSS classes.
-
-<!-- -->
+    a.  `tick`, because it gives per-frame control.
+    b.  `css`, because it is compiled into a Web Animation that can run off the main thread.
+    c.  Both are identical.
+    d.  Neither; transitions must use CSS classes.
 
 14. Explain the trade-off between `css: 'injected'` and `css: 'external'`, and say which is forced for custom elements.
 15. What does `fragments: 'tree'` change and why would you enable it?
@@ -525,12 +521,12 @@ d.  Neither; transitions must use CSS classes.
 18. What is `createSubscriber` for? Describe when the `start` callback runs and when its cleanup runs.
 19. Write the cleanup-correct version of this component:
 
-```html
-<script lang="ts">
-  let w = $state(0);
-  window.addEventListener('resize', () => (w = innerWidth));
-</script>
-```
+    ```html
+    <script lang="ts">
+      let w = $state(0);
+      window.addEventListener('resize', () => (w = innerWidth));
+    </script>
+    ```
 
 20. What does `unmount` twice on the same handle cause?
 21. What does `<svelte:boundary>` not catch? Give two examples and the correct handling.
@@ -539,14 +535,10 @@ d.  Neither; transitions must use CSS classes.
 24. Explain how module-level `$state` can leak user data across SSR requests. Give the safe alternative.
 25. Multiple choice: which CSP configuration is required for the default template cloning approach to work under `require-trusted-types-for 'script'`?
 
-<!-- -->
-
-a.  Nothing; it works by default.
-b.  Compile with `fragments: 'tree'`.
-c.  Compile with `css: 'external'`.
-d.  Disable `discloseVersion`.
-
-<!-- -->
+    a.  Nothing; it works by default.
+    b.  Compile with `fragments: 'tree'`.
+    c.  Compile with `css: 'external'`.
+    d.  Disable `discloseVersion`.
 
 26. When should you use `csp: { nonce }` versus `csp: { hash: true }` in `render`, and what happens if both are set?
 27. Name two browser-support caveats listed in the docs and the features they affect.

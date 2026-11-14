@@ -254,7 +254,7 @@ Svelte maps `onxyz` attributes on custom elements to `addEventListener('xyz', ..
 - Set `bubbles: true` if consumers will listen on ancestors, and `composed: true` if the event must cross a shadow boundary to reach listeners outside nested shadow roots (we used both in the rating element). Without `composed`, an event dispatched inside nested shadow roots stops at the boundary.
 - Put the payload in `detail`, and do not rely on consumers reading your internal state.
 - Dispatch after state changes that the consumer might read back: a `rate` event listener that reads `el.value` should see the new value, so assign the prop first (as `set` does).
-- Name events in lowercase with no dashes problems: `onrate`, `onitem-selected` is awkward in Svelte attribute syntax (use `addEventListener` in that case).
+- Name events in lowercase without dashes: `onrate` works naturally as a Svelte attribute, while `onitem-selected` is awkward (consumers would have to use `addEventListener`).
 
 Typing `$host()`: it is generic, `$host<El extends HTMLElement = HTMLElement>()`, so `$host<HTMLElement & { value: number }>()` gives you typed access.
 
@@ -319,19 +319,19 @@ With `formAssociated = true` the element participates in `<form>` submission, va
 
 ## What does not work
 
-- **Context across element boundaries.** “You can use Svelte’s context feature between regular Svelte components within a custom element, but you can’t use them across custom elements.” Each custom element is its own Svelte root; `setContext` in a parent element is invisible to `getContext` in a child element. For cross-element communication use DOM events, properties, or the platform’s Context Protocol (the community `@lit/context`-style event-based protocol, which you would implement with `$host()` events).
+- **Context across element boundaries.** “You can use Svelte’s context feature between regular Svelte components within a custom element, but you can’t use them across custom elements.” Each custom element is its own Svelte root; `setContext` in a parent element is invisible to `getContext` in a child element. For cross-element communication use DOM events, properties, or the community Context Protocol (the event-based protocol that `@lit/context` implements), which you would implement with `$host()` events.
 - **Server-side rendering.** “Custom elements are not generally suitable for server-side rendering, as the shadow DOM is invisible until JavaScript loads.” Svelte’s `render()` works on the component, but the output is not declarative shadow DOM, so the page content appears only after the element upgrades. Expect a flash of empty content and layout shift; reserve space with CSS (`x-rating:not(:defined) { display: inline-block; min-height: 2rem }`) and use `:defined`.
 - **Older browsers** need polyfills (custom elements and shadow DOM are Baseline today, but Svelte’s own browser floor is older than some CE features; check `ElementInternals`, `adoptedStyleSheets`, and `ShadowRootInit` options such as `clonable` for your targets).
 - **Global styles.** Utility CSS (Tailwind) and page-level resets do not penetrate. Either use `shadow: 'none'` or ship styles with the element.
 - **Bundle duplication.** Each independently bundled element brings its own copy of the Svelte runtime unless you bundle them together or externalise `svelte`. See below.
-- **Two-way binding.** There is no `bind:` across the custom element boundary from non-Svelte consumers. Use events plus properties; in Svelte, `bind:value` on a custom element works only on elements you listen to via standard property/event semantics, so prefer explicit `value={x}` and `onchange` handlers.
+- **Two-way binding.** There is no `bind:` across the custom element boundary from non-Svelte consumers. Use events plus properties. Within Svelte too, prefer an explicit `value={x}` plus an `onchange` (or custom event) handler over `bind:` on a custom element.
 
 ## Using Svelte custom elements from other frameworks
 
 Because the output is the platform’s `customElements` API, integration is idiomatic in each host:
 
 - **Plain HTML / CMS**: import the module (or a script tag) and write the tag. Attributes configure; properties carry rich data.
-- **React**: React 19 passes properties to custom elements when a matching property exists on the element and supports custom events via `onevent` props with the `on` + CamelCase convention only for known React events, so for custom events such as `rate` attach with a `ref` and `addEventListener`. Pass objects as properties, which React 19 does.
+- **React**: React 19 sets properties on custom elements when the element defines a matching property, so objects and arrays arrive intact, and it can attach listeners for custom events through `on…` props. Check how your React version maps the event name; attaching with a `ref` and `addEventListener` always works.
 - **Vue**: configure `compilerOptions.isCustomElement` for your prefix; use `.prop` modifier for property binding and `@rate` for events.
 - **Angular**: add `CUSTOM_ELEMENTS_SCHEMA` and use property binding `[value]` and event binding `(rate)`.
 
@@ -457,13 +457,13 @@ Our test used jsdom, which supports custom elements and shadow DOM well enough. 
 6.  A teammate calls `el.focusInput()` on a custom element immediately after creating it, and it throws. Why, and what are two fixes?
 7.  What does this component compile to in terms of warnings, and how do you fix it?
 
-```html
-<svelte:options customElement="x-card" />
-<script lang="ts">
-  let props = $props();
-</script>
-<p>{props.title}</p>
-```
+    ```html
+    <svelte:options customElement="x-card" />
+    <script lang="ts">
+      let props = $props();
+    </script>
+    <p>{props.title}</p>
+    ```
 
 8.  Given `props: { value: { type: 'Number', reflect: true } }`, what happens when HTML contains `value="3"`, and what happens to the attribute when the component sets `value = 5`?
 9.  How should you pass an array to a custom element from a framework that only supports attributes? From Svelte?
@@ -475,14 +475,10 @@ Our test used jsdom, which supports custom elements and shadow DOM well enough. 
 15. What is `$host()`, what are its restrictions, and what error appears if used in a normal component?
 16. Multiple choice: which statement about slots in a Svelte custom element is true?
 
-<!-- -->
-
-a.  Slot content is created lazily and only when the `<slot>` is rendered.
-b.  Slot content is created eagerly by the DOM even if the `<slot>` is inside a false `{#if}`.
-c.  `let:` passes data from child to slotted content.
-d.  Slots work with `shadow: 'none'`.
-
-<!-- -->
+    a.  Slot content is created lazily and only when the `<slot>` is rendered.
+    b.  Slot content is created eagerly by the DOM even if the `<slot>` is inside a false `{#if}`.
+    c.  `let:` passes data from child to slotted content.
+    d.  Slots work with `shadow: 'none'`.
 
 17. Why can’t a `children` snippet prop be supplied by an HTML consumer, and how should you design around it?
 18. What does the `extend` option receive and return? Give two things it is good for.

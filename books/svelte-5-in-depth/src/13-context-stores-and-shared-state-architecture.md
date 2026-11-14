@@ -134,7 +134,7 @@ Context values are not reactive by themselves; context is a plain map lookup per
 <button onclick={() => (counter.count += 1)}>increment</button>
 ```
 
-The trap, in the docs’ words: “if you *reassign* `counter` instead of updating it, you will ‘break the link’”. After `counter = { count: 0 }` the provider’s variable points at a new proxy while every consumer still holds the old one. Reset by mutating (`counter.count = 0`). Svelte warns when it can detect the mistake (the `state_referenced_locally`-family and ownership warnings), but the rule is architectural: **the object identity placed into context must be stable for the lifetime of the provider.**
+The trap, in the docs’ words: “if you *reassign* `counter` instead of updating it, you will ‘break the link’”. After `counter = { count: 0 }` the provider’s variable points at a new proxy while every consumer still holds the old one. Reset by mutating (`counter.count = 0`). Svelte does not warn about this mistake, so the rule is architectural: **the object identity placed into context must be stable for the lifetime of the provider.**
 
 Primitives are the second trap. `setX(count)` copies the *number*. Pass a getter, or wrap in an object with a getter, exactly as in the theme example above (`get mode() { return mode; }`). That is the “passing state into functions” principle from the `$state` documentation: functions (including getters on objects) are how you pass *current values* rather than snapshots.
 
@@ -415,7 +415,7 @@ Beware of the SSR leak with the fallback; it is only safe if `fallbackPrefs` is 
 
 ### Derived selectors
 
-Components that need “the items matching X” should receive them from a derived selector on the shared state rather than filtering in each component, but they should not each re-derive large collections. Expose derived views as class fields, and parametrised selectors as methods returning a `$derived` created by the *consumer*:
+Components that need “the items matching X” should receive them from a derived selector on the shared state rather than filtering in each component, but they should not each re-derive large collections. Expose derived views as class fields, and let each consumer create its own small `$derived` for parametrised lookups:
 
 ```ts
 export class Tasks {
@@ -711,7 +711,15 @@ The effect version renders a stale frame first, can cascade (effect updates stat
 
 11. A colleague argues that it is fine to use a module-level singleton cart because the app “only renders on the client”. Under what conditions is that safe, and what would make you reject it?
 
-12. Under `experimental.async`, why does this fail, and how do you rewrite it? `svelte <script lang="ts"> import { setUser } from './ctx.ts'; const user = await fetchUser(); setUser(user); </script>`
+12. Under `experimental.async`, why does this fail, and how do you rewrite it?
+
+    ```html
+    <script lang="ts">
+      import { setUser } from './ctx.ts';
+      const user = await fetchUser();
+      setUser(user);
+    </script>
+    ```
 
 13. State the three rules of the store contract. What extra behaviour is allowed for RxJS interop, and what is the downside if the subscription is not called synchronously?
 
@@ -722,7 +730,15 @@ The effect version renders a stale frame first, can cascade (effect updates stat
     c.  `$count` in a `.svelte.ts` file
     d.  A local variable named `$total`
 
-15. What does the following log, and why? `ts const s = writable({ n: 1 }); let calls = 0; s.subscribe(() => calls++); s.set(get(s)); console.log(calls);`
+15. What does the following log, and why?
+
+    ```ts
+    const s = writable({ n: 1 });
+    let calls = 0;
+    s.subscribe(() => calls++);
+    s.set(get(s));
+    console.log(calls);
+    ```
 
 16. A `readable` with a start function opens a WebSocket. Describe exactly when the socket opens and closes. What does `get(store)` do to it, and why does the documentation discourage `get` in hot paths?
 
@@ -734,7 +750,23 @@ The effect version renders a stale frame first, can cascade (effect updates stat
 
 20. List three situations in which a store is still a better choice than a rune-based class, and one in which a class is clearly better.
 
-21. Find the bugs: `ts export class Counter { count = $state(0); increment() { this.count++; } }` `svelte <script lang="ts"> const c = new Counter(); </script> <button onclick={c.increment}>+</button>`
+21. Find the bugs:
+
+    ```ts
+    // counter.ts
+    export class Counter {
+      count = $state(0);
+      increment() { this.count++; }
+    }
+    ```
+
+    ```html
+    <script lang="ts">
+      const c = new Counter();
+    </script>
+
+    <button onclick={c.increment}>+</button>
+    ```
 
 22. Why does the `Cart.add` method replace the entry with a new object in the `SvelteMap` instead of doing `line.qty += 1`? What changes if the values are class instances with `$state` fields?
 

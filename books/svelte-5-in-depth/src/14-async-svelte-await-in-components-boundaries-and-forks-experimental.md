@@ -50,7 +50,7 @@ The three new places, from the docs:
 </script>
 
 <h1>{user.name}</h1>
-<p>{await fetchGreeting(id)}</p>                             // inside markup
+<p>{await fetchGreeting(id)}</p>                             <!-- inside markup -->
 ```
 
 What is *not* allowed. The compiler reports `illegal_await_expression`: “`use:`, `transition:` and `animate:` directives, attachments and bindings do not support await expressions”. I confirmed all of these at compile time:
@@ -500,7 +500,7 @@ An `await` at the top level of a component also changes *when* the component’s
 </svelte:boundary>
 ```
 
-The `$effect.pending()` inside `UserPanel` refers to the *nearest enclosing boundary* (the one in `Page`), because pending counts are attributed per boundary. Because the awaiting derived lives in a child while the indicator is also in the child, the indicator is rendered inside the boundary’s content and works; if you put the spinner outside the boundary (in `Page`, outside `svelte:boundary`) it belongs to the *parent* boundary and will not see the child’s pending work, since counts exclude child boundaries.
+The `$effect.pending()` inside `UserPanel` counts the pending work of its *nearest enclosing boundary*, the one in `Page`. Both the awaiting derived and the indicator sit inside that boundary, so the indicator works. A spinner placed in `Page` outside the `<svelte:boundary>` would belong to the *parent* boundary and would not see this work, because counts exclude child boundaries.
 
 ### Suspense-style layouts
 
@@ -583,7 +583,7 @@ A skeleton test with Vitest and a deferred promise:
 
 ```ts
 import { mount, flushSync, unmount } from 'svelte';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import Harness from './Harness.svelte';   // wraps <svelte:boundary> around the component under test
 
 test('shows stale content until the request resolves', async () => {
@@ -671,11 +671,28 @@ test('shows stale content until the request resolves', async () => {
     c.  throws `experimental_async_required`
     d.  shows the pending snippet
 
-13. Rewrite this handler to use `settled()` correctly, so that `updating` is `true` while the async work is in flight and `false` afterwards: `ts async function onclick() { updating = true; color = 'octarine'; answer = 42; updating = false; }`
+13. Rewrite this handler to use `settled()` correctly, so that `updating` is `true` while the async work is in flight and `false` afterwards:
+
+    ```ts
+    async function onclick() {
+        updating = true;
+        color = 'octarine';
+        answer = 42;
+        updating = false;
+    }
+    ```
 
 14. With the flag on, what does `tick()` resolve on, and why can this be earlier than the completion of async work?
 
-15. Show what the user sees, step by step, for this search box when they type `a`, then quickly `ab`: `svelte <input bind:value={q} /> <p>Searching: {$state.eager(q)}</p> <ul>{#each await search(q) as r (r.id)}<li>{r.title}</li>{/each}</ul>` What is the risk in using `$state.eager` for the list itself?
+15. Show what the user sees, step by step, for this search box when they type `a`, then quickly `ab`:
+
+    ```html
+    <input bind:value={q} />
+    <p>Searching: {$state.eager(q)}</p>
+    <ul>{#each await search(q) as r (r.id)}<li>{r.title}</li>{/each}</ul>
+    ```
+
+    What is the risk in using `$state.eager` for the list itself?
 
 16. How do you cancel a superseded `fetch` inside an async derived? Why must `getAbortSignal()` be called synchronously in the derived expression, and what error occurs if it is called in an event handler?
 

@@ -71,7 +71,7 @@ function to_number(value) {
 }
 ```
 
-and my jsdom run confirmed it: typing `42` gave `42` (a number), clearing the field gave `null`. Type your state as `number | null` (and treat `undefined` as also possible, because initial state may be `undefined` and the property may be absent in older code), and do not write `=== undefined` checks. Browsers report `''` for both an empty field and an unparseable number, so there is no way to distinguish them.
+and my jsdom run confirmed it: typing `42` gave `42` (a number), clearing the field gave `null`. Type your state as `number | null`, and treat `undefined` as possible too (the initial state may be `undefined`). Test for “no number” with `value == null`, which covers both, never with `=== undefined`. Browsers report `''` for both an empty field and an unparseable number, so there is no way to distinguish them.
 
 ### `bind:checked` and `bind:indeterminate`
 
@@ -198,7 +198,7 @@ A form reset restores each control to its *default*: the `value` attribute, `che
 </form>
 ```
 
-For the initial render, **the binding’s value wins** unless it is `null` or `undefined`. After a reset, the default wins. My test: set `value = 'typed'`, `checked = false`, `sel = 'c'`; the first render showed `typed`, `false`, `c`. After editing and calling `form.reset()`, the state (one microtask later) was `default!`, `true`, `b`.
+For the initial render, **the binding’s value wins** unless it is `null` or `undefined`. After a reset, the default wins. My test used this markup with `defaultValue="default!"` on the text input: with `value = 'typed'`, `checked = false` and `size = 'c'`, the first render showed `typed`, `false`, `c`. After editing and calling `form.reset()`, the state (one microtask later) was `default!`, `true`, `b`.
 
 How it works (source, `shared.js` and `misc.js`): a single capturing `reset` listener is installed on the `document` once, the first time any binding needs it. On a reset it waits a microtask (“or else the dom properties of the form elements have not updated to their reset values yet”), and unless the event was `defaultPrevented`, walks `evt.target.elements` and invokes each bound control’s reset handler, which re-reads the control. Consequences:
 
@@ -468,7 +468,7 @@ Also note: stores can be bound (`bind:value={$name}`) because `$name = x` is an 
 React draws a hard line between “controlled” inputs (value supplied by state, every change handled) and “uncontrolled” ones (the DOM holds the truth, read on submit). Svelte offers both, and the choice is yours per field:
 
 - **Controlled/two-way.** `bind:value` (or a function binding). The state is the truth; the DOM follows. Use it when other UI depends on the value while typing (live preview, validation messages, character counters).
-- **Uncontrolled.** No binding. Read values on submit with `new FormData(form)` and let the browser own the input. This is the cheapest and most robust approach for large forms and it works without JavaScript when the form posts to a server. Combine with `defaultValue`s derived from state: `<input name="email" value={user.email} />` sets the property from state but nothing writes back.
+- **Uncontrolled.** No binding. Read values on submit with `new FormData(form)` and let the browser own the input. This is the cheapest and most robust approach for large forms and it works without JavaScript when the form posts to a server. Seed the fields from state one way: `<input name="email" value={user.email} />` (or `defaultValue={user.email}`) sets the field from state, but nothing writes back.
 - **One-way with callback.** `<input value={query} oninput={(e) => (query = e.currentTarget.value)} />` is equivalent to a binding but explicit; useful in a wrapper that wants to intercept.
 
 A hybrid that works well for editing a record: bind inputs to a *draft* (a `$state` copy, or a declaration-tag `{let draft = $state(...)}` from Chapter 6), and commit on submit.
@@ -624,7 +624,16 @@ Because `bind:value` accepts member expressions, forms over a record need no per
 
 18. What value does a `bind:this` variable hold (a) before mount, (b) while mounted, (c) after destroy? Why does a function binding on `bind:this` need a getter?
 
-19. Convert this effect-based code to a function binding, and explain why the effect version is worse: `svelte <script lang="ts"> let name = $state(''); $effect(() => { name = name.trim().slice(0, 20); }); </script> <input bind:value={name} />`
+19. Convert this effect-based code to a function binding, and explain why the effect version is worse:
+
+    ```html
+    <script lang="ts">
+      let name = $state('');
+      $effect(() => { name = name.trim().slice(0, 20); });
+    </script>
+
+    <input bind:value={name} />
+    ```
 
 20. What does `bind:clientWidth={null, redraw}` mean? When would you use a `null` getter?
 

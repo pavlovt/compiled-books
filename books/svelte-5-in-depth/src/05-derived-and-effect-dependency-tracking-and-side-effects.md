@@ -45,7 +45,7 @@ Two properties follow. A derived nobody reads costs nothing after creation. And 
 
 ### Referential equality cut-off
 
-If a recomputation yields a value identical (by `Object.is`-style equality) to the previous one, downstream reactions are not re-run. From the docs’ own example, an effect that reads `large = $derived(count > 10)` does not run when `count` goes from 1 to 2. I counted: an effect reading `large` ran once at setup and when `count` went 2 then 3 it stayed at one run; it ran again only when `count` became 11. So deriveds act as *filters on change*: they convert a high-frequency source into a low-frequency signal. Use that deliberately, for example `let isNarrow = $derived(width < 600)` instead of reading `width` in many places.
+If a recomputation yields a value identical (by `===`) to the previous one, downstream reactions are not re-run. From the docs’ own example, an effect that reads `large = $derived(count > 10)` does not run when `count` goes from 1 to 2. I counted: an effect reading `large` ran once at setup and when `count` went 2 then 3 it stayed at one run; it ran again only when `count` became 11. So deriveds act as *filters on change*: they convert a high-frequency source into a low-frequency signal. Use that deliberately, for example `let isNarrow = $derived(width < 600)` instead of reading `width` in many places.
 
 The cut-off is by identity. A derived returning a new object each time always propagates:
 
@@ -308,7 +308,7 @@ Compare with the manual approach (teardown with an `AbortController`): equivalen
 - `tick()` returns a promise resolving after pending state changes have been applied (or on the next microtask).
 - `beforeUpdate`/`afterUpdate` are deprecated and throw `lifecycle_legacy_only` (“`%name%(...)` cannot be used in runes mode”); at compile time, importing them in a runes component is `runes_mode_invalid_import`. Replace `beforeUpdate` by `$effect.pre`, `afterUpdate` by `$effect`, and the “after DOM update” pattern by `await tick()`.
 
-Is `onMount` redundant with `$effect`? Mostly: an effect with no reactive reads runs once after mount, and its teardown runs on destroy. `onMount` documents intent (“run once, no tracking”) and guarantees no dependency tracking, so accidentally reading state in it never causes re-runs. Prefer `$effect` plus `untrack` when you need both, `onMount` for pure one-time setup.
+Is `onMount` redundant with `$effect`? Mostly: an effect with no reactive reads runs once after mount, and its teardown runs on destroy. `onMount` documents intent (“run once, no tracking”) and guarantees no dependency tracking, so accidentally reading state in it never causes re-runs. Use `onMount` for one-time setup. Use `$effect` when the work must be redone as state changes, and wrap any reads that should not trigger a re-run in `untrack`.
 
 ## When *not* to use `$effect`
 
@@ -428,7 +428,7 @@ $effect(() => {
 });
 ```
 
-Output (excerpt from my run): a console group labelled `my effect` with a line per cause, e.g. `$state count 0`, each with a stack trace of where the write happened. It reports names (`count`, `o.a.b`) thanks to the dev-mode `$.tag` calls (Chapter 2). It is the right tool for “why does this effect keep running”. Placement errors: `inspect_trace_invalid_placement`, and it cannot be used in generator functions (`inspect_trace_generator`).
+Output (excerpt from my run): a console group labelled with the string you passed (here `search effect`) with a line per cause, e.g. `$state count 0`, each with a stack trace of where the write happened. It reports names (`count`, `o.a.b`) thanks to the dev-mode `$.tag` calls (Chapter 2). It is the right tool for “why does this effect keep running”. Placement errors: `inspect_trace_invalid_placement`, and it cannot be used in generator functions (`inspect_trace_generator`).
 
 ## Putting it together: a search box
 
@@ -471,7 +471,7 @@ Output (excerpt from my run): a console group labelled `my effect` with a line p
 <ul>{#each shown as r (r)}<li>{r}</li>{/each}</ul>
 ```
 
-Division of labour: `results` is raw (replaced wholesale), `shown` and `summary` are deriveds (no effect needed), and the only effect talks to the network. Note that `limit` and `error` are read/written *inside* the timeout callback, which is asynchronous and therefore untracked, so the effect depends on `query` alone. The effect writes `results` but never reads it, so it cannot loop. The debounce is a teardown cleaning a timer, and the abort signal cancels in-flight requests. Under the async flag (Chapter 13) this whole component collapses to `$derived(await ...)` with a boundary.
+Division of labour: `results` is raw (replaced wholesale), `shown` and `summary` are deriveds (no effect needed), and the only effect talks to the network. The effect body reads only `query`. `results` and `error` are written *inside* the timeout callback, which runs asynchronously and is therefore untracked, and `limit` is read only by the deriveds, so the effect depends on `query` alone. The effect writes `results` but never reads it, so it cannot loop. The debounce is a teardown cleaning a timer, and the abort signal cancels in-flight requests. Under the async flag (Chapter 13) this whole component collapses to `$derived(await ...)` with a boundary.
 
 ## A decision checklist
 
@@ -498,35 +498,35 @@ Before writing `$effect`, ask in order: Is the result a value computed from stat
 
 3.  What does this print and why?
 
-```ts
-let n = $state(0);
-let big = $derived(n > 10);
-let runs = 0;
-$effect.root(() => { $effect(() => { big; runs++; }); });
-flushSync();
-n = 3; flushSync();
-n = 4; flushSync();
-console.log(runs);
-```
+    ```ts
+    let n = $state(0);
+    let big = $derived(n > 10);
+    let runs = 0;
+    $effect.root(() => { $effect(() => { big; runs++; }); });
+    flushSync();
+    n = 3; flushSync();
+    n = 4; flushSync();
+    console.log(runs);
+    ```
 
 4.  Rewrite `const x = $derived(() => a + b)` so that `x` is a number. What does the original compute?
 
 5.  In which order are `a`, `b`, `c` tracked, and which changes re-run the effect?
 
-```ts
-let a = $state(true), b = $state(1), c = $state(1);
-$effect(() => { if (a) b; else c; });
-```
+    ```ts
+    let a = $state(true), b = $state(1), c = $state(1);
+    $effect(() => { if (a) b; else c; });
+    ```
 
 6.  Find the bug:
 
-```ts
-let total = $state(0);
-let items = $state<number[]>([]);
-let sum = $derived.by(() => { total = items.reduce((x, y) => x + y, 0); return total; });
-```
+    ```ts
+    let total = $state(0);
+    let items = $state<number[]>([]);
+    let sum = $derived.by(() => { total = items.reduce((x, y) => x + y, 0); return total; });
+    ```
 
-What is thrown, when, and how do you fix it?
+    What is thrown, when, and how do you fix it?
 
 7.  Why does `let { a, b } = $derived(obj)` avoid re-running an effect that reads only `a` when only `b` changed, whereas `let { a, b } = obj` (state) does not stay in sync at all?
 
@@ -534,9 +534,9 @@ What is thrown, when, and how do you fix it?
 
 9.  Is the following valid? Why or why not?
 
-```ts
-const d = $derived.by(() => { let local = $state(0); local++; return local; });
-```
+    ```ts
+    const d = $derived.by(() => { let local = $state(0); local++; return local; });
+    ```
 
 10. List the sequence of hook calls (script, `$effect.pre`, `$effect`, `onMount`, teardown, `onDestroy`) from mount to unmount for one state change.
 
@@ -544,11 +544,11 @@ const d = $derived.by(() => { let local = $state(0); local++; return local; });
 
 12. What happens here, and what is the error code?
 
-```ts
-function onclick() {
-  $effect(() => console.log('clicked'));
-}
-```
+    ```ts
+    function onclick() {
+      $effect(() => console.log('clicked'));
+    }
+    ```
 
 13. Give two situations in which `$effect.root` is the correct tool.
 
@@ -558,34 +558,34 @@ function onclick() {
 
 16. Why will this `$effect` not re-run when `size` changes?
 
-```ts
-$effect(() => {
-  ctx.fillStyle = color;
-  setTimeout(() => ctx.fillRect(0, 0, size, size), 0);
-});
-```
+    ```ts
+    $effect(() => {
+      ctx.fillStyle = color;
+      setTimeout(() => ctx.fillRect(0, 0, size, size), 0);
+    });
+    ```
 
 17. What is the abort reason when `getAbortSignal()` aborts because the effect re-ran? Write a fetch effect that ignores aborts.
 
 18. Why does the following `onMount` not clean up the interval?
 
-```ts
-onMount(async () => {
-  const id = setInterval(tick, 1000);
-  return () => clearInterval(id);
-});
-```
+    ```ts
+    onMount(async () => {
+      const id = setInterval(tick, 1000);
+      return () => clearInterval(id);
+    });
+    ```
 
 19. Which lifecycle function runs during server rendering? Which are legacy-only in runes mode and what do they throw?
 
 20. Replace these two cross-writing effects with a derived and a function binding.
 
-```ts
-const total = 100;
-let spent = $state(0), left = $state(total);
-$effect(() => { left = total - spent; });
-$effect(() => { spent = total - left; });
-```
+    ```ts
+    const total = 100;
+    let spent = $state(0), left = $state(total);
+    $effect(() => { left = total - spent; });
+    $effect(() => { spent = total - left; });
+    ```
 
 21. What error does `$effect(() => { count += 1 })` produce and after how many iterations? Is `$effect(() => { latest = source.value })` safe, if `latest` is never read in the effect?
 

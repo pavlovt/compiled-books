@@ -270,17 +270,53 @@ let C: Component<{ foo: string }> = $state(Math.random() ? ComponentA : Componen
 
 Most of the following are either enforced in runes mode or apply to all modes. Treat them as a regression-test checklist.
 
-**Bindings and exports** - `export const foo` in a runes component cannot be bound (`<A bind:foo />` is an error); use `bind:this={a}` and `a.foo`. Props, not exports, are bindable. - A prop is bindable only if declared `$bindable()`. If a bindable prop has a fallback (`$bindable('bar')`), a parent that binds must pass a non-`undefined` value (`props_invalid_value` otherwise). In Svelte 4 the default flowed back to the parent, causing extra renders. - `accessors` and `immutable` options are ignored in runes mode (warnings `options_deprecated_accessors`/`options_deprecated_immutable`); `$state` replaces immutability concerns. - `bind:files` is two-way and accepts only `null`, `undefined` or a `FileList`. Bindings react to `form.reset()`. - `contenteditable` with a binding and reactive content inside: the binding takes full control and the content is not updated by other state.
+**Bindings and exports**:
 
-**Reactivity model** - Classes are not “auto-reactive”. Mutating `foo.value` on a `new Foo()` no longer triggers updates, because reactivity is runtime now. Declare `$state` fields in the class; wrapping `new Foo()` in `$state(...)` does nothing (only plain objects and arrays are proxied). - Array mutation methods now work on `$state` arrays; the `numbers = numbers` self-assignment idiom is unnecessary.
+- `export const foo` in a runes component cannot be bound (`<A bind:foo />` is an error); use `bind:this={a}` and `a.foo`. Props, not exports, are bindable.
+- A prop is bindable only if declared `$bindable()`. If a bindable prop has a fallback (`$bindable('bar')`), a parent that binds must pass a non-`undefined` value (`props_invalid_value` otherwise). In Svelte 4 the default flowed back to the parent, causing extra renders.
+- `accessors` and `immutable` options are ignored in runes mode (warnings `options_deprecated_accessors`/`options_deprecated_immutable`); `$state` replaces immutability concerns.
+- `bind:files` is two-way and accepts only `null`, `undefined` or a `FileList`. Bindings react to `form.reset()`.
+- `contenteditable` with a binding and reactive content inside: the binding takes full control and the content is not updated by other state.
 
-**Template and HTML** - Attribute syntax is stricter: concatenations must be quoted (`prop="this{is}valid"`); a single quoted expression (`answer="{42}"`) warns (`attribute_quoted`) because in Svelte 6 it will become a string. - HTML structure is stricter: markup the browser would repair (a `<table><tr>` without `<tbody>`) is a compile error; `node_invalid_placement_ssr` is the warning variant. - Whitespace: collapsed to one space between nodes and trimmed at tag starts and ends, so `<p>foo<span> - bar</span></p>` renders `foo- bar`. Opt out with `preserveWhitespace`. - `null` and `undefined` render as the empty string (previously the literal text). - `oneventname` attributes no longer accept strings (`onclick="alert('hello')"` is gone). - `<svelte:element this="div">` must use an expression (`this={"div"}`), and bind applicability is no longer inferred from a literal tag. - Content inside `<svelte:options>` is a compile error; `<slot>` inside `<template shadowrootmode>` is preserved. - `{@const}` assignments to destructured parts are disallowed.
+**Reactivity model**:
 
-**Events** - Touch events `ontouchstart`/`ontouchmove` are passive. To prevent defaults, use `on` from `svelte/events` (for example in an attachment). - Many event attributes are *delegated* (`click`, `input`, `keydown`, `pointerdown`, … see Chapter 6). Manually stopping propagation, or dispatching non-bubbling events, can prevent delivery. Event attributes fire after events from bindings. - No multiple `on:click` on one element; duplicates are an error.
+- Classes are not “auto-reactive”. Mutating `foo.value` on a `new Foo()` no longer triggers updates, because reactivity is runtime now. Declare `$state` fields in the class; wrapping `new Foo()` in `$state(...)` does nothing (only plain objects and arrays are proxied).
+- Array mutation methods now work on `$state` arrays; the `numbers = numbers` self-assignment idiom is unnecessary.
 
-**CSS** - `:is(...)`, `:has(...)`, `:where(...)` are now analysed in component scope; selectors relying on the old global treatment become unused (`css_unused_selector`); wrap them in `:global(...)` (Tailwind `@apply` needs a `:global` block). - Scoped selectors use `:where(.svelte-xyz)`, so specificity is lower and more predictable; the hash position is no longer guaranteed. - `--style-props` on components wrap in `<svelte-css-wrapper>` (display `contents`) instead of a `<div>`, which affects child combinators.
+**Template and HTML**:
 
-**Runtime and compiler** - `mount` plays transitions by default (`intro` defaults to `true`), unlike manually instantiated classes. - Hydration: Svelte 5 uses comment markers in server output; do not strip comments from HTML you intend to hydrate. `<img src>` and `{@html}` hydration mismatches are no longer repaired (`hydration_attribute_changed`, `hydration_html_changed` warnings; use the stash/unset/restore effect from the guide to force it). - `beforeUpdate`/`afterUpdate`: legacy-only; child `afterUpdate` runs before the parent’s; no longer run when slot content updates. - `onDestroy` runs child-first. - Compiler options removed or changed: `css` no longer accepts `true`/`false`/`'none'`; `legacy` repurposed; `hydratable`, `enableSourcemap`, `tag`, `loopGuardTimeout`, `format`, `sveltePath`, `errorMode`, `varsReport` removed (each yields a specific `options_removed_*` warning or an `options_removed` error); `generate: 'dom'|'ssr'` became `'client'|'server'` (`options_renamed_ssr_dom`); `namespace` is now only `html`, `svg` or `mathml` (`foreign` removed). - Error and warning codes were renamed from dashes to underscores (`foo-bar` to `foo_bar`): update any `svelte-ignore` comments and `warningFilter` code that used the old names; unknown codes warn with `unknown_code` and a “did you mean” suggestion, and legacy dashed codes warn with `legacy_code`. - `walk` is no longer re-exported from `svelte/compiler`; import `estree-walker` directly. - The runtime needs a modern browser (Proxy, `ResizeObserver`), and `<input type="range" bind:value>` listens only to `input`. - Stricter library rules: `children` is a reserved prop name when a component has content; the `$store` auto-subscription still works, with `store_rune_conflict` if a local binding collides with a rune name.
+- Attribute syntax is stricter: concatenations must be quoted (`prop="this{is}valid"`); a single quoted expression (`answer="{42}"`) warns (`attribute_quoted`) because in Svelte 6 it will become a string.
+- HTML structure is stricter: markup the browser would repair (a `<table><tr>` without `<tbody>`) is a compile error; `node_invalid_placement_ssr` is the warning variant.
+- Whitespace: collapsed to one space between nodes and trimmed at tag starts and ends, so `<p>foo<span> - bar</span></p>` renders `foo- bar`. Opt out with `preserveWhitespace`.
+- `null` and `undefined` render as the empty string (previously the literal text).
+- `oneventname` attributes no longer accept strings (`onclick="alert('hello')"` is gone).
+- `<svelte:element this="div">` must use an expression (`this={"div"}`), and bind applicability is no longer inferred from a literal tag.
+- Content inside `<svelte:options>` is a compile error; `<slot>` inside `<template shadowrootmode>` is preserved.
+- `{@const}` assignments to destructured parts are disallowed.
+
+**Events**:
+
+- Touch events `ontouchstart`/`ontouchmove` are passive. To prevent defaults, use `on` from `svelte/events` (for example in an attachment).
+- Many event attributes are *delegated* (`click`, `input`, `keydown`, `pointerdown`, … see Chapter 6). Manually stopping propagation, or dispatching non-bubbling events, can prevent delivery. Event attributes fire after events from bindings.
+- No multiple `on:click` on one element; duplicates are an error.
+
+**CSS**:
+
+- `:is(...)`, `:has(...)`, `:where(...)` are now analysed in component scope; selectors relying on the old global treatment become unused (`css_unused_selector`); wrap them in `:global(...)` (Tailwind `@apply` needs a `:global` block).
+- Scoped selectors use `:where(.svelte-xyz)`, so specificity is lower and more predictable; the hash position is no longer guaranteed.
+- `--style-props` on components wrap in `<svelte-css-wrapper>` (display `contents`) instead of a `<div>`, which affects child combinators.
+
+**Runtime and compiler**:
+
+- `mount` plays transitions by default (`intro` defaults to `true`), unlike manually instantiated classes.
+- Hydration: Svelte 5 uses comment markers in server output; do not strip comments from HTML you intend to hydrate. `<img src>` and `{@html}` hydration mismatches are no longer repaired (`hydration_attribute_changed`, `hydration_html_changed` warnings; use the stash/unset/restore effect from the guide to force it).
+- `beforeUpdate`/`afterUpdate`: legacy-only; child `afterUpdate` runs before the parent’s; no longer run when slot content updates.
+- `onDestroy` runs child-first.
+- Compiler options removed or changed: `css` no longer accepts `true`/`false`/`'none'`; `legacy` repurposed; `hydratable`, `enableSourcemap`, `tag`, `loopGuardTimeout`, `format`, `sveltePath`, `errorMode`, `varsReport` removed (each yields a specific `options_removed_*` warning or an `options_removed` error); `generate: 'dom'|'ssr'` became `'client'|'server'` (`options_renamed_ssr_dom`); `namespace` is now only `html`, `svg` or `mathml` (`foreign` removed).
+- Error and warning codes were renamed from dashes to underscores (`foo-bar` to `foo_bar`): update any `svelte-ignore` comments and `warningFilter` code that used the old names; unknown codes warn with `unknown_code` and a “did you mean” suggestion, and legacy dashed codes warn with `legacy_code`.
+- `walk` is no longer re-exported from `svelte/compiler`; import `estree-walker` directly.
+- The runtime needs a modern browser (Proxy, `ResizeObserver`), and `<input type="range" bind:value>` listens only to `input`.
+- Stricter library rules: `children` is a reserved prop name when a component has content; the `$store` auto-subscription still works, with `store_rune_conflict` if a local binding collides with a rune name.
 
 ## Legacy API reference
 
@@ -412,14 +448,14 @@ Old codebases may still carry v3-era assumptions. The v4 migration guide items t
 8.  Name three situations in which `migrate()` refuses to migrate a file, as observed in the chapter.
 9.  Convert to Svelte 5 syntax:
 
-```html
-<script>
-  export let value = 0;
-  $: doubled = value * 2;
-  $: if (doubled > 10) console.log('big');
-</script>
-<button on:click={() => (value += 1)}>{doubled}</button>
-```
+    ```html
+    <script>
+      export let value = 0;
+      $: doubled = value * 2;
+      $: if (doubled > 10) console.log('big');
+    </script>
+    <button on:click={() => (value += 1)}>{doubled}</button>
+    ```
 
 10. Convert a Svelte 4 component that dispatches `dispatch('save', { id })` and is used as `<Form on:save={(e) => handle(e.detail)} />`.
 11. How do you replace `<slot name="item" {entry} />` with `let:entry` on the consumer side, in Svelte 5?
@@ -441,14 +477,10 @@ Old codebases may still carry v3-era assumptions. The v4 migration guide items t
 27. List four items from the Svelte 6 outlook that you can prepare for today.
 28. Multiple choice: which statement about `mount` is true?
 
-<!-- -->
-
-a.  It returns a component instance with `$set` and `$destroy`.
-b.  It runs effects synchronously before returning.
-c.  It plays intro transitions by default.
-d.  It hydrates existing server-rendered HTML.
-
-<!-- -->
+    a.  It returns a component instance with `$set` and `$destroy`.
+    b.  It runs effects synchronously before returning.
+    c.  It plays intro transitions by default.
+    d.  It hydrates existing server-rendered HTML.
 
 29. Which v4-era rule explains why `onMount` callbacks do not run when a bundler is misconfigured, and how does the same condition appear in Vitest?
 30. Why might you keep a `writable` store in a migrated codebase?

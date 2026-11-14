@@ -686,7 +686,7 @@ const x = new Tween(0, { duration: prefersReducedMotion.current ? 0 : 400 });
 
 A `duration` of `0` takes the instant path. For springs use `set(value, { instant: prefersReducedMotion.current })`.
 
-`prefersReducedMotion` uses `window.matchMedia`, so it is browser-only. During server rendering, treat it as unknown (see Chapter 14 on `MediaQuery` and SSR fallbacks); since transitions never run on the server, the only SSR exposure is markup that *branches on* the value, which should be avoided.
+`prefersReducedMotion` uses `window.matchMedia`, so it is browser-only. During server rendering, treat it as unknown (see Chapter 9 on `MediaQuery` and its server fallback); since transitions never run on the server, the only SSR exposure is markup that *branches on* the value, which should be avoided.
 
 ## Debugging and testing animation timing
 
@@ -695,7 +695,7 @@ Transitions are asynchronous and tied to real time and the layout engine, which 
 1.  **Test the logic, not the pixels.** The parts that matter to correctness are: which elements exist when, that `outroend` eventually removes DOM, and that focus ends up in the right place. Assert on those with events (`onoutroend`) and `await` a short wait.
 2.  **Make durations injectable.** Accept a `duration` prop or read it from a context so tests can pass `0`. With zero duration and zero delay the runtime completes synchronously (the shortcut described above), so DOM assertions need no timers.
 3.  **Stub `Element.prototype.animate`** (jsdom does not implement it) to capture keyframes, as shown earlier, when you want to assert that a custom `css` function returns what you expect. Better still, unit-test your transition function directly: it is a plain function of `(node, params)`; call it with a fake node and check `css(0, 1)` and `css(1, 0)`. The contract that `t = 1` is the natural state gives you an immediate invariant: `css(1, 0)` should produce styles equivalent to “no transition”.
-4.  **Use the browser’s tools.** Chrome DevTools’ Animations panel can slow all Web Animations, The `transition_slide_display` warning and the `animation_*` compile errors surface most structural mistakes before you see anything on screen.
+4.  **Use the browser’s tools.** Chrome DevTools’ Animations panel can slow all Web Animations. The `transition_slide_display` warning and the `animation_*` compile errors surface most structural mistakes before you see anything on screen.
 5.  **For unmount tests**, `await unmount(app, { outro: true })` and then assert the container is empty; use `flushSync()` after `mount` to run effects first.
 
 A representative component test with Vitest in jsdom (see Chapter 16 for the full setup) might look like this:
@@ -771,7 +771,7 @@ test('panel is removed after outro', async () => {
     c.  Repeatedly before the transition begins, roughly once per 16.7 ms of its duration, to build keyframes
     d.  Only when `tick` is absent and the browser lacks Web Animations support
 
-7.  A teammate writes `css: (t) => \`opacity: \${t}\``with`easing: backOut\`. What problem can occur at the end of an intro, and how do you fix it?
+7.  A teammate writes ``css: (t) => `opacity: ${t}` `` with `easing: backOut`. What problem can occur at the end of an intro, and how do you fix it?
 
 8.  Why is `css` preferred over `tick`? Name a legitimate use case where only `tick` works.
 
@@ -787,7 +787,7 @@ test('panel is removed after outro', async () => {
 
     (State is toggled on, waited 500 ms, then toggled off.)
 
-10. Find the bug: a custom transition returns `css: (t) => \`transform: scale(\${t})\``for an element that already has`transform: rotate(10deg)`in its stylesheet. What happens during the transition, and how do the built-in`fly`and`scale\` avoid it?
+10. Find the bug: a custom transition returns ``css: (t) => `transform: scale(${t})` `` for an element that already has `transform: rotate(10deg)` in its stylesheet. What happens during the transition, and how do the built-in `fly` and `scale` avoid it?
 
 11. What is a deferred transition, and when does the runtime evaluate the returned function? Describe in three sentences how `crossfade` uses this to pair elements.
 
@@ -795,14 +795,10 @@ test('panel is removed after outro', async () => {
 
 13. (Multiple choice) Which of these will make the Svelte compiler reject `animate:flip`?
 
-<!-- -->
-
-a.  The `{#each}` block has no key
-b.  The `<li>` is the only child of the each block
-c.  The same list is reordered
-d.  Parameters are passed with `animate:flip={{ delay: 500 }}`
-
-<!-- -->
+    a.  The `{#each}` block has no key
+    b.  The `<li>` is the only child of the each block
+    c.  The same list is reordered
+    d.  Parameters are passed with `animate:flip={{ delay: 500 }}`
 
 14. A list item is added to the end of a keyed each block with `animate:flip` on its `<li>`. Does the new item animate? Do existing items? Explain.
 
@@ -824,14 +820,10 @@ d.  Parameters are passed with `animate:flip={{ delay: 500 }}`
 
 23. (Multiple choice) A page contains `* { transition-duration: 0s !important; animation-duration: 0s !important }` inside `@media (prefers-reduced-motion: reduce)`. A user with that preference loads a page with `transition:fly={{ y: 300 }}`. What happens?
 
-<!-- -->
-
-a.  The fly transition is skipped because the CSS zeroes durations
-b.  The fly transition plays normally because it uses the Web Animations API
-c.  Svelte detects the media query and disables all transitions automatically
-d.  The transition plays but without the opacity part
-
-<!-- -->
+    a.  The fly transition is skipped because the CSS zeroes durations
+    b.  The fly transition plays normally because it uses the Web Animations API
+    c.  Svelte detects the media query and disables all transitions automatically
+    d.  The transition plays but without the opacity part
 
 24. Implement `safeSlide` that falls back to a 100 ms `fade` when `prefersReducedMotion.current` is true. Give the TypeScript.
 

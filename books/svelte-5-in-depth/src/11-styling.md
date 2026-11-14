@@ -30,7 +30,7 @@ p.a.svelte-1u2atu7 { color: green; }
 
 and adds `class="svelte-1u2atu7"` (merged with any existing classes) to every element the component’s template renders that *could* be matched by a rule. Four facts follow.
 
-**1. The hash is derived from the CSS, not the file path.** By default the class is `svelte-` plus a hash of the stylesheet’s content (the compiler option `cssHash` receives `{ name, filename, css, hash }` and the default is `svelte-${hash(filename ?? css)}`, as the facts sheet records). The practical result: two components with identical `<style>` content can get identical hashes, harmlessly, and any style edit changes the class name. The migration guide also warns that the hash is no longer guaranteed to be the *last* class on the element; do not write selectors that depend on class order.
+**1. The hash is derived from the file name.** The class is `svelte-` plus a hash. The compiler option `cssHash` receives `{ name, filename, css, hash }`, and its default is `svelte-${hash(filename ?? css)}`: when a filename is passed (bundler plugins always pass one, made relative to `rootDir`), the hash comes from the path, and only without one does it fall back to the stylesheet’s content. That is why every `App.svelte` example in this chapter gets the same `svelte-1u2atu7`, whatever its CSS. The practical result: the class name stays stable while you edit styles and changes when you rename or move the file. The migration guide also warns that the hash is no longer guaranteed to be the *last* class on the element; do not write selectors that depend on class order.
 
 **2. Specificity is predictable: +0-1-0.** “Each scoped selector receives a specificity increase of 0-1-0, as a result of the scoping class being added.” So a component’s `p { }` beats a global stylesheet’s `p { }` regardless of load order. The scoping class is added to the *first* compound selector involved; where it must be repeated the compiler uses `:where(.svelte-xyz)`, which has zero specificity, so you never pay twice. Real output for `.a .a { }`:
 
@@ -40,7 +40,7 @@ and adds `class="svelte-1u2atu7"` (merged with any existing classes) to every el
 
 The first occurrence adds 0-1-0, the second adds nothing. This matters when you compare scoped rules with each other: `.a .b` becomes `.a.svelte-x .b:where(.svelte-x)`, so its specificity is 0-3-0, not 0-4-0.
 
-**3. Unused selectors are removed (and warned about).** In the example, `div p` is not output because the component has no `<div>`, and the compiler emits `css_unused_selector` (“Unused CSS selector”div p”“). The compiler’s analysis is conservative in the safe direction: it keeps a selector if *any* element in the template might match, including through dynamic classes. I verified that a rule `.foo { }` is kept when the template has `class={c}`, `class={{ foo: c }}`, `class:foo={c}` or `{...props}` on the element, because the compiler cannot prove it never matches. It is removed when there is no element or class that could possibly carry it.
+**3. Unused selectors are removed (and warned about).** In the example, `div p` is not output because the component has no `<div>`, and the compiler emits `css_unused_selector` (`Unused CSS selector "div p"`). The compiler’s analysis is conservative in the safe direction: it keeps a selector if *any* element in the template might match, including through dynamic classes. I verified that a rule `.foo { }` is kept when the template has `class={c}`, `class={{ foo: c }}`, `class:foo={c}` or `{...props}` on the element, because the compiler cannot prove it never matches. It is removed when there is no element or class that could possibly carry it.
 
 Removal cannot be switched off. The FAQ is explicit: “No. Svelte removes the styles from the component and warns you … in order to prevent issues.” The reasoning: if it kept the selector with the scoping class it would not match anything you expect; if it kept it *without* the scoping class, it would silently become a global style. The escape hatch is `:global`, applied deliberately.
 
@@ -279,7 +279,7 @@ Components that accept `class` should type it as `ClassValue` (5.19, from `svelt
 <div class={['card', klass]}>{@render children?.()}</div>
 ```
 
-The caller’s classes carry their own scope (or are global/utility classes), and the component’s `.card` rule is scoped to the component. Because scoped rules have +0-1-0 specificity, a caller’s utility class such as `p-4` (also 0-1-0) competes on equal footing with `.card` (0-2-0 after scoping), and the *scoped component rule wins*. If you want utilities to override, use `@layer` (utilities in a later layer) or write the component rule with `:where(.card)`.
+The caller’s classes carry their own scope (or are global/utility classes), and the component’s `.card` rule is scoped to the component. Because scoping adds 0-1-0, a caller’s utility class such as `p-4` (0-1-0) loses to `.card`, which is 0-2-0 after scoping, whatever the load order: the *scoped component rule wins*. If you want utilities to override, use `@layer` (utilities in a later layer) or write the component rule with `:where(.card)`.
 
 ### The `class:` directive
 
@@ -351,13 +351,13 @@ Per component, `<svelte:options css="injected" />` overrides the global option (
 cssHash: ({ hash, css, name, filename }) => `app-${name}-${hash(css)}`
 ```
 
-With ``` ({ hash, css, name }) => ``my-${name}-${hash(css)}`` I got ```p.my-App-16e8uch{color:red}\`. Use it for readable class names in debugging, for collision avoidance when two Svelte builds share a page (micro-frontends), or for deterministic names in snapshot tests. Make sure the function is deterministic and includes enough entropy (the content hash) to stay unique.
+With ``({ hash, css, name }) => `my-${name}-${hash(css)}` `` I got `p.my-App-16e8uch{color:red}`. Use it for readable class names in debugging, for collision avoidance when two Svelte builds share a page (micro-frontends), or for deterministic names in snapshot tests. Make sure the function is deterministic and includes enough entropy (the content hash) to stay unique.
 
 ### `hasGlobal`
 
 `compile(...).css.hasGlobal` is `true` when the stylesheet contains global rules (including `:global(...)` and un-prefixed `-global-` keyframes). Tooling that tree-shakes or isolates component CSS can use it to leave such stylesheets alone.
 
-### `preserveWhitespace`, `namespace`
+### `namespace`
 
 `namespace="svg"` (compiler option or `<svelte:options>`) affects element creation, not CSS, but SVG-specific details leak into styling: the custom-property wrapper becomes a `<g>`, and `display: contents` is not available on it.
 
@@ -383,7 +383,7 @@ Utility CSS and scoped CSS are complementary, and their only friction points are
 </style>
 ```
 
-- **Specificity**: scoped rules (0-1-0 for a class, plus the hash) beat equal-specificity utilities from a stylesheet that loads earlier, and tie with later ones; if you want utilities to override component styles consistently, put component styles in a lower cascade layer (`@layer components { ... }` inside `<style>`), and utilities in a higher layer.
+- **Specificity**: a scoped class rule (0-2-0 with the hash) beats a single-class utility (0-1-0) whatever the load order; if you want utilities to override component styles consistently, put component styles in a lower cascade layer (`@layer components { ... }` inside `<style>`), and utilities in a higher layer.
 
 ## Theming and dark mode with custom properties
 
@@ -467,7 +467,7 @@ Usage: `<Badge tone="success" --badge-radius="4px" class="ml-2">paid</Badge>`. T
 
 ## Key takeaways
 
-- Scoping is compile-time: selectors get a hash class (`svelte-xyz`), adding +0-1-0 specificity once and `:where(...)` thereafter. The hash is content-derived and not guaranteed to be last in the class list.
+- Scoping is compile-time: selectors get a hash class (`svelte-xyz`), adding +0-1-0 specificity once and `:where(...)` thereafter. The hash is derived from the file name (from the CSS only when there is none) and is not guaranteed to be last in the class list.
 - Selectors the compiler cannot match to an element are removed and flagged with `css_unused_selector`; this cannot be disabled. Dynamic `class` values and spreads keep selectors alive.
 - `{@html}`, child component markup and library-generated DOM are invisible to scoping. Use partial `:global(...)` or `parent :global { ... }` anchored on your own element.
 - `@keyframes` are scoped; `-global-` makes them global. `:is/:where/:has/:not` are analysed in component context, and native CSS nesting is supported and scoped.

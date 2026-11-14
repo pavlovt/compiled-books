@@ -333,7 +333,7 @@ Form controls, ARIA relationships and SVG `<defs>` all need unique IDs, and the 
 <input id="{uid}-email" type="email" />
 ```
 
-It is only valid as the initializer of a top-level variable declaration (`props_id_invalid_placement` otherwise). The ID is derived from the component’s position in the render tree rather than from a counter, so it remains stable across server render and hydration even when different branches render; in my run it appeared as `p-s1` with `idPrefix: 'p'`, and the generated body also carried a `<!--$p-s1-->` comment.
+It is only valid as the initializer of a top-level variable declaration (`props_id_invalid_placement` otherwise). The server generates it from a per-render counter and writes it into a comment next to the component’s markup; during hydration the client reads the ID back from that comment instead of generating its own, so the two always agree. In my run it appeared as `p-s1` with `idPrefix: 'p'`, and the body carried the matching `<!--$p-s1-->` comment.
 
 The `idPrefix` option (5.22, server `render`) namespaces those IDs. Use it when multiple Svelte apps are rendered into the same document (micro-frontends, islands, widgets), so two independently rendered roots cannot collide. The prefix must not contain `--` (`invalid_id_prefix`). For `mount`/`hydrate` roots there is no prefix option; hydrated IDs must match the server’s, so use the same logic for the server and client entry (the prefix is part of the server output that the client adopts).
 
@@ -383,11 +383,13 @@ A framework like SvelteKit adds routing, data loading and adapters, but the core
 
 Project layout:
 
-    index.html             # template with placeholders
-    src/App.svelte
-    src/entry-client.ts    # hydrate
-    src/entry-server.ts    # render
-    prerender.mjs
+```text
+index.html             # template with placeholders
+src/App.svelte
+src/entry-client.ts    # hydrate
+src/entry-server.ts    # render
+prerender.mjs
+```
 
 ```html
 <!-- index.html -->

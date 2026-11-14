@@ -1,6 +1,6 @@
 # Final Tests
 
-Six tests, each covering several chapters and growing harder: Test 1 checks the foundations, Test 6 goes into the reactivity internals, async Svelte and SSR/hydration. Answers are in `tests-answers.md`; try each test with the chapters closed before you look.
+Six tests, each covering several chapters and growing harder: Test 1 checks the foundations, Test 6 goes into the reactivity internals, async Svelte and SSR/hydration. The answers are in the next chapter, “Final Tests: Answer Key”; try each test with the chapters closed before you look.
 
 Conventions used in the code-reading questions:
 

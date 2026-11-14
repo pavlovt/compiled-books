@@ -164,7 +164,7 @@ $.template_effect(() => $.set_text(text, `1 ${o.a ?? ''}`));
 
 The compiler knows `n` is never reassigned in this file, so it is not a source at all: it is a plain variable, and its value was even inlined into the template string. The object state remains a `$.proxy(...)` (proxies are created for any `$state` holding an object or array, because the compiler cannot prove nobody mutates a property), but the proxy itself is not wrapped in a signal because `o` is never reassigned.
 
-This is the optimisation behind the guidance in the best-practices page: “Only use the `$state` rune for variables that should be reactive… Everything else can be a normal variable”. Using `$state` for something you never reassign costs nothing for primitives but is also useless; the compiler will warn when you do the opposite and forget it (`non_reactive_update`: “`%name%` is updated, but is not declared with `$state(...)`”).
+This is the optimisation behind the guidance in the best-practices page: “Only use the `$state` rune for variables that should be reactive… Everything else can be a normal variable”. Using `$state` for a primitive you never reassign costs nothing, but it is also useless. The opposite mistake, reassigning a variable that the template reads without declaring it with `$state`, gets a warning (`non_reactive_update`: “`%name%` is updated, but is not declared with `$state(...)`”).
 
 ### Static attributes and partial evaluation
 
@@ -233,7 +233,7 @@ $.each(node_1, 16, () => items, (i) => i, ($$anchor, i) => {
 
 The numeric `16` is a bit flag describing the each block (keyed, whether the item is reactive, whether an index is needed, …). Here `show` is never reassigned in this component, so the condition is a plain variable read, not `$.get(show)`. Chapter 5 explains how `$.if` and `$.each` own the effects of their branches.
 
-Props are read lazily, as the third example shows (`let { a, ...rest } = $props()`):
+Props are read lazily. For a component with `let { a, ...rest } = $props()` and the markup `<p {...rest}>{a}</p>`, the output is:
 
 ```js
 var rest_excludes = new Set(['$$slots', '$$events', '$$legacy', 'a']);
@@ -271,7 +271,7 @@ $.delegate(['click']);
 
 The set of delegated events is fixed (from the docs): `beforeinput`, `click`, `change`, `dblclick`, `contextmenu`, `focusin`, `focusout`, `input`, `keydown`, `keyup`, `mousedown`, `mousemove`, `mouseout`, `mouseover`, `mouseup`, `pointerdown`, `pointermove`, `pointerout`, `pointerover`, `pointerup`, `touchend`, `touchmove`, `touchstart`. The benefits are fewer listeners and cheaper element creation, which pays off in long lists. The costs are behavioural, and Chapter 6 covers them: a manual `addEventListener` that calls `stopPropagation` can prevent delegated handlers from running, manually dispatched events need `bubbles: true`, and relative order against handlers added with `addEventListener` differs (use `on` from `svelte/events` to preserve it).
 
-### Reading `$state` across effects: the async variant
+### Async deriveds (experimental)
 
 When `experimental.async` is enabled, derived expressions containing `await` compile to a different shape. This is a taste (details in Chapter 13):
 
@@ -329,7 +329,7 @@ interface CompileResult {
 
 ### `compileModule`
 
-`compileModule` compiles `.svelte.js`/`.svelte.ts` content (JavaScript with runes). The module is always in runes mode. Since 5.37 it ignores component-only options. Using the earlier example:
+`compileModule` compiles `.svelte.js`/`.svelte.ts` content (JavaScript with runes). The module is always in runes mode. Since 5.37 it ignores component-only options. An exported state object that is only mutated:
 
 ```js
 compileModule(`export const c = $state({ n: 0 }); export function inc() { c.n++ }`,
@@ -365,7 +365,7 @@ import { parse } from 'svelte/compiler';
 const ast = parse(source, { modern: true, filename: 'A.svelte' });
 ```
 
-With `modern: true` you get an `AST.Root` with these keys (in my run): `type: 'Root'`, `start`, `end`, `fragment` (a `Fragment` whose `nodes` hold the template), `options` (inline `<svelte:options>`), `css`, `instance`, `module` and `comments`. For the example component, `ast.fragment.nodes.map(n => n.type)` returned `['Text', 'RegularElement', 'Text', 'IfBlock', 'Text']`. The default (legacy) AST has different keys (`html`, `instance`, `module`, `css`); `modern` becomes the default in Svelte 6 and the option is removed in Svelte 7, so new tools should always pass `modern: true`. The `loose` option makes the parser tolerant of unclosed tags and incomplete expressions, which is what language servers need while you type.
+With `modern: true` you get an `AST.Root` with these keys (in my run): `type: 'Root'`, `start`, `end`, `fragment` (a `Fragment` whose `nodes` hold the template), `options` (inline `<svelte:options>`), `css`, `instance`, `module` and `comments`. For a component whose markup is a `<p>` followed by an `{#if}` block, `ast.fragment.nodes.map(n => n.type)` returned `['Text', 'RegularElement', 'Text', 'IfBlock', 'Text']`. The default (legacy) AST has different keys (`html`, `instance`, `module`, `css`); `modern` becomes the default in Svelte 6 and the option is removed in Svelte 7, so new tools should always pass `modern: true`. The `loose` option makes the parser tolerant of unclosed tags and incomplete expressions, which is what language servers need while you type.
 
 ### `parseCss`
 
@@ -546,12 +546,12 @@ const out = await preprocess(
   { filename: 'A.svelte' }
 );
 console.log(out.code);
-// <script>let a=1</script><style>p{C}</style><p>{a}</p>
+// <script>let a = 1</script><style>p{C}</style><p>{a}</p>
 ```
 
 ### `vitePreprocess`
 
-`vitePreprocess` from `@sveltejs/vite-plugin-svelte` is a ready-made group (`vitePreprocess(opts?)`) that delegates `<style lang="...">` to Vite’s CSS pipeline (so Sass, Less, PostCSS and others work with Vite’s own config) and, with `{ script: true }`, transpiles TypeScript with Vite’s esbuild-based transform. As covered in Chapter 1, you do not need it for type-only TypeScript. With non-Vite bundlers, the docs point to `svelte-preprocess`.
+`vitePreprocess` from `@sveltejs/vite-plugin-svelte` is a ready-made group (`vitePreprocess(opts?)`) that delegates `<style lang="...">` to Vite’s CSS pipeline (so Sass, Less, PostCSS and others work with Vite’s own config) and, with `{ script: true }`, transpiles TypeScript with Vite’s own transform. As covered in Chapter 1, you do not need it for type-only TypeScript. With non-Vite bundlers, the docs point to `svelte-preprocess`.
 
 > **Senior tip:** Preprocessors operate on text and lose context: a TypeScript preprocessor sees only the script, not the markup’s use of the variables. That is one reason Svelte 5 parses TypeScript natively. Prefer native syntax over preprocessors whenever the language allows it, and keep any markup preprocessor to mechanical rewrites.
 
@@ -643,7 +643,7 @@ The comment form `<!-- svelte-ignore code1, code2 (reason) -->` (or `// svelte-i
 
 The compiler’s view is one file at a time. This has four practical consequences.
 
-**Cross-module state.** As the `compileModule` outputs showed, whether a variable is a signal is a property of the file that declares it. A variable that is reassigned becomes a signal; that decision cannot be seen by importers, so reassigned state cannot be exported. A variable that is only mutated is a proxy with no wrapping signal, so exporting it is fine. By the same logic exported `$derived` is rejected (`derived_invalid_export`), because the derived value is accessed by calling a function internally.
+**Cross-module state.** As the `compileModule` outputs showed, whether a variable is a signal is a property of the file that declares it. A variable that is reassigned becomes a signal; that decision cannot be seen by importers, so reassigned state cannot be exported. A variable that is only mutated is a proxy with no wrapping signal, so exporting it is fine. By the same logic an exported `$derived` is rejected (`derived_invalid_export`), even when it is a `const`: a derived is itself a signal, read with `$.get(...)` in the declaring file, so an importer would receive the signal object instead of its value.
 
 **Passing runes through functions.** `track(count)` passes a number, not the variable. At the call site the compiler can see `count` is a state variable and rewrites it to `$.get(count)`, yielding a value. If `track` wanted to observe the signal itself, it would need a getter:
 
@@ -745,16 +745,16 @@ You can also make the compiler itself your linter: compile each file with `gener
 
 4.  What does this component compile to in terms of signals? Which variables are signals, which are plain, and which is a proxy?
 
-```html
-<script>
-  let a = $state(1);
-  let b = $state(2);
-  let o = $state({ x: 1 });
-  function bump() { b++; }
-</script>
-<p>{a} {b} {o.x}</p>
-<button onclick={bump}>+</button>
-```
+    ```html
+    <script>
+      let a = $state(1);
+      let b = $state(2);
+      let o = $state({ x: 1 });
+      function bump() { b++; }
+    </script>
+    <p>{a} {b} {o.x}</p>
+    <button onclick={bump}>+</button>
+    ```
 
 5.  What does “partial evaluation” mean, and which of these expressions can be folded at compile time given `const w = 3`: `{w + 1}`, `class="a {'b'}"`, `{count}` where `count` is `$state`?
 
@@ -774,11 +774,11 @@ You can also make the compiler itself your linter: compile each file with `gener
 
 13. Find the bug. The compile fails; what is the error code and why?
 
-```ts
-// store.svelte.ts
-export let theme = $state<'light' | 'dark'>('light');
-export function toggle() { theme = theme === 'light' ? 'dark' : 'light'; }
-```
+    ```ts
+    // store.svelte.ts
+    export let theme = $state<'light' | 'dark'>('light');
+    export function toggle() { theme = theme === 'light' ? 'dark' : 'light'; }
+    ```
 
 14. Why is `export const settings = $state({ compact: false })` accepted while the previous example is not?
 
@@ -792,16 +792,16 @@ export function toggle() { theme = theme === 'light' ? 'dark' : 'light'; }
 
 19. Predict the order of the calls, and the attributes seen by the second group’s style preprocessor:
 
-```ts
-const order: string[] = [];
-const g = (n: string) => ({
-  name: n,
-  markup: ({ content }) => { order.push(n + ':markup'); return { code: content }; },
-  script: ({ content }) => { order.push(n + ':script'); return { code: content }; },
-  style: ({ content }) => { order.push(n + ':style'); return { code: content, attributes: {} }; },
-});
-await preprocess(src, [g('a'), g('b')]);
-```
+    ```ts
+    const order: string[] = [];
+    const g = (n: string) => ({
+      name: n,
+      markup: ({ content }) => { order.push(n + ':markup'); return { code: content }; },
+      script: ({ content }) => { order.push(n + ':script'); return { code: content }; },
+      style: ({ content }) => { order.push(n + ':style'); return { code: content, attributes: {} }; },
+    });
+    await preprocess(src, [g('a'), g('b')]);
+    ```
 
 20. A style preprocessor returns `{ code, attributes: { ...attributes, lang: undefined } }`. What ends up in the output and what is the fix?
 

@@ -106,7 +106,7 @@ The kinds:
 
 | Kind | Created by | Role |
 |------------------------|------------------------|------------------------|
-| `ROOT_EFFECT` | `mount`/`hydrate` (via `component_root`), `$effect.root` (`effect_root`) | top of a tree; not tracked; destroyed manually; `mount` returns a function that destroys it (optionally pausing for outros) |
+| `ROOT_EFFECT` | `mount`/`hydrate` (via `component_root`), `$effect.root` (`effect_root`) | top of a tree; not tracked; destroyed manually: `$effect.root` returns the destroy function, and for `mount` the runtime keeps it and calls it from `unmount` (optionally pausing for outros) |
 | `BRANCH_EFFECT` | `branch(fn)`: component bodies, each item bodies, if/else branches, snippets | a group of child effects with no reactive dependencies of its own; can be paused/destroyed as a unit |
 | `BLOCK_EFFECT` | `block(fn)`: `{#if}`, `{#each}`, `{#key}`, `{#await}`, `<svelte:element>`, boundaries | tracks the block’s controlling expression; owns branches; does *not* destroy children on re-run (it manages them) |
 | `MANAGED_EFFECT` | `managed(fn)` | like block, but scheduled with render effects |
@@ -180,7 +180,7 @@ The consequences for ordering, which my experiment on a component with `$effect.
 
 - Initial run: `pre`, then the render effects (including the `{#if}` branch), then the user effect. Pre effects run at creation as render effects; user effects are deferred until after the tree exists.
 - Update: `pre | template | user`. Block effects and render effects run during the traversal (parents before children, in tree order), and user effects run last, after the DOM is updated, in tree order. (In my run the `{#if}` branch disappeared on the update, so no block-body output appears.)
-- Within each category the order is the order of the traversal (tree order, parents before children). The exact interleaving between sibling components’ user effects follows the order in which they were scheduled, so log or `$inspect.trace` rather than assuming when you depend on it.
+- Within each category the order is the order of the traversal (tree order). For render and block effects that means parents before children. A component’s own user effects are different: they are created when its initialisation finishes, after the child components it rendered, so on mount a child’s `$effect` and `onMount` run before the parent’s. The exact interleaving between sibling components’ user effects follows the order in which they were scheduled, so log or `$inspect.trace` rather than assuming when you depend on it.
 
 ### The microtask and the loop guard
 
@@ -272,18 +272,18 @@ Svelte provides enough hooks to observe all of this without touching internals.
 
 2.  **Count effect runs.** Use the technique from this book’s Vitest examples:
 
-```ts
-function track(fn: () => void) {
-  let runs = 0;
-  const destroy = $effect.root(() => {
-    $effect(() => { runs++; fn(); });
-  });
-  flushSync();
-  return { get runs() { return runs; }, destroy };
-}
-```
+    ```ts
+    function track(fn: () => void) {
+      let runs = 0;
+      const destroy = $effect.root(() => {
+        $effect(() => { runs++; fn(); });
+      });
+      flushSync();
+      return { get runs() { return runs; }, destroy };
+    }
+    ```
 
-Compare `track(() => s)` with `track(() => s.value)` for a mutated proxy, or an array’s `length` with `arr[0]`.
+    Compare `track(() => s)` with `track(() => s.value)` for a mutated proxy, or an array’s `length` with `arr[0]`.
 
 3.  **Observe flush ordering.** Log from `$effect.pre`, a template expression with a comma operator (`{(log.push('tpl'), n)}`) and `$effect`, as in the ordering test above. Then add `{#if}` around the template expression and observe branch creation and destruction.
 
@@ -332,15 +332,15 @@ Compare `track(() => s)` with `track(() => s.value)` for a mutated proxy, or an 
 
 11. Draw (as an indented tree) the effects created by this component:
 
-```html
-<script>
-  let show = $state(true);
-  let n = $state(0);
-  $effect(() => console.log(n));
-</script>
-{#if show}<p>{n}</p>{/if}
-<Child />
-```
+    ```html
+    <script>
+      let show = $state(true);
+      let n = $state(0);
+      $effect(() => console.log(n));
+    </script>
+    {#if show}<p>{n}</p>{/if}
+    <Child />
+    ```
 
 12. After `n++`, which effects are marked, which re-run, and in which order?
 
@@ -352,17 +352,17 @@ Compare `track(() => s)` with `track(() => s.value)` for a mutated proxy, or an 
 
 16. Predict the log:
 
-```ts
-let a = $state(0);
-const log: string[] = [];
-$effect.root(() => {
-  $effect(() => { log.push('A:' + a); });
-});
-flushSync();
-a = 1; log.push('after write');
-await Promise.resolve();
-log.push('after microtask');
-```
+    ```ts
+    let a = $state(0);
+    const log: string[] = [];
+    $effect.root(() => {
+      $effect(() => { log.push('A:' + a); });
+    });
+    flushSync();
+    a = 1; log.push('after write');
+    await Promise.resolve();
+    log.push('after microtask');
+    ```
 
 17. What is the infinite-loop guard? After how many iterations does it fire and what does it throw?
 

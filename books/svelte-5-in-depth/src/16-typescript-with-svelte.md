@@ -32,7 +32,7 @@ export default {
 
 > **Senior tip:** Prefer the erasable subset anyway. Replace `enum` with a `const` object plus a union type (`const Level = { Low: 0, High: 1 } as const; type Level = (typeof Level)[keyof typeof Level]`), replace parameter properties with explicit fields, and consider enabling TypeScript’s `erasableSyntaxOnly` compiler option in your tsconfig so the editor flags non-erasable syntax in `.ts` files too. This keeps `.svelte` and `.ts` files under the same rules and removes the need for a script preprocessor. (The docs mention “erasable syntax only” specifically for the custom element `extend` function, where code outside the `<script>` is not preprocessed.)
 
-Two more limits: TypeScript syntax is accepted only inside `<script lang="ts">` and in expressions *when the component declares a TS script*. In the template, annotations like `onclick={(e: MouseEvent) => ...}` only parse if some `<script lang="ts">` exists in the file (an empty one suffices): without it, I got `js_parse_error` at the colon. And the `.svelte.ts`/`.svelte.js` module files that hold runes are compiled by the Svelte compiler with the same type-erasure rule, after your normal TypeScript tooling (Vite/esbuild) has had its chance.
+Two more limits: TypeScript syntax is accepted only inside `<script lang="ts">` and in expressions *when the component declares a TS script*. In the template, annotations like `onclick={(e: MouseEvent) => ...}` only parse if some `<script lang="ts">` exists in the file (an empty one suffices): without it, I got `js_parse_error` at the colon. And the `.svelte.ts`/`.svelte.js` module files that hold runes are compiled by the Svelte compiler with the same type-erasure rule, after Vite’s own TypeScript transform has had its chance.
 
 ## `tsconfig.json`
 
@@ -231,7 +231,7 @@ Uses:
 <DynamicComponent prop="foo" />
 ```
 
-Because `<svelte:component>` is unnecessary in runes mode (a component-valued variable is dynamic by itself), the `Component` type is how you write a “slot for a component” prop. Assignability follows function parameter bivariance rules for props: a component requiring *more* props than `{ prop: string }` is rejected.
+Because `<svelte:component>` is unnecessary in runes mode (a component-valued variable is dynamic by itself), the `Component` type is how you write a “slot for a component” prop. Assignability works like function parameters: a component that requires *more* props than `{ prop: string }` is rejected, because the caller would not supply them.
 
 **`ComponentProps<typeof X>`** extracts the props type:
 
@@ -342,7 +342,7 @@ Details:
 - **Elements without a dedicated interface** use `SvelteHTMLElements['div']`: `let { children, ...rest }: SvelteHTMLElements['div'] = $props();`. `SvelteHTMLElements` is the map from tag name to attribute type; it also contains the `svelte:*` special elements (`svelte:window`, `svelte:document`, `svelte:body`, `svelte:head`, `svelte:fragment`, `svelte:options`, `svelte:boundary` with `onerror`, `failed: Snippet<[error: unknown, reset: () => void]>`, `pending: Snippet`).
 - **Event handler types** follow `EventHandler<E, T>` and named aliases such as `MouseEventHandler<T>`, `KeyboardEventHandler<T>`, `FormEventHandler<T>`. Use them for callback props that forward DOM events: `onclick?: MouseEventHandler<HTMLButtonElement>`. In markup, inline handlers get contextual types automatically (`oninput={(e) => e.currentTarget.value}`; `e.currentTarget.value.toFixed()` failed with `Property 'toFixed' does not exist on type 'string'`).
 - **Rest ordering.** `{...rest}` after your own attributes lets callers override; before them lets your attributes win. For a handler you want to *combine* with the caller’s, do not rely on spreading: attributes and events from spreads are overwritten by later ones, so wrap explicitly (`onclick={(e) => { rest.onclick?.(e); track(); }}` and spread `rest` before).
-- **Data attributes.** `HTMLAttributes` contains `[key: \`data-\${string}\`\]: any`, so any`data-\*\` attribute type-checks.
+- **Data attributes.** `HTMLAttributes` contains ``[key: `data-${string}`]: any``, so any `data-*` attribute type-checks.
 
 ### Augmenting the DOM types
 
@@ -530,7 +530,13 @@ A discriminated union on `href` makes `<Button href="/x">` accept anchor attribu
 
 9.  Give the interface and component script for a generic `Select` component where `options: T[]`, `value: T | undefined` (bindable), `label: (o: T) => string` and `onchange?: (o: T) => void` all share a type parameter `T`.
 
-10. In this usage, what type does `item` have, and why? `svelte <List items={[{ id: 'a', text: 'A', n: 1 }]}> {#snippet row(item)}{item.n}{/snippet} </List>`
+10. In this usage, what type does `item` have, and why?
+
+    ```html
+    <List items={[{ id: 'a', text: 'A', n: 1 }]}>
+      {#snippet row(item)}{item.n}{/snippet}
+    </List>
+    ```
 
 11. What does `Snippet<[string, number]>` mean, and why is `Snippet<string[]>` rejected? Which runtime error occurs if a `Snippet` prop is `undefined` and rendered without optional chaining?
 
@@ -552,7 +558,7 @@ A discriminated union on `href` makes `<Button href="/x">` accept anchor attribu
 
 20. What does `export {}` at the end of an augmentation `.d.ts` do, and what happens if you omit it?
 
-21. Augment the DOM typings so that `<div data-track="x">` is accepted and `<fancy-input kind="text" | "number">` is a valid custom element with a `kind` attribute. Show the `.d.ts`.
+21. Augment the DOM typings so that `<div data-track="x">` is accepted and `<fancy-input kind="text">` is a valid custom element whose `kind` attribute accepts `"text"` or `"number"`. Show the `.d.ts`.
 
 22. How do you type an action that takes a `number` parameter and dispatches a custom `longpress` event handled with `onlongpress`? Why would you choose an attachment instead?
 
