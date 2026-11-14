@@ -135,7 +135,7 @@ import { foo } from '$lib/foo';
 import { foo } from '#lib/foo.js';
 ```
 
-Two practical notes. First, for a TypeScript source file `foo.ts` the specifier is still `#lib/foo.js`. Second, the `imports` entries are exact: `#lib` maps to the index file, `#lib/*` to the directory. If your `src/lib/index` is a `.ts` file, the first mapping should point at `./src/lib/index.ts` (the sv scaffold I generated used `./src/lib/index.js` with a TypeScript project and worked for type-resolution because the scaffold’s `index.ts` was resolved through TypeScript; verify your own mapping by building). Libraries get `#` imports rewritten to relative paths by `svelte-package` (Chapter 19).
+Two practical notes. First, for a TypeScript source file `foo.ts` the specifier is still `#lib/foo.js`. Second, the `imports` entries are exact: `#lib` maps to the index file, `#lib/*` to the directory. If your `src/lib/index` is a `.ts` file, point the first mapping at `./src/lib/index.ts`. (The sv scaffold I generated used `./src/lib/index.js` in a TypeScript project; TypeScript still resolved it by mapping the `.js` specifier to the `.ts` source, but verify your own mapping with a build.) Libraries get `#` imports rewritten to relative paths by `svelte-package` (Chapter 19).
 
 #### Modules and APIs
 
@@ -268,7 +268,7 @@ My ordered checklist (author practice):
 7.  `goto`, shallow routing, `refreshAll` updates.
 8.  Origin: `paths.origin` or proxy-header variables replace `ORIGIN`; forms tested behind your real proxy.
 9.  CSRF: any intentional cross-origin form POST added to `csrf.trustedOrigins`; webhook callers send `Content-Type`.
-10. Cookies: ASCII names, explicit `path` where you relied on the old default semantics.
+10. Cookies: ASCII-only names; `path` now defaults to `'/'`, so keep passing it explicitly wherever a cookie should be scoped more narrowly.
 11. External redirects opted in where intended.
 12. Remote functions: both flags present; no `url`/`params`/`route` use inside queries; `field.as()` everywhere.
 13. `server`-directory and filename audit.
@@ -300,7 +300,7 @@ src/
   lib/
     server/                server-only (any `server` dir is protected in 3.x)
       db/                  pool, tenant-scoped repositories
-      auth/                session store, password hashing, requireUser/requireRole
+      auth/                session store, password hashing, requireUser/requireRole/requireTenantRole
       domain/              plain functions: the business logic
       logger.ts, metrics.ts
     ui/                    components (props in, events out)
@@ -354,7 +354,7 @@ const security: Handle = async ({ event, resolve }) => {
     response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
     response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
     response.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
-    response.headers.set('x-frame-options', 'DENY'); // CSP frame-ancestors is ignored on prerendered meta; keep the header
+    response.headers.set('x-frame-options', 'DENY'); // legacy fallback to CSP frame-ancestors; prerendered pages get it from the CDN
     return response;
 };
 
@@ -402,8 +402,8 @@ export const handleError: HandleServerError = ({ kind, error, event }) => {
 Design points:
 
 - **Named handles in a `sequence`** give readable span names (`sveltekit.handle.sequenced.session`) and an explicit order. Session before tenant before guard.
-- **Guards live in `handle`, not only in layouts** (Chapter 14), because layout loads do not rerun on every navigation and run in parallel with page loads. The `tenant` handle is the authorization boundary for tenant membership: it runs on every request, including data requests and remote function calls, because those go through `handle`.
-- **Remote function calls pass through `handle`** too, so session and tenant resolve for them. But inside a remote `form` or `command`, `event.params`/`event.url` describe the *calling page*; and in a `query`, accessing them throws. So the tenant for a remote call must be **an explicit argument that the server re-verifies**, never trusted from the URL (ADR 5).
+- **Guards live in `handle`, not only in layouts** (Chapter 14), because layout loads do not rerun on every navigation and run in parallel with page loads. The `tenant` handle is the authorization boundary for tenant membership on page routes: it runs on every page and data request. Remote function calls go through it as well, but it cannot resolve their tenant, so they verify membership themselves (next point).
+- **Remote function calls pass through `handle`** too, so the session resolves for them. The tenant does not resolve reliably: for a `query` the request URL is the internal remote endpoint, so `event.params.tenant` is empty in `handle`, and for `form`/`command` the params describe the *calling page* as reported by the client (inside a `query`, accessing them throws). So the tenant for a remote call is **an explicit argument that the server re-verifies** against the user’s memberships, never taken from the URL or from `locals.tenant` (ADR 5).
 - The security handle shows a conscious trade: headers set after `resolve` on every response. CSP is configured declaratively in `sveltekit({ csp })`, not here (Chapter 15).
 - `handleError` triages by `kind` and never throws. (The final `return` for the other kinds is covered by the three explicit cases; for the type system’s benefit return the error object in all non-unknown cases.)
 
@@ -439,22 +439,37 @@ Combine it with Postgres row-level security keyed on a per-transaction setting, 
 import { getRequestEvent } from '$app/server';
 import { error, redirect } from '@sveltejs/kit';
 
+import { resolveMembership } from './membership.js';
+
+type Role = 'viewer' | 'editor' | 'admin';
+const rank = { viewer: 0, editor: 1, admin: 2 } as const;
+
 export function requireUser() {
-    const { locals, url } = getRequestEvent();
-    if (!locals.user) redirect(303, `/login?next=${encodeURIComponent(url.pathname)}`);
-    return locals.user;
+    const { locals, url, isRemoteRequest } = getRequestEvent();
+    if (locals.user) return locals.user;
+    if (isRemoteRequest) error(401, 'Sign in required'); // no redirect from a URL we cannot trust
+    redirect(303, `/login?next=${encodeURIComponent(url.pathname)}`);
 }
 
-export function requireRole(min: 'viewer' | 'editor' | 'admin') {
+/** Loads and actions: the tenant was resolved by the `tenant` handle from the real page URL. */
+export function requireRole(min: Role) {
+    const user = requireUser();
     const { locals } = getRequestEvent();
-    requireUser();
-    const rank = { viewer: 0, editor: 1, admin: 2 } as const;
     if (!locals.tenant || rank[locals.role!] < rank[min]) error(403, 'Forbidden');
-    return { user: locals.user!, tenant: locals.tenant, role: locals.role! };
+    return { user, tenant: locals.tenant, role: locals.role! };
+}
+
+/** Remote functions: the tenant is an explicit argument, re-verified against the session user. */
+export async function requireTenantRole(slug: string, min: Role) {
+    const user = requireUser();
+    const membership = await resolveMembership(user.id, slug);
+    if (!membership) error(404, 'Not found');
+    if (rank[membership.role] < rank[min]) error(403, 'Forbidden');
+    return { user, tenant: membership.tenant, role: membership.role };
 }
 ```
 
-`requireUser` uses `getRequestEvent()`, so it works in loads, actions and remote functions. It reads `url.pathname` only for the redirect target, which is safe, but see below for tenant trust inside remote functions.
+`requireUser` uses `getRequestEvent()`, so it works in loads, actions and remote functions; in a remote call it answers 401 instead of building a redirect from a URL it cannot trust (Chapter 14). `requireRole` serves loads and actions, where `handle` resolved the tenant from the URL that was actually requested. `requireTenantRole` serves remote functions, for the reason given in the pipeline notes above.
 
 ### Remote functions with single-flight updates
 
@@ -464,20 +479,26 @@ Remote functions are experimental (Chapters 7 and 8): they need `experimental.re
 // src/routes/(app)/[tenant=slug]/views/views.remote.ts
 import * as v from 'valibot';
 import { query, form, requested } from '$app/server';
-import { requireRole } from '#lib/server/auth/guards.js';
+import { requireTenantRole } from '#lib/server/auth/guards.js';
 import { scoped } from '#lib/server/db/scoped.js';
 import { renameView, listViews } from '#lib/server/domain/views.js';
 
-// The tenant comes from the verified membership resolved in `handle`; the client passes nothing for it.
-export const getViews = query(async () => {
-    const { tenant } = requireRole('viewer'); // reads locals, not url/params (those throw in queries)
+const tenantSlug = v.pipe(v.string(), v.minLength(1), v.maxLength(63));
+
+// The page passes its tenant slug; the server re-verifies membership on every call.
+export const getViews = query(tenantSlug, async (slug) => {
+    const { tenant } = await requireTenantRole(slug, 'viewer');
     return listViews(scoped({ tenantId: tenant.id }));
 });
 
 export const rename = form(
-    v.object({ id: v.pipe(v.string(), v.uuid()), name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)) }),
-    async ({ id, name }) => {
-        const { tenant } = requireRole('editor');
+    v.object({
+        tenant: tenantSlug, // a hidden field: rename.fields.tenant.as('hidden', page.params.tenant)
+        id: v.pipe(v.string(), v.uuid()),
+        name: v.pipe(v.string(), v.minLength(1), v.maxLength(80))
+    }),
+    async ({ tenant: slug, id, name }) => {
+        const { tenant } = await requireTenantRole(slug, 'editor');
         await renameView(scoped({ tenantId: tenant.id }), id, name);
 
         // Single-flight: refresh what the client asked for, bounded.
@@ -486,13 +507,13 @@ export const rename = form(
 );
 ```
 
-Two cautions I apply in review. First, whether a no-argument `query` signature and the exact `requested` iteration API match your installed 3.x types must be checked against `$app/server`’s declarations (Chapter 8); I describe the pattern from the documented behaviour: a mutation can refresh specific queries in the same round trip, the server opts in by calling `requested(query, limit)`, and every requested update must be refreshed, set or ignored or that query errors on the client. Second, the tenant: because `event.locals` is populated by `handle` from the session and the tenant *slug of the page that initiated the call*, a remote call made from the wrong tenant’s page would resolve a different membership. That is correct behaviour only if the slug is the tenant the user intends. For anything destructive I pass the tenant ID as an explicit validated argument and assert it equals `locals.tenant.id`, so a stale tab on another tenant cannot write into the wrong one:
+Two cautions I apply in review. First, whether the exact `requested` iteration API matches your installed 3.x types must be checked against `$app/server`’s declarations (Chapter 8); I describe the pattern from the documented behaviour: a mutation can refresh specific queries in the same round trip, the server opts in by calling `requested(query, limit)`, and every requested update must be refreshed, set or ignored or that query errors on the client. Second, the tenant argument: it is *client-supplied*, so it is only a claim about which tenant the user means. `requireTenantRole` makes it safe by resolving the membership afresh from the session user, so a user can never reach a tenant they do not belong to. For destructive operations I go one step further and also pass the tenant *ID* the page was rendered with, so that a slug that has since been renamed or reused cannot redirect the write to a different tenant:
 
 ```ts
 export const deleteView = command(
-    v.object({ tenantId: v.pipe(v.string(), v.uuid()), id: v.pipe(v.string(), v.uuid()) }),
-    async ({ tenantId, id }) => {
-        const { tenant } = requireRole('admin');
+    v.object({ tenant: tenantSlug, tenantId: v.pipe(v.string(), v.uuid()), id: v.pipe(v.string(), v.uuid()) }),
+    async ({ tenant: slug, tenantId, id }) => {
+        const { tenant } = await requireTenantRole(slug, 'admin');
         if (tenant.id !== tenantId) error(409, 'Tenant mismatch');
         // ...
     }
@@ -573,7 +594,7 @@ Runtime environment on Cloud Run: `PROTOCOL_HEADER=x-forwarded-proto`, `HOST_HEA
 
 **ADR 4: Error taxonomy.** *Decision:* four user-facing classes: *not found* (404, also used for unauthorised tenant access), *forbidden* (403, role too low), *invalid input* (400 or form issues, never logged above info), *unexpected* (500 with request ID shown). `handleError` triages by `kind`; only `unknown` and 5xx `app` errors alert. `+error.svelte` at the `(app)` level shows the request ID and a retry link; `error.html` is the static fallback. Webhook endpoints return plain status codes and never HTML. *Consequences:* alert noise stays low; support can find any failure from the ID.
 
-**ADR 5: Authorization in remote functions.** *Decision:* every remote function begins with `requireRole(...)`, which reads `locals` set by `handle`. For destructive commands the tenant ID is an explicit argument verified against `locals.tenant.id`. Never use `event.url`, `params` or `route` for authorization in forms/commands (they describe the calling page), and they throw in queries. *Consequences:* a stale or manipulated page cannot target another tenant; reviewers grep for functions lacking a guard.
+**ADR 5: Authorization in remote functions.** *Decision:* every remote function takes the tenant slug as an explicit, schema-validated argument and begins with `requireTenantRole(slug, ...)`, which re-resolves the membership from the session user; none relies on `locals.tenant`, which `handle` cannot resolve for remote calls. Destructive commands also take the tenant ID the page was rendered with and reject a mismatch with 409. Never use `event.url`, `params` or `route` for authorization in forms/commands (they describe the calling page), and they throw in queries. *Consequences:* a stale or manipulated page cannot target another tenant; reviewers grep for functions lacking a guard.
 
 **ADR 6: Security headers and CSRF.** *Decision:* CSP configured in `sveltekit({ csp })` with `mode: 'auto'` (nonces on dynamic pages) and reporting enabled; HSTS, `nosniff`, referrer and permissions policies, `X-Frame-Options` set in `handle`; CSRF left at its always-on default; `csrf.trustedOrigins` includes only the billing provider’s origin if it posts forms (it uses a JSON webhook with a signature, so empty); webhook verification by HMAC signature on the raw body and a `Content-Type` check; session cookie `httpOnly`, `secure`, `sameSite: 'lax'`, explicit `path: '/'`; `redirect` to external URLs forbidden except an allow-list for the identity provider. *Consequences:* defence in depth; the login redirect uses a validated same-origin `next` path.
 
@@ -585,7 +606,7 @@ Runtime environment on Cloud Run: `PROTOCOL_HEADER=x-forwarded-proto`, `HOST_HEA
 
 | Level | Scope |
 |------------------------------------|------------------------------------|
-| Unit (Vitest, Node) | domain functions; `requireRole` with mocked `$app/server`; matchers in `params.ts`; valibot schemas; `handleError` by kind |
+| Unit (Vitest, Node) | domain functions; `requireRole` and `requireTenantRole` with mocked `$app/server`; matchers in `params.ts`; valibot schemas; `handleError` by kind |
 | Integration (Vitest, `Request`) | each `handle` in the sequence and the composed `handle`; webhook handler (valid and invalid signatures, replay); actions that remain |
 | Component (Vitest browser) | `ui` components with props; no `$app/state` dependencies inside shared components |
 | Tenant isolation | a dedicated suite that, for every repository method, runs as tenant A against tenant B’s rows and expects nothing; plus RLS tests against a real Postgres |
@@ -656,6 +677,6 @@ If you keep only a page of this book, keep this:
 25. For Cloudflare, where do you now get `env`, `waitUntil`, `cf` and `caches`?
 26. List five APIs deprecated in 3.x that you should schedule for removal before v4.
 27. In the capstone, why is the `tenant` handle placed after `session` and before `guard`, and why return 404 rather than 403 for a foreign tenant?
-28. In the capstone, why must destructive remote commands take an explicit tenant ID, and why is `event.params` not used for authorization?
+28. In the capstone, why do remote functions take the tenant as an explicit argument instead of reading `locals.tenant` or `event.params`, and why do destructive commands also pass the tenant ID?
 29. **Design:** In the capstone, list three layers that jointly prevent cross-tenant data access, and give one test for each.
 30. **Design:** Choose caching policies for: the login page, a tenant dashboard page, `/_app/immutable/*`, a `query.live` stream, and the billing webhook. Justify each.

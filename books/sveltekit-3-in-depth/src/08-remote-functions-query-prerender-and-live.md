@@ -28,13 +28,13 @@ A remote module is any file under `src` whose name has a `remote` segment: `post
 - **Placement.** Anywhere in `src` *except* inside a `server` directory. Files in server-only directories cannot be imported by client code, which is the whole point of a remote module, so the two are contradictory.
 - **Exports.** Every export must be a remote function created by `query`, `query.batch`, `query.live`, `form`, `command` or `prerender`. A `default` export raises `remote_module_default_export`; any other value raises `remote_module_invalid_export`. Type-only exports are erased and therefore fine. Consequence: **you cannot export a schema** from a `.remote.ts` file. Put shared schemas in an ordinary module (`schemas.ts`) and import it from both sides.
 - **Names.** Exports are named; reserved words such as `delete` or `class` are allowed (the client module is generated with care for that). Names that are `Object.prototype` members answer 404.
-- **Libraries.** Files inside `node_modules` are remote modules only if the package lists `@sveltejs/kit` in `peerDependencies`. Section 7.10 returns to this.
+- **Libraries.** Files inside `node_modules` are remote modules only if the package lists `@sveltejs/kit` in `peerDependencies`. Section 7.9 returns to this.
 
 ### What the build does with them
 
 The Vite plugin transforms each remote module twice. In the **server** build the module is kept as is, then a few lines are appended that give every export an `id` of `<hash>/<name>`, where `hash` is a hash of the file path relative to the project root. Each remote module is emitted as its own chunk so the server can load it lazily by hash. In the **client** build the module is replaced with a generated one that exports, for each name, a call such as `query('a1b2c3/getPost')` from SvelteKit’s client runtime; the server code never reaches the browser. To know the type of each export (query, form, …) in production, the server build is analysed first and the metadata is handed to the client build; in development the module is loaded in the Vite runner and inspected.
 
-Two things follow. First, the HTTP endpoint is derived from file location: **moving a remote file changes its endpoint**, which matters for clients on an old deployment (section 7.9, and the version polling in Chapter 16). Second, importing a remote module in server code, for example calling `await getPost(slug)` from a `load` function, calls the real function directly, with request-scoped deduplication, no HTTP involved.
+Two things follow. First, the HTTP endpoint is derived from file location: **moving a remote file changes its endpoint**, which matters for clients on an old deployment (section 7.9, and the version polling in Chapters 2 and 12). Second, importing a remote module in server code, for example calling `await getPost(slug)` from a `load` function, calls the real function directly, with request-scoped deduplication, no HTTP involved.
 
 ## 7.2 On the wire
 
@@ -211,7 +211,7 @@ export const getDashboard = query(async () => {
 
 A private (non-exported) query never appears in a response payload, so it is safe for data that must not reach the client. (The implementation deliberately skips serialising anything without an `id`.)
 
-**On the client**, identical calls return proxies that point at one underlying `Query` instance. The cache entry lives as long as something references it: a rendered component, an in-flight await, a stored resource. When the last proxy is garbage collected (the runtime uses a `FinalizationRegistry`) and no effect pins it, the entry is evicted on the next tick. You do not manage lifetimes, but you should know the consequence: **a query is not a long-lived store**. If you navigate away and back, or hold no reference, you will refetch. Persist data you want to keep in `$state` outside the query, or use `prerender` for data that rarely changes.
+**On the client**, identical calls return proxies that point at one underlying `Query` instance. The cache entry lives as long as something references it: a rendered component, an in-flight await, a stored resource. When the last proxy is garbage collected (the runtime uses a `FinalizationRegistry`) and no effect pins it, the entry is evicted on the next tick. You do not manage lifetimes, but you should know the consequence: **a query is not a long-lived store**. (It is also why the runtime’s cache factory takes care not to close over the proxy: a reference from the cache entry back to its proxy would keep the proxy alive, and the entry would never be evicted.) If you navigate away and back, or hold no reference, you will refetch. Persist data you want to keep in `$state` outside the query, or use `prerender` for data that rarely changes.
 
 ### Server-side rendering and hydration
 
@@ -459,7 +459,7 @@ export const transport: Transport = {
 Versioning is the operational hazard. Because a client may be running a previous build while the server is new (or vice versa during a rolling deploy):
 
 - Adding an optional argument field is safe; removing or renaming one produces validation failures on stale clients.
-- Moving or renaming a remote module changes its hash; old clients get 404. SvelteKit detects new deployments via the version header on remote responses and `version.pollInterval` (default one hour) and the `updated` store in `$app/state`; call `updated.check()` or reload on the first failed call after `updated.current` becomes `true`.
+- Moving or renaming a remote module changes its hash; old clients get 404. SvelteKit detects new deployments via the version header on remote responses and `version.pollInterval` (default one hour) and the `updated` object from `$app/state`; call `updated.check()` or reload on the first failed call after `updated.current` becomes `true`.
 - Treat `kind: 'validation'` errors during a deployment window as expected noise.
 
 ### Libraries that ship remote functions
@@ -498,22 +498,41 @@ A package can export remote modules if it lists `@sveltejs/kit` in `peerDependen
 7.  Explain the difference between `Input`, `Output` and `Validated` for a query whose schema is `v.pipe(v.string(), v.transform(Number))`.
 8.  Predict: are `getPosts({ page: 1, tag: 'a' })` and `getPosts({ tag: 'a', page: 1 })` the same cache entry? What about `getPosts([1, 'a'])` versus `getPosts(['a', 1])`?
 9.  Multiple choice: a validation failure for a remote query reaches the client as
+
     a.  an HTTP 400 response with the Valibot issues in the body
     b.  an HTTP 200 response whose envelope has `type: 'error'` and `{ status: 400, message: 'Bad Request' }`
     c.  an HTTP 500 response
     d.  a thrown `ValidationError` instance
 10. What is the difference between `loading` and `ready` on a query resource, and how would you use both for a “dim while refreshing” list?
-11. What does this render the second time `Next` is clicked, and how many requests are made if `getPosts` is a plain `query`? `svelte <script lang="ts"> let page = $state(1); const posts = $derived(getPosts({ page })); </script> <button onclick={() => page++}>Next</button> {#each (await posts) as p}<li>{p.title}</li>{/each}`
+11. What does this render the second time `Next` is clicked, and how many requests are made if `getPosts` is a plain `query`?
+
+    ```html
+    <script lang="ts">
+      let page = $state(1);
+      const posts = $derived(getPosts({ page }));
+    </script>
+
+    <button onclick={() => page++}>Next</button>
+    {#each (await posts) as p}<li>{p.title}</li>{/each}
+    ```
 12. Why does a private (non-exported) query still dedupe per request, and why is it safe for sensitive data?
 13. A page that is prerendered calls `await getPosts()` where `getPosts` is a `query`. What happens at build time and what are two fixes?
 14. How is a client query’s cache entry evicted? Why does the implementation avoid closing over `this` in the cache factory?
 15. Design: 30 `<ProductCard>` components each call `await getStock(id)`. Sketch the server-side function so that one database query serves all of them, and say what happens if one id does not exist.
-16. Find the bug: `ts export const getStock = query.batch(v.string(), async (ids) => { const rows = await db.stock(ids); return (id) => rows.find((r) => r.id === id).qty; });`
+16. Find the bug:
+
+    ```ts
+    export const getStock = query.batch(v.string(), async (ids) => {
+      const rows = await db.stock(ids);
+      return (id) => rows.find((r) => r.id === id).qty;
+    });
+    ```
 17. Why does the client batch use `setTimeout(0)` instead of a microtask?
 18. A live-query generator never yields before awaiting an event that may take minutes. What goes wrong during SSR and hydration?
 19. A live-query generator polls a database every second and yields the snapshot. Does the client receive 60 messages a minute if nothing changes? Explain.
 20. Describe the reconnection policy of a live query: backoff formula, what stops retries, and what makes a failure terminal.
 21. Multiple choice: what does `done` indicate on a live query?
+
     a.  the browser is offline
     b.  the server finished the stream or the query failed terminally; only `reconnect()` restarts it
     c.  the first value has arrived

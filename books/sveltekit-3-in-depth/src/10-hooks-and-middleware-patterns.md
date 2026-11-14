@@ -108,6 +108,7 @@ export const handle: Handle = async ({ event, resolve }) =>
 - Use it for replacements of *placeholders you own*, which sit in one chunk by construction: `app.html` is the place to put `%lang%` or `%theme%`, and `transformPageChunk` the place to fill them.
 - Never rewrite arbitrary content with a regex (you will miss matches, or mangle a tag split across chunks).
 - `done` is `true` for the last chunk. Return `undefined` to emit an empty string for that chunk.
+- In 3.1 the implementation actually calls it once, with the whole document and `done: true` (Chapter 2). Write transforms that are correct either way, so they keep working when chunked flushing arrives.
 
 ```html
 <!-- src/app.html -->
@@ -236,19 +237,23 @@ Design rules that survive real codebases:
 3.  **Store identity and capabilities, not data.** `locals.user` (an id and role) is a good fit; the user’s full order history is not. Fetch data in `load` or queries, where it is cached and typed per use.
 4.  **Make expensive derivations lazy.** `handle` runs for every dynamic request, including ones that never need the user (an unauthenticated JSON endpoint, a CORS preflight). Expose a memoised getter instead of an eager lookup:
 
-```ts
-const session: Handle = async ({ event, resolve }) => {
-    let pending: Promise<App.Locals['user']> | undefined;
-    Object.defineProperty(event.locals, 'user', {
-        configurable: true,
-        get: () => (pending ??= lookupUser(event.cookies.get('session'))),
-        enumerable: true
-    });
-    return resolve(event);
-};
-```
+    ```ts
+    const session: Handle = async ({ event, resolve }) => {
+        let pending: Promise<App.Locals['user']> | undefined;
+        Object.defineProperty(event.locals, 'user', {
+            configurable: true,
+            get: () => (pending ??= lookupUser(event.cookies.get('session'))),
+            enumerable: true
+        });
+        return resolve(event);
+    };
+    ```
 
-The catch is that `locals.user` becomes a promise-returning pattern, which changes the type; many teams prefer an explicit `locals.getUser()` function memoised per request. Either way the lookup happens at most once, and only when something asks. 5. **Locals and remote functions.** Remote functions read `getRequestEvent().locals`, so identity derived in `handle` is available to queries, forms and commands. That is the recommended trust path: identity from *cookies and headers* into `locals` in `handle`; authorisation checks inside each function. 6. **Locals do not refresh mid-request.** `handle` runs once, before actions and remote calls. If an action or `form`/`command` handler changes the session cookie, it must also update `locals` (Chapter 6, section 6.9) because `load` functions of the same request see the same object. 7. **Do not copy `locals` into page data wholesale.** `return { ...locals }` from a root layout `load` sends every field to the browser, including `requestId` or internal flags. Return an explicit projection (`{ user: locals.user && { name: locals.user.name } }`).
+    The catch is that `locals.user` becomes a promise-returning pattern, which changes the type; many teams prefer an explicit `locals.getUser()` function memoised per request. Either way the lookup happens at most once, and only when something asks.
+
+5.  **Locals and remote functions.** Remote functions read `getRequestEvent().locals`, so identity derived in `handle` is available to queries, forms and commands. That is the recommended trust path: identity from *cookies and headers* into `locals` in `handle`; authorisation checks inside each function.
+6.  **Locals do not refresh mid-request.** `handle` runs once, before actions and remote calls. If an action or `form`/`command` handler changes the session cookie, it must also update `locals` (Chapter 6, section 6.9) because `load` functions of the same request see the same object.
+7.  **Do not copy `locals` into page data wholesale.** `return { ...locals }` from a root layout `load` sends every field to the browser, including `requestId` or internal flags. Return an explicit projection (`{ user: locals.user && { name: locals.user.name } }`).
 
 Where `AsyncLocalStorage` is available, `getRequestEvent()` (Chapter 7) gives deep helper functions access to `locals` without threading the event through every call. Prefer that to your own `AsyncLocalStorage` for request context unless you need data the event does not carry; and know that on runtimes without async local storage it only works synchronously at the start of a function.
 
@@ -625,7 +630,15 @@ A short, uncomfortable list:
 
 9.  A load function inlined an API response and the browser code reads `response.headers.get('x-total-count')` after hydration but gets `null`. What is missing?
 
-10. Find the bug: `ts export const handle: Handle = async ({ event, resolve }) => { const response = await resolve(event); response.headers.set('x-frame-options', 'DENY'); return response; };` (Hint: what response types could cause this to throw?)
+10. Find the bug (hint: what response types could cause this to throw?):
+
+    ```ts
+    export const handle: Handle = async ({ event, resolve }) => {
+      const response = await resolve(event);
+      response.headers.set('x-frame-options', 'DENY');
+      return response;
+    };
+    ```
 
 11. An error is thrown directly inside `handle` before `resolve`. What does the user see for a browser navigation, and for a request with `Accept: application/json`? Is `+error.svelte` used?
 

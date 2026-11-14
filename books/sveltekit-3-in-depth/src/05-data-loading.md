@@ -211,7 +211,7 @@ What is **not** inlined: server `load` fetches (the server load’s result is wh
 
 ```ts
 // src/hooks.server.ts
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 export const handle: Handle = ({ event, resolve }) =>
     resolve(event, {
@@ -365,7 +365,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 };
 ```
 
-`cookies.set(name, value, options)` requires `path` (explicitly, since v2) and defaults to `httpOnly: true`, `secure: true` (relaxed on `localhost` in development) and `sameSite: 'lax'`. `cookies.delete`, `cookies.getAll`, `cookies.serialize` and `cookies.parse` exist too. A cookie set in a load is applied to the response when `resolve` returns; but a `Set-Cookie` produced in a **streamed** promise would be too late, as would any response header (see “Redirects and errors”).
+`cookies.set(name, value, options)` defaults `path` to `/` in 3.0 (in 2.x it had to be set explicitly), and defaults to `httpOnly: true`, `secure: true` (relaxed on `localhost` in development) and `sameSite: 'lax'`. `cookies.delete`, `cookies.getAll`, `cookies.serialize` and `cookies.parse` exist too. A cookie set in a load is applied to the response when `resolve` returns; but a `Set-Cookie` produced in a **streamed** promise would be too late, as would any response header (see “Redirects and errors”).
 
 ## `getRequestEvent`
 
@@ -569,7 +569,17 @@ Client-side loads are not traced by Kit; `tracing.enabled` is `false` and the sp
     c.  External URLs require `{ external: true }` or an allow-list
     d.  It may be called inside a streamed promise to redirect the page
 
-24. Rewrite so redirects and HTTP errors are not swallowed: `ts try { const r = await getThing(); if (!r) error(404); return r; } catch { return fallback; }`
+24. Rewrite so redirects and HTTP errors are not swallowed:
+
+    ```ts
+    try {
+      const r = await getThing();
+      if (!r) error(404);
+      return r;
+    } catch {
+      return fallback;
+    }
+    ```
 
 25. In a data request, how is a thrown `redirect(307, '/login')` represented, and what HTTP status does that response have? Who follows it?
 

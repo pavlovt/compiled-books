@@ -1,22 +1,22 @@
 # Final Tests
 
-Six cumulative tests for the whole book. Each test has 27 questions and spans several chapters. Difficulty rises from Test 1 (core concepts) to Test 6 (expert level: internals, failure modes and architecture). Answer without looking things up first, then check `tests-answers.md`. Unless a question says otherwise, assume SvelteKit 3.1 with Svelte 5.57, `#lib` imports, config in `sveltekit({...})`, and the experimental flags for remote functions enabled where they are used.
+Six cumulative tests for the whole book. Each test has 27 questions and spans several chapters. Difficulty rises from Test 1 (core concepts) to Test 6 (expert level: internals, failure modes and architecture). Answer without looking things up first, then check the next chapter, “Final Tests: Answer Key”. Unless a question says otherwise, assume SvelteKit 3.1 with Svelte 5.57, `#lib` imports, config in `sveltekit({...})`, and the experimental flags for remote functions enabled where they are used.
 
 ## Test 1: Foundations: Toolchain, Routing, and Data Loading
 
 1.  Where does project configuration live in SvelteKit 3?
 
-    - a\. In the `kit` key of `svelte.config.js`
-    - b\. In options passed to `sveltekit({...})` in `vite.config`
-    - c\. In a `sveltekit` key in `package.json`
-    - d\. In `.svelte-kit/config.json`
+    a.  In the `kit` key of `svelte.config.js`
+    b.  In options passed to `sveltekit({...})` in `vite.config`
+    c.  In a `sveltekit` key in `package.json`
+    d.  In `.svelte-kit/config.json`
 
 2.  Which of these is **not** a minimum version required by SvelteKit 3.x?
 
-    - a\. Node 22.17
-    - b\. TypeScript 6
-    - c\. Vite 8.0.12
-    - d\. Svelte 6.0
+    a.  Node 22.17
+    b.  TypeScript 6
+    c.  Vite 8.0.12
+    d.  Svelte 6.0
 
 3.  A SvelteKit 2 file contains `import { fmt } from '$lib/util/format';`. Write the SvelteKit 3 import, and the `package.json` entry that makes it resolve.
 
@@ -26,10 +26,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 6.  Which of these requests goes through the `handle` hook?
 
-    - a\. A prerendered page served by the adapter
-    - b\. A file from `static/`
-    - c\. A client navigation’s `__data.json` request
-    - d\. A hashed file under `/_app/immutable/`
+    a.  A prerendered page served by the adapter
+    b.  A file from `static/`
+    c.  A client navigation’s `__data.json` request
+    d.  A hashed file under `/_app/immutable/`
 
 7.  Put these steps of `server.respond` in the order they occur, and say what happens if the one marked with an asterisk throws: `handle`, CSRF origin check, `reroute`\*, route matching, trailing-slash normalisation.
 
@@ -45,12 +45,21 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 10. What may a `src/params.ts` matcher return, and what is not allowed of it?
 
-    - a\. Any object, and it may be async
-    - b\. A `string | number | boolean | bigint` (or `undefined` for no match); it must be synchronous
-    - c\. A `Promise` of a string, so it can query a database
-    - d\. Only a boolean
+    a.  Any object, and it may be async
+    b.  A `string | number | boolean | bigint` (or `undefined` for no match); it must be synchronous
+    c.  A `Promise` of a string, so it can query a database
+    d.  Only a boolean
 
-11. What does this do for a visit to `/de/ueber-uns`? State what `event.url.pathname` is inside `load` and what the address bar shows. `ts // src/hooks.ts import type { Reroute } from '@sveltejs/kit/hooks'; export const reroute: Reroute = ({ url }) => { if (url.pathname === '/de/ueber-uns') return '/de/about'; };`
+11. What does this do for a visit to `/de/ueber-uns`? State what `event.url.pathname` is inside `load` and what the address bar shows.
+
+    ```ts
+    // src/hooks.ts
+    import type { Reroute } from '@sveltejs/kit/hooks';
+
+    export const reroute: Reroute = ({ url }) => {
+      if (url.pathname === '/de/ueber-uns') return '/de/about';
+    };
+    ```
 
 12. A route directory contains both `+page.svelte` and `+server.ts` (exporting `GET` and `PUT`). Which one answers a `fetch` with method `PUT`? Which answers a `GET` with `Accept: text/html,*/*;q=0.8`, and which a `GET` with `Accept: */*`? What response header is added?
 
@@ -58,23 +67,41 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 14. Which of these can only a universal `load` do?
 
-    - a\. Read a secret from the environment
-    - b\. Return a class instance or a function
-    - c\. Read `cookies`
-    - d\. Read `locals`
+    a.  Read a secret from the environment
+    b.  Return a class instance or a function
+    c.  Read `cookies`
+    d.  Read `locals`
 
-15. Identify the waterfalls and rewrite the page load to remove them. `ts // src/routes/posts/[slug]/+page.server.ts export const load = async ({ parent, params }) => { const { user } = await parent(); const post = await db.post(params.slug); const comments = await db.comments(params.slug); return { post, comments, mine: post.authorId === user.id }; };`
+15. Identify the waterfalls and rewrite the page load to remove them.
+
+    ```ts
+    // src/routes/posts/[slug]/+page.server.ts
+    export const load = async ({ parent, params }) => {
+      const { user } = await parent();
+      const post = await db.post(params.slug);
+      const comments = await db.comments(params.slug);
+      return { post, comments, mine: post.authorId === user.id };
+    };
+    ```
 
 16. Load A reads `url.searchParams.get('q')`. Load B (a different node) reads `new URL(request.url).searchParams.get('q')`. The user navigates from `?q=a` to `?q=b` on the same page. Which load reruns, and what is the consequence for the other?
 
-17. For the load below, say which of the four events rerun it: (i) navigating from `?page=1&sort=asc` to `?page=1&sort=desc`; (ii) `invalidate('app:cart')`; (iii) clicking a link to `?page=2`; (iv) `invalidate('/api/items')`. `` ts export const load = async ({ url, depends, fetch }) => { depends('app:cart'); const page = Number(url.searchParams.get('page') ?? 1); return { items: await (await fetch(`/api/items?page=${page}`)).json() }; }; `` (This is a server `load`.)
+17. For the load below, say which of the four events rerun it: (i) navigating from `?page=1&sort=asc` to `?page=1&sort=desc`; (ii) `invalidate('app:cart')`; (iii) clicking a link to `?page=2`; (iv) `invalidate('/api/items')`. This is a server `load`:
+
+    ```ts
+    export const load = async ({ url, depends, fetch }) => {
+      depends('app:cart');
+      const page = Number(url.searchParams.get('page') ?? 1);
+      return { items: await (await fetch(`/api/items?page=${page}`)).json() };
+    };
+    ```
 
 18. Which statement about streaming is correct?
 
-    - a\. A streamed promise may still change the status code after it resolves
-    - b\. Promises returned from a universal `load` are streamed too
-    - c\. Only server `load` streams; attach a no-op `.catch` to avoid process-level unhandled rejections; status, headers and cookies must be decided before streaming starts
-    - d\. Streamed responses receive an HTML-hash `ETag`
+    a.  A streamed promise may still change the status code after it resolves
+    b.  Promises returned from a universal `load` are streamed too
+    c.  Only server `load` streams; attach a no-op `.catch` to avoid process-level unhandled rejections; status, headers and cookies must be decided before streaming starts
+    d.  Streamed responses receive an HTML-hash `ETag`
 
 19. `preloadData(href)` has three result types in SvelteKit 3. Name them and say which one is new in 3.0.
 
@@ -82,12 +109,21 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 21. What is the default of `version.pollInterval` in SvelteKit 3?
 
-    - a\. `0` (no polling)
-    - b\. `60000`
-    - c\. `3600000`
-    - d\. `86400000`
+    a.  `0` (no polling)
+    b.  `60000`
+    c.  `3600000`
+    d.  `86400000`
 
-22. A page navigates from `/posts/a` to `/posts/b` and keeps showing the title of post a. Why, and give two fixes? `svelte <script lang="ts"> let { data } = $props(); let title = $state(data.post.title); </script> <h1>{title}</h1>`
+22. A page navigates from `/posts/a` to `/posts/b` and keeps showing the title of post a. Why, and give two fixes?
+
+    ```html
+    <script lang="ts">
+      let { data } = $props();
+      let title = $state(data.post.title);
+    </script>
+
+    <h1>{title}</h1>
+    ```
 
 23. A universal `load` calls `fetch('/api/items')`. Explain why the browser does not issue that request again while hydrating, and what controls which response headers are available to the browser code.
 
@@ -138,10 +174,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 8.  Which of these filenames are treated as remote modules in SvelteKit 3?
 
-    - a\. `posts.remote.ts`
-    - b\. `posts.remote.test.ts`
-    - c\. `remote.ts`
-    - d\. All of the above
+    a.  `posts.remote.ts`
+    b.  `posts.remote.test.ts`
+    c.  `remote.ts`
+    d.  All of the above
 
 9.  What happens when a browser calls this function with `getPost('hello')`, and what are the two correct ways to fix it?
 
@@ -159,10 +195,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 13. Which statement about `query.live` is correct?
 
-    - a\. It supports `.refresh()` to rerun the generator
-    - b\. During SSR it yields its first value and closes; on the client it keeps one shared connection per key and exposes `.current` and `.connected`
-    - c\. It delivers every intermediate value, even if the client is slow
-    - d\. It should be cached in a service worker so it works offline
+    a.  It supports `.refresh()` to rerun the generator
+    b.  During SSR it yields its first value and closes; on the client it keeps one shared connection per key and exposes `.current` and `.connected`
+    c.  It delivers every intermediate value, even if the client is slow
+    d.  It should be cached in a service worker so it works offline
 
 14. Inside a remote `query`, what happens when code reads `event.url`, `event.params` or `event.route`? What do those properties contain inside a `form` or `command`, why must they not be used for authorisation, and can a `command` call `redirect()`?
 
@@ -170,19 +206,33 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 16. Which statement about the remote `prerender` function is correct?
 
-    - a\. It runs on every request and caches in memory
-    - b\. It runs at build time, is excluded from the server bundle unless `dynamic: true`, and is the only remote read usable on fully prerendered pages
-    - c\. It cannot take arguments
-    - d\. It requires a service worker
+    a.  It runs on every request and caches in memory
+    b.  It runs at build time, is excluded from the server bundle unless `dynamic: true`, and is the only remote read usable on fully prerendered pages
+    c.  It cannot take arguments
+    d.  It requires a service worker
 
-17. Find the two bugs in this remote form. `ts // schema const schema = v.object({ title: v.string(), published: v.boolean() }); export const createPost = form(schema, async (data) => { /* ... */ });` `svelte <form {...createPost}> <input name="title" /> <input type="checkbox" name="published" /> <button>Save</button> </form>`
+17. Find the two bugs in this remote form.
+
+    ```ts
+    // schema
+    const schema = v.object({ title: v.string(), published: v.boolean() });
+    export const createPost = form(schema, async (data) => { /* ... */ });
+    ```
+
+    ```html
+    <form {...createPost}>
+      <input name="title" />
+      <input type="checkbox" name="published" />
+      <button>Save</button>
+    </form>
+    ```
 
 18. According to the published types, what options does a remote form’s `validate()` accept, and how does the documentation’s wording differ?
 
-    - a\. `{ all?: boolean, preflightOnly?: boolean }`; the docs say `includeUntouched`
-    - b\. `{ includeUntouched?: boolean }`; the docs agree
-    - c\. `{ strict?: boolean }`; the docs say `all`
-    - d\. No options at all
+    a.  `{ all?: boolean, preflightOnly?: boolean }`; the docs say `includeUntouched`
+    b.  `{ includeUntouched?: boolean }`; the docs agree
+    c.  `{ strict?: boolean }`; the docs say `all`
+    d.  No options at all
 
 19. In a remote form handler, how do you report that an email is already registered, so that it shows up next to the right field? Why is `fail()` the wrong tool here?
 
@@ -196,10 +246,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 24. In SvelteKit 3, which statement about `handleError` is correct?
 
-    - a\. It is not called for errors you create with `error(404)`
-    - b\. It is called for all errors with a `kind`, may return a `status`, and must never throw
-    - c\. `handleValidationError` still handles validation failures of remote functions
-    - d\. It replaces `+error.svelte`
+    a.  It is not called for errors you create with `error(404)`
+    b.  It is called for all errors with a `kind`, may return a `status`, and must never throw
+    c.  `handleValidationError` still handles validation failures of remote functions
+    d.  It replaces `+error.svelte`
 
 25. Given `src/routes/+error.svelte`, `src/routes/app/+error.svelte` and `src/routes/app/+layout.server.ts` that calls `error(500, 'boom')`, which component renders? What renders if `src/routes/+layout.server.ts` throws? What renders for an error thrown inside `handle` before `resolve`?
 
@@ -219,10 +269,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 5.  What does a page render when both `ssr = false` and `csr = false` are set?
 
-    - a\. A blank shell with client-side hydration
-    - b\. The prerendered markup without JavaScript
-    - c\. Nothing useful: no server-rendered markup and no client-side JavaScript
-    - d\. A 404
+    a.  A blank shell with client-side hydration
+    b.  The prerendered markup without JavaScript
+    c.  Nothing useful: no server-rendered markup and no client-side JavaScript
+    d.  A 404
 
 6.  You must ship a pure SPA to static hosting with `adapter-static`. What two things do you need, and why does the book recommend a hybrid (prerender public routes, SPA only the rest) when the app has public pages?
 
@@ -241,30 +291,39 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 10. Where should state live if it must survive a reload, be shareable via link and influence server rendering?
 
-    - a\. A `.svelte.ts` singleton
-    - b\. `sessionStorage`
-    - c\. The URL (path or search params), validated on read
-    - d\. A cookie set with JavaScript
+    a.  A `.svelte.ts` singleton
+    b.  `sessionStorage`
+    c.  The URL (path or search params), validated on read
+    d.  A cookie set with JavaScript
 
 11. A photo gallery opens a modal using `goto(href, { shallow: true, state: { photoId } })`. What does `page.state` contain during SSR and after a hard reload (without `persistState`)? What do `beforeNavigate` and friends do for such a navigation? What should the page offer so shared links work?
 
-12. Convert this SvelteKit 2 snippet to SvelteKit 3, and say what changed about `page.url`. `svelte <script> import { page, navigating } from '$app/stores'; </script> {#if $navigating}<Spinner />{/if} <p>{$page.url.pathname}</p>`
+12. Convert this SvelteKit 2 snippet to SvelteKit 3, and say what changed about `page.url`.
+
+    ```html
+    <script>
+      import { page, navigating } from '$app/stores';
+    </script>
+
+    {#if $navigating}<Spinner />{/if}
+    <p>{$page.url.pathname}</p>
+    ```
 
 13. Which statement about `snapshot()` is true?
 
-    - a\. It persists to `localStorage` as JSON
-    - b\. It is called during component initialisation, captures and restores ephemeral UI state per history entry via devalue-serialised `sessionStorage`
-    - c\. It only works in `+page.svelte`
-    - d\. It is the recommended way to store the authenticated user
+    a.  It persists to `localStorage` as JSON
+    b.  It is called during component initialisation, captures and restores ephemeral UI state per history entry via devalue-serialised `sessionStorage`
+    c.  It only works in `+page.svelte`
+    d.  It is the recommended way to store the authenticated user
 
 14. Write the `src/env.ts` declaration for: a private `DATABASE_URL` that must be a URL; a public `PUBLIC_API_BASE` fixed at build time; and a public `PUBLIC_FEATURE_BANNER` that may change per deployment without a rebuild. Show how server code imports the first one.
 
 15. Which of these modules are protected as server-only in SvelteKit 3?
 
-    - a\. `src/lib/db.server.ts`
-    - b\. `src/lib/auth/server/hash.ts`
-    - c\. `src/lib/serverless.ts`
-    - d\. a and b only
+    a.  `src/lib/db.server.ts`
+    b.  `src/lib/auth/server/hash.ts`
+    c.  `src/lib/serverless.ts`
+    d.  a and b only
 
 16. All unit tests pass, but a production build fails because a component imports `#lib/server/db.js`. Why did Vitest not catch it, and how do you enforce the rule in CI?
 
@@ -278,9 +337,18 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 21. For a first-party web app with server-rendered pages, argue for opaque server-side sessions rather than JWTs, and say what the database should store.
 
-22. What is wrong with this cookie, and what are SvelteKit 3’s defaults? `ts cookies.set('session', token, { httpOnly: false, sameSite: 'none' });`
+22. What is wrong with this cookie, and what are SvelteKit 3’s defaults?
 
-23. A `handle` hook redirects anonymous users away from paths starting with `/admin`. A team adds an admin-only remote function and considers it protected. Is it? Explain, and show the fix. `ts // src/routes/admin/invoices.remote.ts export const getInvoices = query(async () => db.invoices());`
+    ```ts
+    cookies.set('session', token, { httpOnly: false, sameSite: 'none' });
+    ```
+
+23. A `handle` hook redirects anonymous users away from paths starting with `/admin`. A team adds an admin-only remote function and considers it protected. Is it? Explain, and show the fix.
+
+    ```ts
+    // src/routes/admin/invoices.remote.ts
+    export const getInvoices = query(async () => db.invoices());
+    ```
 
 24. Write a rule for validating a `next` query parameter before redirecting after login. Why is SvelteKit 3’s refusal of external `redirect()` targets not a substitute?
 
@@ -294,10 +362,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 1.  Under which condition does SvelteKit add a nonce or hash source for the inline scripts it emits?
 
-    - a\. Always, whatever your policy says
-    - b\. When your effective script policy does not contain `'unsafe-inline'` (or contains `'strict-dynamic'`)
-    - c\. Only for prerendered pages
-    - d\. Only in development
+    a.  Always, whatever your policy says
+    b.  When your effective script policy does not contain `'unsafe-inline'` (or contains `'strict-dynamic'`)
+    c.  Only for prerendered pages
+    d.  Only in development
 
 2.  Your `app.html` contains an inline analytics bootstrap with `nonce="%sveltekit.nonce%"`, and several routes are prerendered. What goes wrong, and what are your options?
 
@@ -307,10 +375,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 5.  Production app, `csrf` left at defaults, app origin `https://app.example.com`. For each request, say whether SvelteKit’s built-in CSRF check rejects it, and what else protects (or fails to protect) you:
 
-    - a\. A form-encoded `POST /settings` from `https://evil.example` with the user’s cookies
-    - b\. A cross-origin `fetch` with `Content-Type: application/json` to a `+server` `POST` endpoint
-    - c\. A cross-origin `POST` with no `Content-Type` header
-    - d\. A cross-origin remote function call from an origin listed in `csrf.trustedOrigins`
+    a.  A form-encoded `POST /settings` from `https://evil.example` with the user’s cookies
+    b.  A cross-origin `fetch` with `Content-Type: application/json` to a `+server` `POST` endpoint
+    c.  A cross-origin `POST` with no `Content-Type` header
+    d.  A cross-origin remote function call from an origin listed in `csrf.trustedOrigins`
 
 6.  An endpoint `GET /api/preview?url=` fetches the given URL server-side and returns its title. List four controls that make it safe against SSRF, and say where in SvelteKit you could centralise one of them.
 
@@ -328,21 +396,28 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 9.  What does `output.linkHeaderPreload: true` do, and why is it `false` by default in SvelteKit 3?
 
-    - a\. It preloads fonts automatically through `Link` headers on every response
-    - b\. It sends preload hints for JS and CSS as a `Link` header on dynamically rendered pages instead of `<link>` elements, at the risk of oversized headers
-    - c\. It re-enables the removed `preloadStrategy` option
-    - d\. It prefetches all routes
+    a.  It preloads fonts automatically through `Link` headers on every response
+    b.  It sends preload hints for JS and CSS as a `Link` header on dynamically rendered pages instead of `<link>` elements, at the risk of oversized headers
+    c.  It re-enables the removed `preloadStrategy` option
+    d.  It prefetches all routes
 
 10. A category page lists 100 product links, each with a database-backed `load`. Hover preloading is hammering the database. How do you reduce the cost without losing code preloading, and which condition disables preloading entirely?
 
-11. What is wrong here, and what two limits of `setHeaders` apply? `ts export const load = async ({ setHeaders, locals }) => { setHeaders({ 'cache-control': 'public, max-age=300' }); return { user: locals.user, items: await listItems() }; };`
+11. What is wrong here, and what two limits of `setHeaders` apply?
+
+    ```ts
+    export const load = async ({ setHeaders, locals }) => {
+      setHeaders({ 'cache-control': 'public, max-age=300' });
+      return { user: locals.user, items: await listItems() };
+    };
+    ```
 
 12. Which statement about HTML `ETag`s is correct?
 
-    - a\. Streamed pages get a strong `ETag` computed incrementally
-    - b\. Non-streamed SSR pages get an HTML-hash `ETag` and `If-None-Match` yields `304`, which saves bandwidth but not render CPU
-    - c\. `ETag`s are only generated for prerendered pages
-    - d\. `__data.json` responses are cached for a day by default
+    a.  Streamed pages get a strong `ETag` computed incrementally
+    b.  Non-streamed SSR pages get an HTML-hash `ETag` and `If-None-Match` yields `304`, which saves bandwidth but not render CPU
+    c.  `ETag`s are only generated for prerendered pages
+    d.  `__data.json` responses are cached for a day by default
 
 13. A universal `load` calls `fetch('/api/prices')`, and the endpoint answers with `Cache-Control: max-age=30`. After hydration the user triggers `invalidate` several times in 10 seconds. What does the browser do, and what should you not rely on this for?
 
@@ -364,14 +439,24 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 22. Choose an adapter for each, with one sentence of justification: (a) SSR app with Postgres, `query.live` and background workers on Cloud Run; (b) a documentation site; (c) an app that must use KV and run at the edge on Cloudflare; (d) an existing app that used the `edge` runtime on Vercel.
 
-23. Port this SvelteKit 2 adapter-cloudflare code to SvelteKit 3, and say what must be installed and run to get types. `ts export async function GET({ platform, request }) { const value = await platform!.env.KV.get('k'); platform!.context.waitUntil(log(value)); const country = platform!.cf.country; const cached = await platform!.caches.default.match(request); return new Response(value); }`
+23. Port this SvelteKit 2 adapter-cloudflare code to SvelteKit 3, and say what must be installed and run to get types.
+
+    ```ts
+    export async function GET({ platform, request }) {
+      const value = await platform!.env.KV.get('k');
+      platform!.context.waitUntil(log(value));
+      const country = platform!.cf.country;
+      const cached = await platform!.caches.default.match(request);
+      return new Response(value);
+    }
+    ```
 
 24. Which statement about ISR with `adapter-vercel` is correct?
 
-    - a\. It is safe for routes that render the logged-in user’s name
-    - b\. It requires the `edge` runtime
-    - c\. It has no effect on prerendered routes, needs a `bypassToken` of at least 32 characters for on-demand revalidation and Draft Mode, and is only safe where all visitors see identical content
-    - d\. It ignores `allowQuery`
+    a.  It is safe for routes that render the logged-in user’s name
+    b.  It requires the `edge` runtime
+    c.  It has no effect on prerendered routes, needs a `bypassToken` of at least 32 characters for on-demand revalidation and Draft Mode, and is only safe where all visitors see identical content
+    d.  It ignores `allowQuery`
 
 25. What does a custom adapter’s `adapt(builder)` have to produce, how does the generated server instance get used at runtime, and what are `emulate()` and `supports` for?
 
@@ -385,10 +470,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 2.  A library source file contains `import { fmt } from '#lib/util/format.js';` and another contains `import { helper } from './helpers';` (a `helpers.ts` file). What does `svelte-package` do with each, and which one is a bug?
 
-    - a\. It rewrites the `#lib` import to a relative path and the extensionless import breaks consumers; the second is the bug
-    - b\. It rewrites neither, and both break
-    - c\. It rewrites the extensionless import and leaves `#lib`
-    - d\. It bundles both into one file
+    a.  It rewrites the `#lib` import to a relative path and the extensionless import breaks consumers; the second is the bug
+    b.  It rewrites neither, and both break
+    c.  It rewrites the extensionless import and leaves `#lib`
+    d.  It bundles both into one file
 
 3.  A UI library’s `Breadcrumbs.svelte` imports `page` from `$app/state` and calls `goto` from `$app/navigation`. Name two problems and a redesign that keeps the component usable in plain Svelte and in SvelteKit apps.
 
@@ -427,18 +512,45 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 11. Which sequence is the recommended upgrade path from SvelteKit 2?
 
-    - a\. Run the codemod first, then upgrade Node and fix whatever breaks
-    - b\. Latest 2.x and fix deprecation warnings, raise Node/TypeScript/Svelte/Vite/plugin versions, run the codemod, resolve the manual checklist, test against a production build and staging, then deploy with the 2.x deployment available for rollback
-    - c\. Switch to the 3.x adapters first, then change config
-    - d\. Upgrade only `@sveltejs/kit` and let the CLI migrate everything at first build
+    a.  Run the codemod first, then upgrade Node and fix whatever breaks
+    b.  Latest 2.x and fix deprecation warnings, raise Node/TypeScript/Svelte/Vite/plugin versions, run the codemod, resolve the manual checklist, test against a production build and staging, then deploy with the 2.x deployment available for rollback
+    c.  Switch to the 3.x adapters first, then change config
+    d.  Upgrade only `@sveltejs/kit` and let the CLI migrate everything at first build
 
 12. Match each `sv migrate sveltekit-3` task to its purpose: consolidating `src/params/*`; replacing `$lib`; `$app/stores` to `$app/state`; writing a list of things that could not be automated; opting existing external redirects in.
 
-13. Port this SvelteKit 2 configuration to SvelteKit 3. Which line has no equivalent, and what replaces it? `js // svelte.config.js import adapter from '@sveltejs/adapter-node'; import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'; export default { preprocess: vitePreprocess(), kit: { adapter: adapter(), csrf: { checkOrigin: false }, prerender: { origin: 'https://shop.example' }, files: { lib: 'src/lib' }, experimental: { tracing: { server: true }, instrumentation: { server: true } } } };`
+13. Port this SvelteKit 2 configuration to SvelteKit 3. Which line has no equivalent, and what replaces it?
+
+    ```js
+    // svelte.config.js
+    import adapter from '@sveltejs/adapter-node';
+    import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+    export default {
+      preprocess: vitePreprocess(),
+      kit: {
+        adapter: adapter(),
+        csrf: { checkOrigin: false },
+        prerender: { origin: 'https://shop.example' },
+        files: { lib: 'src/lib' },
+        experimental: {
+          tracing: { server: true },
+          instrumentation: { server: true }
+        }
+      }
+    };
+    ```
 
 14. Name four changes in SvelteKit 3 that compile and type-check but change runtime behaviour, and say how you would detect each in a staging environment.
 
-15. After the upgrade, the on-call channel is flooded with alerts from this hook. What changed, and how do you fix it? `ts export const handleError: HandleServerError = ({ error, event }) => { Sentry.captureException(error); return { message: 'Something went wrong' }; };`
+15. After the upgrade, the on-call channel is flooded with alerts from this hook. What changed, and how do you fix it?
+
+    ```ts
+    export const handleError: HandleServerError = ({ error, event }) => {
+      Sentry.captureException(error);
+      return { message: 'Something went wrong' };
+    };
+    ```
 
 16. How does a remote `form` still work with JavaScript disabled? What do the spread attributes provide, and what does the browser do on submit when JavaScript is available?
 
@@ -450,10 +562,10 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 20. What is true of `router.resolution: 'server'`?
 
-    - a\. Route lookups go through your `handle` hook
-    - b\. Route lookups are answered on the server before `handle` (the manifest is not shipped to the browser), and `reroute` still applies
-    - c\. It disables client-side navigation
-    - d\. It requires the hash router
+    a.  Route lookups go through your `handle` hook
+    b.  Route lookups are answered on the server before `handle` (the manifest is not shipped to the browser), and `reroute` still applies
+    c.  It disables client-side navigation
+    d.  It requires the hash router
 
 21. `goto('/downloads/report.pdf')` rejects, although the file exists under `static/`. Why, and what do you do instead?
 
@@ -467,7 +579,23 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 26. Scenario: you maintain a design-system library that currently imports `$app/state` and `$lib` inside components. Describe the refactor to make it publishable, including package layout, public API for navigation-aware components, and release checks.
 
-27. Review this `+page.server.ts` and list every problem. `ts import { redirect } from '@sveltejs/kit'; import { SESSION_SECRET } from '$env/static/private'; export const prerender = true; export const actions = { default: async ({ request, cookies }) => { const d = await request.formData(); cookies.set('theme', String(d.get('theme'))); cookies.set('sig', sign(String(d.get('theme')), SESSION_SECRET)); throw redirect(303, String(d.get('next'))); } };`
+27. Review this `+page.server.ts` and list every problem.
+
+    ```ts
+    import { redirect } from '@sveltejs/kit';
+    import { SESSION_SECRET } from '$env/static/private';
+
+    export const prerender = true;
+
+    export const actions = {
+      default: async ({ request, cookies }) => {
+        const d = await request.formData();
+        cookies.set('theme', String(d.get('theme')));
+        cookies.set('sig', sign(String(d.get('theme')), SESSION_SECRET));
+        throw redirect(303, String(d.get('next')));
+      }
+    };
+    ```
 
 ## Test 6: Expert Level: Internals, Failure Modes, and Architecture
 
@@ -503,16 +631,25 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 7.  A remote form handler must make an active `query.live` ticker deliver a fresh value immediately in the same response. Which approach is right?
 
-    - a\. `ticker().refresh()`
-    - b\. `ticker().reconnect()`, because live queries have no `.refresh()`
-    - c\. `invalidate('ticker')`
-    - d\. Nothing: live queries ignore mutations
+    a.  `ticker().refresh()`
+    b.  `ticker().reconnect()`, because live queries have no `.refresh()`
+    c.  `invalidate('ticker')`
+    d.  Nothing: live queries ignore mutations
 
 8.  A server `load` returns a `Money` class instance. Write the `src/hooks.ts` `transport` entry that lets it cross the wire, and name two other places that use the same transport.
 
 9.  A fully prerendered marketing page calls a plain remote `query` for a price list. What happens, and which alternatives would you use?
 
-10. Find the authorisation hole and fix it. `ts // src/routes/[tenant]/members/members.remote.ts export const removeMember = command(v.string(), async (memberId) => { const { params, locals } = getRequestEvent(); if (locals.user?.tenant !== params.tenant) error(403); await db.members.delete({ where: { id: memberId } }); });`
+10. Find the authorisation hole and fix it.
+
+    ```ts
+    // src/routes/[tenant]/members/members.remote.ts
+    export const removeMember = command(v.string(), async (memberId) => {
+      const { params, locals } = getRequestEvent();
+      if (locals.user?.tenant !== params.tenant) error(403);
+      await db.members.delete({ where: { id: memberId } });
+    });
+    ```
 
 11. One image is built once and promoted from staging (`https://staging.example`) to production (`https://app.example.com`) behind a TLS-terminating proxy, and form POSTs fail CSRF on one of them. Why is `paths.origin` a poor fit, and what do you set instead on adapter-node?
 
@@ -530,14 +667,29 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 18. Which of these are build errors when imported from browser code?
 
-    - a\. `src/lib/server/db.ts`
-    - b\. `src/lib/ui/server/Chart.svelte`
-    - c\. `src/routes/server/helpers.ts`
-    - d\. a and b, but not c
+    a.  `src/lib/server/db.ts`
+    b.  `src/lib/ui/server/Chart.svelte`
+    c.  `src/routes/server/helpers.ts`
+    d.  a and b, but not c
 
-19. Find the bug and describe its symptom. `ts export const actions = { default: async ({ request }) => { try { const form = await request.formData(); await save(parse(form)); redirect(303, '/done'); } catch (e) { logger.error(e); return fail(500, { message: 'Could not save' }); } } };`
+19. Find the bug and describe its symptom.
 
-20. Why does the capstone’s tenant resolution answer `404`, not `403`, for a tenant the user is not a member of? Where does that check run, and why is it a safe authorisation boundary for remote function calls too?
+    ```ts
+    export const actions = {
+      default: async ({ request }) => {
+        try {
+          const form = await request.formData();
+          await save(parse(form));
+          redirect(303, '/done');
+        } catch (e) {
+          logger.error(e);
+          return fail(500, { message: 'Could not save' });
+        }
+      }
+    };
+    ```
+
+20. Why does the capstone’s tenant resolution answer `404`, not `403`, for a tenant the user is not a member of? Where does that check run for page requests, and why do remote functions repeat it instead of relying on `locals.tenant`?
 
 21. Scenario: in a multi-tenant app, a single forgotten `where tenant_id = ...` has leaked data before. Design the defence in depth: data access API, database, remote function arguments, destructive commands and tests.
 
@@ -551,4 +703,23 @@ Six cumulative tests for the whole book. Each test has 27 questions and spans se
 
 26. Scenario: on staging, streamed `load` promises and a `query.live` ticker appear to arrive all at once at the end of the response. Explain the likely causes along the path and how you verify and fix each.
 
-27. Review this hooks file and list every defect. `ts // src/hooks.server.ts let requestCount = 0; export const handle: Handle = async ({ event, resolve }) => { requestCount++; event.locals.user = await getUser(event.cookies.get('session')); if (event.url.pathname.startsWith('/admin') && !event.locals.user?.admin) { return new Response('Forbidden', { status: 403 }); } const response = await resolve(event); response.headers.set('cache-control', 'public, max-age=60'); return response; }; export const handleFetch: HandleFetch = ({ request, fetch }) => fetch(new Request(request, { headers: { ...request.headers, authorization: TOKEN } }));`
+27. Review this hooks file and list every defect.
+
+    ```ts
+    // src/hooks.server.ts
+    let requestCount = 0;
+
+    export const handle: Handle = async ({ event, resolve }) => {
+      requestCount++;
+      event.locals.user = await getUser(event.cookies.get('session'));
+      if (event.url.pathname.startsWith('/admin') && !event.locals.user?.admin) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const response = await resolve(event);
+      response.headers.set('cache-control', 'public, max-age=60');
+      return response;
+    };
+
+    export const handleFetch: HandleFetch = ({ request, fetch }) =>
+      fetch(new Request(request, { headers: { ...request.headers, authorization: TOKEN } }));
+    ```

@@ -44,7 +44,7 @@ Before drawing conclusions, let us look at what actually happens. This is a mini
 
 ```ts
 // src/hooks.server.ts
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 export const handle: Handle = async ({ event, resolve }) => {
     console.log(
@@ -388,7 +388,7 @@ The following hook classifies every request and emits `Server-Timing`, using onl
 
 ```ts
 // src/hooks.server.ts
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 function kind(event: Parameters<Handle>[0]['event']): string {
     if (event.isRemoteRequest) return 'remote';

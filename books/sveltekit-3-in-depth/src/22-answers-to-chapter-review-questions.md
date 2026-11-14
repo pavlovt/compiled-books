@@ -2,7 +2,7 @@
 
 ## Chapter 1: What SvelteKit 3 Is: Architecture and Toolchain
 
-1.  a\. Svelte, the compiler. (b) The Vite plugin (`@sveltejs/kit/vite`), which scans `src/routes` and generates the manifests and types. (c) The adapter (`adapter-netlify`), invoked at the end of `vite build`.
+1.  (a) Svelte, the compiler. (b) The Vite plugin (`@sveltejs/kit/vite`), which scans `src/routes` and generates the manifests and types. (c) The adapter (`adapter-netlify`), invoked at the end of `vite build`.
 
 2.  `server.init({ env, read })` is called once at boot to hand the platform’s environment and file-reading implementation to the runtime. `server.respond(request, { getClientAddress })` is called per request: it takes a web-standard `Request` and returns a `Response`.
 
@@ -40,7 +40,7 @@
 
 19. A JSON response `{"name": "..."}` with `content-type: application/json`. It uses `Request`, `FormData` and `Response.json`. With no `name` field `body.get('name')` is `null`, so `?? 'world'` yields `"world"`.
 
-20. a\. Removed. (b) Deprecated. (c) Experimental (remote functions). (d) Stable. (e) Deprecated (`files.*`). (f) Stable.
+20. (a) Removed. (b) Deprecated. (c) Experimental (remote functions). (d) Stable. (e) Deprecated (`files.*`). (f) Stable.
 
 21. `experimental: { remoteFunctions: true }` in `sveltekit({...})` and `compilerOptions: { experimental: { async: true } }` (Svelte’s flag). With the Kit flag off, `*.remote.*` files cause an error.
 
@@ -62,7 +62,7 @@
 
 4.  Four `handle` invocations: the document request (1) plus its `/api/time` sub-request (2), then the client-side navigation to `/posts/43`, which is a `__data.json` request (3) plus its `/api/time` sub-request (4). Only one invocation (the data request) has `isDataRequest` true. The sub-requests are plain `GET /api/time` calls with `isSubRequest` true.
 
-5.  d\. CSRF origin check, (b) `reroute`, (e) route matching, (c) trailing-slash `308` (only when the path needs normalising), (a) `handle`, (f) `ETag`/`304` processing.
+5.  (d) CSRF origin check, (b) `reroute`, (e) route matching, (c) trailing-slash `308` (only when the path needs normalising), (a) `handle`, (f) `ETag`/`304` processing.
 
 6.  Trailing-slash normalisation (step 11) happens before `handle` and returns a `308`, so your hook never sees the un-normalised request. Change the `trailingSlash` page option for the route instead of redirecting in `handle`.
 
@@ -84,7 +84,7 @@
 
 15. The page `load` does execute, because layout and page loads start concurrently. The user does not see its data, because the first failure (the layout’s `error(401)`) decides the response and the nearest error boundary above the layout renders. Therefore a layout-only guard does not protect page loads from running; guard in `handle` or in each page load (or have pages `await parent()`).
 
-16. e\. remote-data cache seeded, (b) `init` hook awaited, (a) hydration, (d) `afterNavigate` with `type: 'enter'`, (c) router listeners installed.
+16. (e) remote-data cache seeded, (b) `init` hook awaited, (a) hydration, (d) `afterNavigate` with `type: 'enter'`, (c) router listeners installed.
 
 17. During hydration, the client reruns universal `load` to rebuild its data and dependency tracking. Its `fetch` calls are answered from the inlined `data-sveltekit-fetched` scripts (matching URL and request hash, subject to `data-ttl`), so no network request is made. Side effects other than `fetch` do run twice.
 
@@ -114,7 +114,7 @@
 
 4.  It matches all three. `rest` is `''` for `/a/z`, `'b'` for `/a/b/z`, and `'b/c'` for `/a/b/c/z`.
 
-5.  a\. invalid: a rest segment is always optional, so double brackets are an error. (c) invalid: adjacent parameters must be separated. (d) invalid: escapes must be lowercase (`[x+3a]`). (b) and (e) are valid.
+5.  (a) invalid: a rest segment is always optional, so double brackets are an error. (c) invalid: adjacent parameters must be separated. (d) invalid: escapes must be lowercase (`[x+3a]`). (b) and (e) are valid.
 
 6.  Name the directory `src/routes/[x+2e]well-known/security.txt/+server.ts`. A directory with a leading `.` causes trouble for TypeScript, so the dot is written as the escape `[x+2e]`.
 
@@ -146,13 +146,23 @@
 
 20. **c.** A route ID. Use `match()` to convert a pathname.
 
-21. a\. page; (b) endpoint, since JSON is requested; (c) endpoint, since `*/*` does not prioritise HTML; (d) endpoint (`DELETE` always goes to `+server`; there is no handler for it unless `fallback`/`DELETE` is exported, giving 405); (e) browsers send `text/html` first, so the page (a `HEAD` is handled like `GET`).
+21. (a) page; (b) endpoint, since JSON is requested; (c) endpoint, since `*/*` does not prioritise HTML; (d) endpoint (`DELETE` always goes to `+server`; there is no handler for it unless `fallback`/`DELETE` is exported, giving 405); (e) browsers send `text/html` first, so the page (a `HEAD` is handled like `GET`).
 
 22. `Vary: Accept`, so that proxies and browsers cache the HTML and JSON variants of the same URL separately.
 
 23. It must be pure and idempotent (cached per URL on the client), must be fast (async ones delay navigation), runs before `handle` so has no `locals` or `cookies`, and if it throws on the server the response is a bare 500. It cannot read cookies because it also runs in the browser with only a URL and must give the same answer on both sides.
 
-24. `ts // src/hooks.ts const map: Record<string, string> = { '/de/ueber-uns': '/de/about', '/fr/a-propos': '/fr/about' }; export const reroute: Reroute = ({ url }) => map[url.pathname];` `event.url.pathname` remains `/de/ueber-uns` in `load` and `handle`; only route selection and `params` (`lang: 'de'`) use the rewritten path.
+24. ```ts
+    // src/hooks.ts
+    const map: Record<string, string> = {
+      '/de/ueber-uns': '/de/about',
+      '/fr/a-propos': '/fr/about'
+    };
+
+    export const reroute: Reroute = ({ url }) => map[url.pathname];
+    ```
+
+    `event.url.pathname` remains `/de/ueber-uns` in `load` and `handle`; only route selection and `params` (`lang: 'de'`) use the rewritten path.
 
 25. Client resolution matches in the browser from a shipped manifest; server resolution asks the server (`__route.js`) for each unvisited path. Benefits: smaller initial payload, hidden route list, infrastructure can intercept navigations. Cost: a round trip on first visit to each path. `handle` does not see route-resolution requests (they are answered before it); `reroute` still applies.
 
@@ -206,11 +216,33 @@
 
 21. `setHeaders` governs the HTML document response. Data requests (`__data.json`) always carry `cache-control: private, no-store`.
 
-22. `` ts export function requireRole(role: string) { const { locals, url } = getRequestEvent(); if (!locals.user) redirect(303, `/login?${new URLSearchParams({ redirectTo: url.pathname + url.search })}`); if (locals.user.role !== role) error(403, 'Forbidden'); return locals.user; } `` Inside a load, `url` is the tracked URL, so reading `pathname`/`search` records a dependency and the load reruns when they change (use `untrack` if undesired).
+22. ```ts
+    export function requireRole(role: string) {
+      const { locals, url } = getRequestEvent();
+      if (!locals.user) {
+        redirect(303, `/login?${new URLSearchParams({ redirectTo: url.pathname + url.search })}`);
+      }
+      if (locals.user.role !== role) error(403, 'Forbidden');
+      return locals.user;
+    }
+    ```
 
-23. **c.**
+    Inside a load, `url` is the tracked URL, so reading `pathname`/`search` records a dependency and the load reruns when they change (use `untrack` if undesired).
 
-24. `ts try { const r = await getThing(); if (!r) error(404); return r; } catch (e) { if (isHttpError(e) || isRedirect(e)) throw e; return fallback; }` Better: call `error(404)` outside the `try`.
+23. **c.** In 3.0 `redirect()` rejects locations on another origin unless you pass `{ external: true }` or an allow-list. You no longer `throw` it (it throws for you), external URLs are not allowed by default, and a redirect cannot happen inside a streamed promise because the response has already started.
+
+24. ```ts
+    try {
+      const r = await getThing();
+      if (!r) error(404);
+      return r;
+    } catch (e) {
+      if (isHttpError(e) || isRedirect(e)) throw e;
+      return fallback;
+    }
+    ```
+
+    Better: call `error(404)` outside the `try`.
 
 25. As a JSON body `{"type":"redirect","status":307,"location":"/login"}` with HTTP status 200. The client router follows it (up to 20 hops).
 
@@ -218,7 +250,7 @@
 
 27. Universal loads run on the server where `window` is undefined. Use `browser` from `$app/env` (or `BROWSER` from `esm-env`) guards, or move the logic into `onMount`/an `$effect`.
 
-28. `tracing.current.setAttribute('app.user_id', locals.user.id)` on the load event. On the client the `tracing` object is a no-op (`enabled: false`), so the same code is harmless in universal loads.
+28. `tracing.current.setAttribute('app.user_id', locals.user.id)` on the load event. On the client the `tracing` object is a no-op (`enabled: false`), so tracing calls are harmless in universal loads (there the user ID would come from `data` or `parent()`, since `locals` exists only in server loads).
 
 ## Chapter 5: Invalidation and Streaming
 
@@ -287,8 +319,8 @@
 5.  `satisfies` keeps the precise inferred return type of each action, so the generated `PageProps['form']` is a union of what you really return. An annotation widens the return type to the generic signature and `form` becomes loosely typed.
 6.  It collapses repeated keys, keeping only one value (and files stay as `File`). Use `formData.getAll('name')` for checkbox groups and `<select multiple>`.
 7.  The relative action resolves to `/items?/delete`, dropping `page=2`, so the user lands on `/items` (the `?/delete` part is stripped, nothing else remains). Write `action="?page=2&/delete"` to preserve it.
-8.  a\. 422; since 3.0 the enhanced response uses the `fail` status. (b) `result.status` is 422 (the client copies the HTTP status onto failure results). (c) `page.status` is 422 once `update()` applies the result.
-9.  b\. `applyAction` updates `form`/`page.form`/`page.status` for success and failure and calls `goto` for redirects, but it neither refreshes data nor navigates to the location of a non-redirect result; `update` does those things.
+8.  (a) 422; since 3.0 the enhanced response uses the `fail` status. (b) `result.status` is 422 (the client copies the HTTP status onto failure results). (c) `page.status` is 422 once `update()` applies the result.
+9.  **b.** `applyAction` updates `form`/`page.form`/`page.status` for success and failure and calls `goto` for redirects, but it neither refreshes data nor navigates to the location of a non-redirect result; `update` does those things.
 10. In SvelteKit 3 the default is to navigate to `/other` and render it with the result. With `navigate: false` the result is applied to the current page (`form`, `page.form`, `page.status`; errors render the current route’s nearest boundary), restoring the v2 behaviour.
 11. It is the `AbortController` bound to the request’s `fetch`. Keep the previous controller and call `abort()` at the start of a new submission (search-as-you-type, rapid toggles) so only the latest response is applied; aborted requests resolve silently without calling your callback.
 12. The request is made, but nothing is applied: `form`, `page.status` and data are not updated, the form is not reset and no redirect is followed. Returning a callback replaces the defaults entirely.
@@ -300,11 +332,11 @@
 18. `request.formData()` has already buffered the whole body by then. The adapter/platform limit (e.g. adapter-node `BODY_SIZE_LIMIT`, default 512K) is what rejects oversized bodies earlier, or you must use presigned uploads or streaming.
 19. `handle` populated `locals.user` before the action; deleting the cookie does not change `locals`, and the page `load` that runs after the action in the same request still sees the user. Fixes: set `locals.user = null` in the action (ideally via a shared helper that does both), or `redirect(303, ...)` so the next request runs `handle` afresh.
 20. Layout loads and actions are separate code paths: an action runs before any loads and does not depend on layout data, and layout loads also run in parallel and do not rerun on every navigation. The check belongs in `handle` (route-pattern guard) or inside the action itself (and in each `+page.server` load).
-21. c\. `303 See Other` makes the browser follow with a `GET`; 307 would repeat the `POST`, 301/200 are inappropriate.
+21. **c.** `303 See Other` makes the browser follow with a `GET`; 307 would repeat the `POST`, 301/200 are inappropriate.
 22. `redirect()` treats it as external (different origin than the current one) and, with no `external` option, throws a developer error, resulting in a 500. A safer version validates first: accept only values starting with `/`, not `//`, not containing a backslash, else fall back to a default path.
 23. It checks the `Origin` header on form-typed (or content-type-less) `POST/PUT/PATCH/DELETE` requests against the app’s own origin (`paths.origin` if set, else the origin derived from `request.url`) and `csrf.trustedOrigins`. Behind a TLS-terminating proxy, make sure the adapter sees the correct protocol/host (adapter-node protocol/host headers) or set `paths.origin`; otherwise all form posts are rejected with 403.
 24. Enhanced action responses now carry the real `fail` status (4xx) instead of 200, so validation failures show up as client errors in logs, CDNs and APM tools.
-25. a\. Without JS: a 500 page rendered by the nearest `+error.svelte` (or `error.html` as a last resort). (b) With `use:enhance`: an `error` result, so the callback sees `result.type === 'error'` and the default flow renders the nearest `+error.svelte`. In both cases `handleError` receives the error with `kind` set to the unexpected-error kind and can return a sanitised `App.Error`.
+25. (a) Without JS: a 500 page rendered by the nearest `+error.svelte` (or `error.html` as a last resort). (b) With `use:enhance`: an `error` result, so the callback sees `result.type === 'error'` and the default flow renders the nearest `+error.svelte`. In both cases `handleError` receives the error with `kind` set to the unexpected-error kind and can return a sanitised `App.Error`.
 26. Actions: manual `FormData` typing, hand-rolled validation shape, redirects and no-JS support, cannot be prerendered, stable. Remote `form`: schema-derived types, per-field issues and `preflight`, redirects supported, experimental. Choose actions for existing codebases, stability-sensitive projects, and page-scoped, URL-addressed flows.
 27. Prerendering produces static HTML at build time with no server to receive the `POST`; SvelteKit fails the build (`prerender_actions`). Options: set `prerender = false` for the form route and deploy a server (or adapter with SSR for that route), or post to an external service or a separate `+server` endpoint.
 28. Problems: results are lost on reload, URLs cannot be bookmarked or shared, back/forward behave badly, nothing is cacheable, and the response is a `POST`. Better: a GET form (`<form action="/search">`) whose `load` reads `url.searchParams`.
@@ -319,9 +351,9 @@
 6.  At runtime the argument is passed through without validation. At compile time, TypeScript still trusts your annotation, so the type may be a lie. Acceptable when the argument is an opaque value validated elsewhere (for example immediately checked by a library call in the body) and not used unsafely; never when interpolating it into queries.
 7.  `Input` is `string` (what callers pass); `Output`/`Validated` is `number` (what the function body and `requested()` entries see). The `Validated` type parameter of `RemoteQueryFunction` carries this output type.
 8.  Yes for the objects: keys are sorted, so they share an entry. No for the arrays: array order is preserved, so `[1,'a']` and `['a',1]` are different keys.
-9.  b\. At runtime the error is serialised inside a 200 envelope (`type: 'error'`) with the generic body `{ status: 400, message: 'Bad Request' }`; the issues are only visible to `handleError`. (The HTTP status is non-200 only while prerendering or when something around the function, like `handle`, rejects.)
+9.  **b.** At runtime the error is serialised inside a 200 envelope (`type: 'error'`) with the generic body `{ status: 400, message: 'Bad Request' }`; the issues are only visible to `handleError`. (The HTTP status is non-200 only while prerendering or when something around the function, like `handle`, rejects.)
 10. `loading` is `true` before the first value and during every refresh; `ready` becomes `true` after the first value and stays `true`. Render `current` when `ready` is true and add a dimming class when `loading` is true, so stale data stays visible while refetching.
-11. Each click creates a new argument and therefore a new key, so each triggers one request and the awaiting block shows the nearest boundary’s pending state until the new data arrives (unless Svelte keeps the old UI during the async update). After two clicks the list shows page 3, and three pages have been requested in total (page 1 may come from the SSR payload instead of a request).
+11. Each click creates a new argument and therefore a new key, so each triggers one request. A boundary’s `pending` snippet only covers its first render, so Svelte keeps showing the previous list until the new data arrives (use `$effect.pending()` for a loading indicator). After two clicks the list shows page 3, and three pages have been requested in total (page 1 may come from the SSR payload instead of a request).
 12. The per-request cache is keyed by function and argument, regardless of whether the function is exported. Only exported functions have an `id`, and results of functions without an `id` are never added to the response payload, so a private query’s data cannot reach the client.
 13. The build fails with `remote_query_prerender`: queries fetch runtime data and cannot be used while prerendering. Fixes: use `prerender` for that data; or set `prerender = false` for the page (render it dynamically).
 14. When the last `QueryProxy` referencing an entry is garbage collected (a `FinalizationRegistry` decrements the entry’s count) and no effect or in-flight await pins it, a check on the next tick evicts the entry. The factory must not close over `this`, otherwise the cache entry would reference the proxy, which could then never be collected and the entry never evicted.
@@ -331,10 +363,10 @@
 18. SSR awaits the first value and then closes the iterator; if the generator awaits for minutes before yielding, SSR hangs (or the page times out), and a generator that finishes without yielding raises `remote_query_live_no_value`. Always yield an initial value immediately.
 19. No. The server compares the devalue-serialised value with the previously sent one and skips identical values, so unchanged snapshots cost no frames (only keep-alive comments every 30 s of silence).
 20. Backoff delay is `min(250ms * 2^attempt, 10s)` with ±20% jitter, reset on a successful connect. Retries stop when `navigator.onLine` is false (until the `online` event) and when the page is hidden/unloaded (pagehide), resuming on bfcache restore. An intentional `HttpError` (including validation) after the first value, or any error before the first value, is terminal: `done` becomes true and only `reconnect()` revives it.
-21. b\. `done` means the stream ended (generator returned) or the query failed terminally.
+21. **b.** `done` means the stream ended (generator returned) or the query failed terminally.
 22. When the client disconnects SvelteKit aborts `request.signal` and calls `generator.return()`, but a pending `await` inside the generator cannot be interrupted. Passing the signal to the awaited subscription lets you stop waiting, release the subscription and let the generator finish.
 23. A cloned streaming response keeps streaming after the page is closed. Live responses have `Cache-Control: private, no-store` (and `content-type: text/event-stream`), so exclude any response with `no-store` from caching logic.
-24. a\. `prerender` runs at build time (or lazily with `dynamic`), `query` at request time. (b) Prerender functions are excluded from the server bundle unless `dynamic: true`. (c) Prerender results are stored in the browser Cache API per deployment version; queries only in the in-memory cache. (d) `prerender` has no `refresh`/`set`/`withOverride`.
+24. (a) `prerender` runs at build time (or lazily with `dynamic`), `query` at request time. (b) Prerender functions are excluded from the server bundle unless `dynamic: true`. (c) Prerender results are stored in the browser Cache API per deployment version; queries only in the in-memory cache. (d) `prerender` has no `refresh`/`set`/`withOverride`.
 25. The server bundle does not contain the function, so the call cannot run; the static lookup finds nothing and the call fails (404/error). Use `dynamic: true` to compute non-prerendered arguments on demand.
 26. `query`: `url` throws; `cookies.set` throws (reading is fine); `setHeaders` throws. `form`: `url` works but is the calling page and is client-supplied; `cookies.set` works (absolute path); `setHeaders` throws.
 27. For a query, `handle` runs with the URL of the remote endpoint (`/_app/remote/...`), not the page, so the prefix never matches. Authorise inside the remote function (a `requireUser()` helper using `getRequestEvent().locals`, plus data-level permission checks); `handle` should only derive identity from cookies into `locals`.
@@ -359,7 +391,7 @@
 13. The default callback resets the DOM form after success; once you provide `enhance`, nothing resets automatically. Call `form.element.reset()` yourself when `submit()` resolves `true`.
 14. The response carries a redirect plus the refreshed `getTodos` data. The client applies the query data and calls `goto('/done')`, waits for the navigation to finish, then `submit()` resolves with `true`.
 15. Commands are imperative mutations; a redirect inside one raises `remote_command_redirect` on the client. Return the destination (or any result) from the command and call `goto` after awaiting it.
-16. b\. A command does not invalidate anything automatically; you must use `refresh`/`set`/`.updates(...)` or call `refreshAll()` yourself.
+16. **b.** A command does not invalidate anything automatically; you must use `refresh`/`set`/`.updates(...)` or call `refreshAll()` yourself.
 17. A successful form calls `refreshAll()`: all queries and load functions that can rerun. A command invalidates nothing.
 18. No. Any explicit `refresh()`, `set()` or `reconnect()` call replaces the default `refreshAll`, and `load` functions are not queries. Only `getPosts` is updated, so `user` stays stale unless you call `refreshAll()` yourself.
 19. The query function is stored and executed after the handler body finishes. It therefore observes all writes made in the handler, regardless of call order, and if the query is awaited again in the handler the cache entry is reused rather than run twice.
@@ -400,7 +432,7 @@
 21. The client caches results and calls it once per URL; impure or varying output yields stale/inconsistent routing and hydration mismatches between server and client.
 22. No: neither `event.url` nor the address bar change. It changes only the pathname used to select the route and derive `params`.
 23. Async work in client `init` delays hydration, so the page stays non-interactive until it finishes.
-24. b\.
+24. **b.** `encode` returns a truthy encoding for instances of the type and `false` for everything else, and `decode` rebuilds the instance from that encoding. `encode` runs on the server (and on the client for remote function arguments), the transporter’s key identifies the type on both sides, and transport applies to remote functions and actions as well as `load` data.
 
 25. `export const maintenance: Handle = async ({event, resolve}) => { if (building || process.env.MAINTENANCE !== '1') return resolve(event); if (event.url.pathname === '/healthz') return new Response('ok'); return new Response(html, { status: 503, headers: {'retry-after': '600', 'content-type': 'text/html'} }); }`. Static assets and prerendered pages still bypass it.
 26. The response varies by `Origin`, so caches need `Vary: Origin` to avoid serving one origin’s CORS headers to another. The CSRF check applies only to form-typed (or content-type-less) requests, and a JSON `fetch` is neither.
@@ -428,7 +460,7 @@
 15. The static `src/error.html`, since no boundary exists above the root layout.
 16. If it throws, the framework falls back to `error.html`; data needs also run into the root layout load (which may be the thing that failed), causing recursive failure.
 17. The automatically created `<svelte:boundary>` around each `+error.svelte` (and error routing via `handleError`), on server and client. It is default in 3.0 (the experimental flag was removed); an async client `handleError` needs `experimental.async`.
-18. b\.
+18. **b.** A `+server.ts` handler has no page to render, so SvelteKit answers by the `Accept` header: a JSON-preferring client gets the error as JSON with status 422 (an HTML-preferring one gets `error.html`). `+error.svelte` is never used for endpoints.
 
 19. They are replaced (message HTML-escaped) in `error.html`, the static fallback used for errors in `handle`, `+server` (non-JSON clients), the root layout, and errors while rendering the error page.
 20. A plain-text `404 Not Found` with `Vary: Sec-Fetch-Dest`, since a full HTML error page is useless for non-HTML subresources and wastes bandwidth.
@@ -449,19 +481,19 @@
 
 2.  `true` removes the route from the runtime manifest (smaller server, but no runtime fallback if a URL was not prerendered). `'auto'` prerenders what the crawler finds and keeps the route in the manifest so other URLs render on demand. `/blog/[slug]` with the top posts listed in `entries()` and a long tail rendered at request time is the textbook case.
 
-3.  a\. Make the route reachable: link from a prerendered page, add to `prerender.entries`, or export `entries()`: the correct fix when the page really is static. (b) Change to `prerender = 'auto'`: allows dynamic rendering, but then the route stays in the manifest and needs a server. (c) Relax `prerender.handleUnseenRoutes` to `'warn'`/a function: appropriate only when some routes are legitimately unreachable (e.g. empty CMS section), at the risk of 404s in production.
+3.  (a) Make the route reachable: link from a prerendered page, add to `prerender.entries`, or export `entries()`: the correct fix when the page really is static. (b) Change to `prerender = 'auto'`: allows dynamic rendering, but then the route stays in the manifest and needs a server. (c) Relax `prerender.handleUnseenRoutes` to `'warn'`/a function: appropriate only when some routes are legitimately unreachable (e.g. empty CMS section), at the risk of 404s in production.
 
 4.  Because `csr = dev` is not a literal, SvelteKit imports the module on the server for analysis, and `mapbox-gl` touches `window`/`document` at import time, which does not exist there. Move the import into `+page.svelte` (or a dynamically imported, browser-guarded path) so that `+page.ts` has no browser-only top-level code.
 
 5.  False. With `ssr = false` the page component and universal `load` run only in the browser, but `+page.server.ts` `load` functions (and actions) still run on the server; the client fetches their data through `__data.json` requests.
 
-6.  a\. Yes: parameters are fine if you provide entries or links. (b) No: reading `url.searchParams` while prerendering is an error. (c) No: pages with actions cannot be prerendered. (d) No: user-specific content violates the “same content for everyone” rule.
+6.  (a) Yes: parameters are fine if you provide entries or links. (b) No: reading `url.searchParams` while prerendering is an error. (c) No: pages with actions cannot be prerendered. (d) No: user-specific content violates the “same content for everyone” rule.
 
 7.  Only `<meta http-equiv="cache-control" content="max-age=600">` is added to the document head. Other headers (`x-foo`) cannot be represented in a static file and are not emitted.
 
 8.  It prerenders exactly `/` and `/pricing` and does not follow any links (`crawl: false`), so any other prerenderable route will not be discovered, and routes marked `prerender = true` that are not listed trigger the unseen-routes failure. It does not disable prerendering of the listed pages and does not affect SSR routes.
 
-9.  b\. The default `concurrency` is 1.
+9.  **b.** The default `concurrency` is 1.
 
 10. JavaScript is single-threaded. Concurrency overlaps waiting time, so while one page awaits a network response another can render. If the build is CPU-bound, rendering work is still serialised on the one thread, so extra concurrency adds nothing.
 
@@ -473,7 +505,7 @@
 
 14. The fallback page is served for arbitrary URLs (`/a/b/c`). Relative asset paths would resolve against whatever URL was requested and break, so absolute (`/_app/...`) paths are required.
 
-15. b\. The hash router determines the route from `location.hash`, which needs no server cooperation. (`inline` bundling and `embedded` do not solve routing, and `trailingSlash` is unrelated.)
+15. **b.** The hash router determines the route from `location.hash`, which needs no server cooperation. (`inline` bundling and `embedded` do not solve routing, and `trailingSlash` is unrelated.)
 
 16. SSR and prerendering are disabled (the build emits a single fallback `index.html`) and no server logic can be used. Every internal link must start with `#/`, e.g. `<a href="#/settings">`.
 
@@ -501,7 +533,7 @@
 
 1.  Module scope on the server is shared by every request for the life of the process. In local development with one tab you are the only user, so it appears to work; in production one user’s submitted data is returned to the next visitor (and is lost on restart or missing on other instances). Authenticate with cookies and persist in a datastore.
 
-2.  a\. safe, shared infrastructure; (b) unsafe, concurrent requests race and leak; (c) safe, as long as it is only written in the browser; (d) safe, since it is user-independent (bound its size and TTL).
+2.  (a) safe, shared infrastructure; (b) unsafe, concurrent requests race and leak; (c) safe, as long as it is only written in the browser; (d) safe, since it is user-independent (bound its size and TTL).
 
 3.  On the server, `session.userId` is assigned during `load` and stays in the shared singleton, so the next request rendering before its own assignment could read the previous user’s id, and concurrent requests overwrite each other. The design violates “no side effects in `load`” and uses a process-wide singleton for per-request data. Return `{ userId: locals.userId }` and carry it through `data`, `page.data` or request-scoped context.
 
@@ -513,7 +545,7 @@
 
 7.  Any three of: the state is not shareable or bookmarkable; it is lost on reload; the server cannot render the sorted list on first load/without JS; Back/Forward do not step through sort changes; SEO and caching treat sorted variants as one URL; it requires JavaScript and a POST for what is a read.
 
-8.  a\. `replace: true` avoids a history entry per keystroke and `reset: false` keeps scroll position and focus. `shallow` would not rerun `load`; `refreshAll` and `persistState` are unrelated.
+8.  **a.** `replace: true` avoids a history entry per keystroke and `reset: false` keeps scroll position and focus. `shallow` would not rerun `load`; `refreshAll` and `persistState` are unrelated.
 
 9.  URL state is user input. Validate: `sort` must be one of a whitelist, `page` must be a positive integer (otherwise return the default). Canonicalise: omit defaults, so `?page=1` redirects to or is rendered as the same state as no param, keeping one URL per state for caching and SEO.
 
@@ -531,9 +563,19 @@
 
 16. Polling (`version.pollInterval`, default one hour), version headers on data requests, remote calls and form action responses, and tab focus/visibility changes. `pollInterval: 0` disables polling only; the other sources and `updated.check()` still work.
 
-17. For example: `ts beforeNavigate(({ cancel, type, willUnload }) => { if (!dirty) return; if (type === 'leave' || willUnload) return cancel(); // native browser dialog if (!confirm('Discard unsaved changes?')) cancel(); });` For `leave`, calling `cancel()` triggers the browser’s native unload confirmation.
+17. For example:
 
-18. c\. Captured values are devalue-serialised, stored in `sessionStorage` and keyed by history entry; `restore` is called after the page updates.
+    ```ts
+    beforeNavigate(({ cancel, type, willUnload }) => {
+      if (!dirty) return;
+      if (type === 'leave' || willUnload) return cancel(); // native browser dialog
+      if (!confirm('Discard unsaved changes?')) cancel();
+    });
+    ```
+
+    For `leave`, calling `cancel()` triggers the browser’s native unload confirmation.
+
+18. **c.** Captured values are devalue-serialised, stored in `sessionStorage` and keyed by history entry; `restore` is called after the page updates.
 
 19. Auto ids derive from the call site, so both instances of one component share the same id; a duplicate id on mounted snapshots errors in development and the values overwrite each other. Pass distinct explicit ids (e.g. including the item id). Across deployments the stack frame changes with source edits, so stored snapshots from the old version are orphaned; explicit ids keep them stable.
 
@@ -561,11 +603,11 @@
 
 4.  Any three of: static is read at build time, dynamic at process start; static is inlined into the bundle, dynamic is not; static enables dead-code elimination; changing static needs a rebuild, dynamic only a restart; static is validated at build, dynamic at startup (and during analysis); static is baked into an image, dynamic can differ per deployment.
 
-5.  a\. Make the validator lenient during the build: `schema: building ? v.optional(url) : url` with `building` from `$app/env`. (b) Provide a dummy value to the build job. Prefer (a): no fake secrets in CI and the real requirement is still enforced when the server starts.
+5.  (a) Make the validator lenient during the build: `schema: building ? v.optional(url) : url` with `building` from `$app/env`. (b) Provide a dummy value to the build job. Prefer (a): no fake secrets in CI and the real requirement is still enforced when the server starts.
 
 6.  For prerendered pages the values cannot be embedded per request, so the page loads a prerendered `_app/env.js` module before application code and takes the value from it, giving one extra (small) module request. The value is the runtime one the server provides. With `static: true` the value is inlined at build and no `env.js` request is needed, but you must rebuild to change it.
 
-7.  d\. `src/routes/server/...` is explicitly excluded from the `server` directory rule. a is a `.server` filename, b and c are inside `server` directories.
+7.  **d.** `src/routes/server/...` is explicitly excluded from the `server` directory rule. a is a `.server` filename, b and c are inside `server` directories.
 
 8.  The build fails. SvelteKit checks transitive import chains from browser entry points (`+page.svelte`); even though only `add` is used, `utils.js` re-exports the server-only module, so it could end up in client JavaScript. The error prints the chain `+page.svelte` → `utils.js` → `secrets.ts`.
 
@@ -579,7 +621,15 @@
 
 13. They re-export the explicit modules, so `env` contains only variables declared in `src/env.ts`. Code that relied on arbitrary `process.env` entries or on every `PUBLIC_*` variable being available without declaration breaks: those values are missing until declared.
 
-14. `src/env.ts`: `ts export const variables = defineEnvVars({ WEBHOOK_SECRET: {}, PUBLIC_SENTRY_DSN: { public: true, static: true } });` Code: `import { WEBHOOK_SECRET } from '$app/env/private'; import { PUBLIC_SENTRY_DSN } from '$app/env/public';` (static public mirrors `$env/static/public`).
+14. ```ts
+    // src/env.ts
+    export const variables = defineEnvVars({
+      WEBHOOK_SECRET: {},
+      PUBLIC_SENTRY_DSN: { public: true, static: true }
+    });
+    ```
+
+    Code: `import { WEBHOOK_SECRET } from '$app/env/private'; import { PUBLIC_SENTRY_DSN } from '$app/env/public';` (static public mirrors `$env/static/public`).
 
 15. `building` is `true` during build analysis and while prerendering, and `false` when serving requests in production and in `vite dev`. Guard side effects like opening a DB connection or starting a scheduler: `if (!building) connect();`.
 
@@ -589,7 +639,7 @@
 
 18. `adapter-node` reads the process environment and does not load `.env` files in production. Fix with `node --env-file=.env build` or inject real environment variables via the platform/orchestrator.
 
-19. a\. dynamic, (b) static (a build-time stamp), (c) dynamic (differs per environment, so one image can be promoted), (d) static (needs inlining for dead-code elimination, and it is the same constant per build target).
+19. (a) dynamic, (b) static (a build-time stamp), (c) dynamic (differs per environment, so one image can be promoted), (d) static (needs inlining for dead-code elimination, and it is the same constant per build target).
 
 20. Fine: analytics ids, public API base URLs, feature flags, publishable keys. Never: secret keys, database credentials, signing secrets, private tokens.
 
@@ -615,7 +665,7 @@
 
 4.  The layout redirect does not protect the page: layout and page `load` functions run in parallel, and layout loads may not rerun on client-side navigations between child pages. Also `allInvoices()` is unscoped and the page does not check `locals.user`, so an unauthenticated request (or one that reaches the page `load` directly, e.g. via `__data.json`) can read all invoices. Fix: check the user in the page `load` (`requireUser()`) and scope the query to that user; add a guard in `handle`.
 
-5.  1.  Layout loads do not necessarily rerun on each navigation; (2) layout and page loads run in parallel, so the page can fetch data before the redirect takes effect. Not covered at all: `+server.ts` endpoints, form actions, remote functions (also page loads of other routes outside the layout).
+5.  (1) Layout loads do not necessarily rerun on each navigation; (2) layout and page loads run in parallel, so the page can fetch data before the redirect takes effect. Not covered at all: `+server.ts` endpoints, form actions, remote functions (also page loads of other routes outside the layout).
 
 6.  It sees the old `locals.user` (typically `null`) because actions do not rerun `handle`; the cookie is set for the *next* request. Fix: set `locals.user` and `locals.session` in the action after creating the session (and redirect with 303 so the next request goes through `handle` properly).
 
@@ -623,18 +673,18 @@
 
 8.  For queries, `handle` sees the URL of the internal remote endpoint (`/_app/remote/...`), not the page URL, so the prefix never matches; for forms/commands the URL is a client-reported page. Protection must be inside the function: `requireUser()` and resource-level checks against `locals`.
 
-9. ``` {.sourceCode .ts}
-      export function requireUser() {
-       const event = getRequestEvent();
-       if (event.locals.user) return event.locals.user;
-       if (event.isRemoteRequest) error(401, 'Sign in required');
-       redirect(303, `/login?next=${encodeURIComponent(event.url.pathname + event.url.search)}`);
-      }
-   ```
+9.  ```ts
+    export function requireUser() {
+      const event = getRequestEvent();
+      if (event.locals.user) return event.locals.user;
+      if (event.isRemoteRequest) error(401, 'Sign in required');
+      redirect(303, `/login?next=${encodeURIComponent(event.url.pathname + event.url.search)}`);
+    }
+    ```
 
-   `event.isRemoteRequest` distinguishes them. `command` cannot redirect (redirects are allowed in `form`, `query` and `prerender`, not in `command`), so the client has to decide what to do with the 401.
+    `event.isRemoteRequest` distinguishes them. `command` cannot redirect (redirects are allowed in `form`, `query` and `prerender`, not in `command`), so the client has to decide what to do with the 401.
 
-10. c\. `url.pathname` in `form`/`command` describes the page the client claims to be calling from and can be manipulated. The others derive from the cookie-validated session or compare validated input to it.
+10. **c.** `url.pathname` in `form`/`command` describes the page the client claims to be calling from and can be manipulated. The others derive from the cookie-validated session or compare validated input to it.
 
 11. Reusing an anonymous session id enables session fixation: an attacker who planted a known id in the victim’s browser would share the post-login session. Create a fresh session (new random token) on login and other privilege changes.
 
@@ -656,7 +706,7 @@
 
 20. The CSRF origin check runs only in production, and the request’s origin is derived from `request.url`, which is wrong behind a proxy that does not forward the host. Configure `paths.origin` in `sveltekit({...})` (or `HOST_HEADER`/`PROTOCOL_HEADER` for adapter-node with a trusted proxy).
 
-21. b\. List the exact origin in `csrf.trustedOrigins`. `'*'` trusts everyone, `sameSite: 'none'` is unrelated to the origin check and weakens cookies, and `checkOrigin` was removed in 3.0.
+21. **b.** List the exact origin in `csrf.trustedOrigins`. `'*'` trusts everyone, `sameSite: 'none'` is unrelated to the origin check and weakens cookies, and `checkOrigin` was removed in 3.0.
 
 22. No. Remote function calls (non-GET) from another origin are always rejected; `trustedOrigins` only applies to non-remote form-style requests. Cross-origin clients must use ordinary `+server.ts` endpoints instead.
 
@@ -688,17 +738,28 @@
 
 9.  `svelte-trusted-html` (required unless all pages have `csr = false`) and `sveltekit-trusted-url` (required when `serviceWorker.register` is true), when `require-trusted-types-for 'script'` is set. It does not make `{@html}` safe or replace sanitisation.
 
-10. Rejected when the method is POST/PUT/PATCH/DELETE, the content type is form-style (urlencoded, multipart, text/plain) or absent, the `Origin` differs from the app origin, and it is not in `trustedOrigins`. (a) rejected; (b) not checked by this mechanism (CORS governs it); (c) rejected (no content type… here curl sends urlencoded and no `Origin`, so rejected); (d) never checked, so a state change on GET is your bug.
+10. Rejected when the method is POST/PUT/PATCH/DELETE, the content type is form-style (urlencoded, multipart, text/plain) or absent, the `Origin` differs from the app origin, and it is not in `trustedOrigins`. (a) rejected; (b) not checked by this mechanism (CORS governs it); (c) rejected: `curl -d` sends `application/x-www-form-urlencoded` and no `Origin`, and a missing `Origin` never matches; (d) never checked, so a state change on GET is your bug.
 
 11. The check is skipped in development. Test with a real form post against a production build in the deployed topology.
 
 12. The CSRF check runs before `handle`, so rejected requests never reach your hook; logic in `handle` cannot see or rely on them.
 
-13. `csrf: { trustedOrigins: ['https://pay.example'] }`. `'*'` removes protection for every origin. It does not allow remote function calls: those ignore `trustedOrigins`.
+13. `csrf: { trustedOrigins: ['https://pay.example'] }`. `'*'` removes protection for every origin. It does not allow remote function calls: those ignore `trustedOrigins`. Note that this works only when the post comes from the user’s browser (an auto-submitted form on `pay.example`, which sends `Origin: https://pay.example`); a true server-to-server webhook usually sends no `Origin`, so it must post JSON or go to a separate service.
 
 14. Set `paths.origin: 'https://your.domain'` (build-time config; no trust needed beyond correctness), or with adapter-node set `PROTOCOL_HEADER`/`HOST_HEADER` to the forwarded headers (only valid if a trusted proxy overwrites them).
 
-15. `ts const h: Handle = async ({ event, resolve }) => { const res = await resolve(event); const headers = new Headers(res.headers); headers.set('x-content-type-options', 'nosniff'); headers.set('referrer-policy', 'strict-origin-when-cross-origin'); if (!dev) headers.set('strict-transport-security', 'max-age=63072000; includeSubDomains'); return new Response(res.body, { status: res.status, headers }); };` Prerendered pages are served as static files and bypass `handle`; set their headers at the platform (`_headers`, `vercel.json`, nginx).
+15. ```ts
+    const h: Handle = async ({ event, resolve }) => {
+      const res = await resolve(event);
+      const headers = new Headers(res.headers);
+      headers.set('x-content-type-options', 'nosniff');
+      headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+      if (!dev) headers.set('strict-transport-security', 'max-age=63072000; includeSubDomains');
+      return new Response(res.body, { status: res.status, headers });
+    };
+    ```
+
+    Prerendered pages are served as static files and bypass `handle`; set their headers at the platform (`_headers`, `vercel.json`, nginx).
 
 16. HSTS is sticky: if any subdomain lacks HTTPS it becomes unreachable, and preload is hard to undo. Start with a short `max-age`, no `includeSubDomains`/`preload`, then increase after verifying.
 
@@ -733,7 +794,7 @@
 7.  Dev is unbundled, uses HMR, lacks production preload tags, and inlines styles; production behaviour differs. Preview runs in Node, so it does not reproduce adapter-specific behaviour such as the `platform` object, Vercel ISR, or Cloudflare runtime constraints (and CDN behaviour).
 8.  `const [a, b] = await Promise.all([getAccount(locals.userId), getInvoices(locals.userId)]);`. Neither call depends on the other’s result because both need only `locals.userId`, so the wall-clock time becomes the slower of the two.
 9.  Put the user on `event.locals` in `handle` (or read it with `getRequestEvent()` in a shared helper), so every `load` has it without waiting for the layout.
-10. c\. Viewport/eager preloading applies only to links in the DOM right after navigation, and it fetches code only.
+10. **c.** Viewport/eager preloading applies only to links in the DOM right after navigation, and it fetches code only.
 11. The preload listeners are never installed (the check happens once at client start), so neither hover/tap preloading nor viewport/eager code preloading occurs. There is no per-link override.
 12. Preload runs `load`, so a hover (even without a click) increments the counter. Make `load` idempotent and side-effect free, and move the write to an action or remote `command`/`form` triggered by an explicit user action; alternatively disable preloading for those links with `data-sveltekit-preload-data="false"`.
 13. For a redirect: `{ type: 'redirect', location }`. For an error status: `{ type: 'error', status, error }`. For a non-route or external URL, it rejects (throws) rather than returning a result.
@@ -764,13 +825,13 @@
 7.  In a `handle` (for example an `auth` handle) or any server code with the event, call `event.tracing.root.setAttribute('app.tenant.id', id)` (or `setAttributes`). The root span is the `sveltekit.handle.root` span, so the attribute is on the root of every trace for the request.
 8.  The new span’s parent is `sveltekit.load` (the active span), because SvelteKit uses `startActiveSpan` and the SDK’s `AsyncLocalStorage` context manager propagates it. Without `span.end()` the span is never exported, leaving a truncated trace.
 9.  In dev it is resolved per request and imported through Vite’s module runner before the server is configured for that request. In production with adapter-node it is part of a build-time facade entry that imports it natively before dynamically importing the server.
-10. 1.  Import the env initialiser; (2) import `instrumentation.server.js`; (3) dynamically import the real entry (`start.js`) and re-export its exports. Because the application is imported only after the instrumentation has registered its hooks, libraries are intercepted when first imported.
+10. (1) Import the env initialiser; (2) import `instrumentation.server.js`; (3) dynamically import the real entry (`start.js`) and re-export its exports. Because the application is imported only after the instrumentation has registered its hooks, libraries are intercepted when first imported.
 11. Dev fails with an `adapter_instrumentation_unsupported`-style error naming the file and adapter, on the first request that loads the instrumentation file (the check runs when the dev server resolves it).
 12. `src/env.ts` is evaluated when `$app/env/*` modules are imported, before `instrumentation.server` can start, so anything it imports is loaded before interceptors exist and cannot be wrapped.
 13. At startup the process cannot resolve `pg` (adapter-node keeps `dependencies` external; `devDependencies` are not installed in the image), so it fails with a module-not-found error. Move `pg` to `dependencies`.
-14. 1.  Shared chunks: code imported by the instrumentation file is bundled with application code, so the app evaluates before interceptors are registered. (2) The library is inlined/transformed into an application chunk so no bare import remains. `ssr.external` addresses the second.
+14. (1) Shared chunks: code imported by the instrumentation file is bundled with application code, so the app evaluates before interceptors are registered. (2) The library is inlined/transformed into an application chunk so no bare import remains. `ssr.external` addresses the second.
 15. `register-hooks.mjs` uses `module.registerHooks()` synchronously and requires Node 22.22.3+/24.11.1+/25.1.0+/26+; on older versions `register()` throws. Fallback: check `supportsSyncHooks()` and otherwise use `createAddHookMessageChannel()` with `node:module`’s async `register('import-in-the-middle/hook.mjs', ...)`.
-16. a\. `OTEL_TRACES_SAMPLER=parentbased_traceidratio` and `OTEL_TRACES_SAMPLER_ARG=0.1`. b) Sampling then becomes deployment configuration that can change per environment without a code change or rebuild.
+16. (a) `OTEL_TRACES_SAMPLER=parentbased_traceidratio` and `OTEL_TRACES_SAMPLER_ARG=0.1`. (b) Sampling then becomes deployment configuration that can change per environment without a code change or rebuild.
 17. Spans and metrics are exported in batches; without `await sdk.shutdown()` the last batch (often the failing request) is lost. adapter-node emits `process.on('sveltekit:shutdown', reason)` with `SIGINT`, `SIGTERM` or `IDLE`.
 18. Errors generated by SvelteKit itself, such as 404, 405, 413, with safe `{ status, message }`. Since `handleError` is called for all errors (not only unexpected ones), logging every kind at error level would flood alerts with 404s, validation failures and expected `error()` outcomes.
 19. `issues` (the array of Standard Schema issues). No: `validation` is server only; the client hook’s kinds are `app`, `framework`, `unknown`.
@@ -783,7 +844,7 @@
 26. `sendBeacon` queues the request so it survives page unload and does not block navigation; a plain `fetch` can be cancelled when the page is torn down (unless `keepalive` is set).
 27. Beyond polling (`version.pollInterval`, default one hour), it can become `true` after focus, tab visibility changes, server-data navigations and remote calls when a new `version.name` is detected. Operationally: show a reload prompt and log it to measure how long clients stay on stale code after a deploy, which bounds how long you must keep backward compatibility.
 28. Run `node --inspect build` (or `--inspect-brk`) and attach DevTools or VS Code. Enable `build.sourcemap` so breakpoints map to source lines.
-29. b\. Interceptors must be registered before libraries are imported, and the adapter facade arranges for the instrumentation file to run first.
+29. **b.** Interceptors must be registered before libraries are imported, and the adapter facade arranges for the instrumentation file to run first.
 30. Logs: one structured line per request with `requestId`, `traceId`, route ID and status; unknown errors logged at `error` in `handleError` (by `kind`), 404/validation at info/warn. Spans: SvelteKit marks `ERROR` only for 5xx and unknown errors, so span-status-based alerts already exclude 4xx. Metrics: a counter incremented in `handle` for `status >= 500`, labelled by route ID and status, recorded on every instance (not sampled), alerting on the ratio to the duration histogram’s count. Sampled traces then serve diagnosis, not alerting.
 
 ## Chapter 18: Deployment and Adapters
@@ -815,7 +876,7 @@
 25. The Edge runtime. `nodejs22.x`, `nodejs24.x` and `bun1.x` remain. Move the route to a Node runtime and use CDN, ISR or prerendering for latency.
 26. `expiration` is required, `allowQuery` controls the cache key. ISR on a prerendered route has no effect.
 27. A page that renders the logged-in user’s name from a session cookie is cached and then served to the next visitor, who sees the first user’s content.
-28. They do not change between build and run on Vercel, so `static: true` inlines them and allows dead-code elimination.
+28. They describe the deployment, so their build-time values stay correct at run time, and some are not available to functions at run time at all; the adapter documentation therefore requires `static: true`, which inlines them (and allows dead-code elimination).
 29. `builder.routes` replaced `createEntries`; `generateServerInstance` (or `builder.manifest`) replaced `generateManifest`. The entry must call `await server.init({ env, read })` and then `server.respond(request, { getClientAddress, platform })`.
 30. Sample answer: adapter-node on Cloud Run suits `query.live` (long connections, though Cloud Run request timeouts and concurrency apply), gives control over shutdown (`SHUTDOWN_TIMEOUT` below the grace period) and runs in a region next to Postgres, but skew handling during rollouts is yours. Vercel gives skew protection and ISR, but function duration limits and buffering fit live connections poorly, and the Edge runtime is gone, so compute must be pinned to `fra1`. Recommend adapter-node on Cloud Run in the Frankfurt region because of the live dashboards, with `version.name` and retained assets for skew.
 
@@ -849,7 +910,7 @@
 26. It tests what ships (preload tags, bundles, hydration). Preview runs in Node and does not apply adapter-specific behaviour such as `platform`, ISR or edge/worker constraints.
 27. A server-rendered element is clicked before hydration attaches handlers, so a form posts normally or the click is lost. Avoid by waiting for an explicit hydration signal (for example a `data-hydrated` attribute set in `onMount`) and by using auto-waiting web-first assertions instead of fixed sleeps.
 28. Log in once in a setup project, save `storageState`, and reuse it in the other projects, avoiding UI login per test. The file must not be committed to version control.
-29. b\. Errors reported by a `pageerror`/console listener expose hydration mismatches that otherwise pass quietly; the other options hide or mask problems.
+29. **b.** Errors reported by a `pageerror`/console listener expose hydration mismatches that otherwise pass quietly; the other options hide or mask problems.
 30. Sample: unit tests for validators, `requireUser`-style helpers, session lookup and `params.ts`; `Request`-based tests for the webhook handler (signature check, bad payload, idempotency), each action’s failure and success shapes and the `handle` branches; thin remote wrappers tested with logic as plain functions; component tests for the form UI; Playwright for login, one action flow, one remote-function flow with its single-flight update, and a no-JS form test. CI: install, `svelte-kit sync`, `check`, lint, Vitest, build, Playwright with traces and report upload on failure.
 
 ## Chapter 20: Migrating from SvelteKit 2 to 3, and a Capstone Architecture
@@ -881,6 +942,6 @@
 25. `env` and `waitUntil` from `cloudflare:workers`; `cf` on `request.cf`; `caches` as a global.
 26. Any five: `$env/*`, `$app/environment`, `invalidateAll`, `pushState`/`replaceState`, `json()`/`text()`, `files.*`, `alias`, `typescript.config`, `export const snapshot`, `adapter-cloudflare-workers`.
 27. Session must exist before membership can be resolved, and the guard should see the final state. 404 avoids revealing that the tenant exists to non-members.
-28. `event.params`/`url` in forms and commands describe the calling page (and throw in queries), so a stale or manipulated page could target another tenant. An explicit validated tenant ID compared with `locals.tenant.id` makes the intent explicit and catches mismatches.
+28. For a `query`, `handle` sees the internal remote endpoint URL, so it cannot resolve `params.tenant` and `locals.tenant` stays empty; in forms and commands `event.params`/`url` describe the calling page as reported by the client (and accessing them throws in queries). So the tenant slug is an explicit argument, and `requireTenantRole` re-resolves the membership from the session user, which makes the client-supplied value safe. Destructive commands also pass the tenant ID the page was rendered with and reject a mismatch with 409, so a renamed or reused slug or a stale tab cannot redirect the write to another tenant.
 29. Sample: (1) `tenant` handle membership check: test that a non-member gets 404 on tenant routes; (2) tenant-scoped repositories with no unscoped API: test every method as tenant A against tenant B data returns nothing; (3) Postgres RLS: test that a query without the right session setting returns no rows.
 30. Login page: prerendered, CDN-cacheable (no user data). Tenant dashboard: `private, no-store` (personalised and tenant-specific). `/_app/immutable/*`: `public,max-age=31536000,immutable` (content-hashed). `query.live` stream: `no-store` and never cached by a service worker. Billing webhook: no caching, plain status responses, signature verified.

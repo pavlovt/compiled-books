@@ -338,7 +338,7 @@ export const handle = sequence(requestContext);
 
 Since 3.0, `handleError` runs for every error thrown while loading, rendering or responding, except redirects: app errors from `error(...)`, framework errors such as 404/405/413, validation errors from remote-function argument checks, and unknown errors. It receives `{ kind, error, event }` (plus `issues` for validation errors; the client variant has no `validation` kind) and returns an `App.Error`-shaped object whose `status` and `message` are optional overrides. Never throw from it.
 
-> **Note:** The hook’s input type in 3.1 is `CaughtError & { event }`. You get `kind` and `error` (and `issues` for validation errors); for the `framework` and `validation` kinds, `error` itself carries `status` and `message`. There are no top-level `status`/`message` arguments, so read them from `error`.
+> **Note:** The hook’s input type in 3.1 is `CaughtError & { event }`. You get `kind` and `error` (and `issues` for validation errors). For every kind except `unknown`, `error` itself carries `status` and `message` (for `app` it is the `App.Error` body, which always includes them). There are no top-level `status`/`message` arguments, so read them from `error`.
 
 The consequence of “all errors” is that you must triage by `kind`, or you will page yourself for every 404 and every validation failure:
 
@@ -603,12 +603,12 @@ If you do nothing else (author practice), ship this:
 8.  **What happens?** In a server `load` you call `tracer.startActiveSpan('db.query', fn)` from `@opentelemetry/api` and the `NodeSDK` is running. What is the new span’s parent? What would change if you forgot `span.end()`?
 9.  In development, when is `instrumentation.server` imported? How does that differ from the production flow with adapter-node?
 10. Describe the three steps the adapter-node instrumentation facade performs, in order, and why the order matters.
-11. What error do you get if you enable `tracing.server` and the active adapter does not support instrumentation, and when does it surface?
+11. What error do you get if `src/instrumentation.server.ts` exists and the active adapter does not support instrumentation, and when does it surface?
 12. Why can’t you instrument a database client that is imported (directly or transitively) from `src/env.ts`?
 13. **Find the bug:** an engineer adds `'pg'` to `ssr.external`, keeps `pg` in `devDependencies`, and deploys with adapter-node into a production image that installed only production dependencies. What happens at startup?
 14. Name two ways a bundler can prevent auto-instrumentation from working, and the Vite option that addresses the second.
 15. Why does the docs’ quickstart `register()` call throw on Node 22.22.2, and what is the fallback?
-16. a\. Which environment variables would you use to sample 10% of traces with a parent-based sampler? b) Why prefer this over hard-coding in the SDK constructor?
+16. (a) Which environment variables would you use to sample 10% of traces with a parent-based sampler? (b) Why prefer this over hard-coding in the SDK constructor?
 17. Why should the SDK be flushed from a `sveltekit:shutdown` listener, and which adapter emits that event?
 18. In `handleError`, what does `kind: 'framework'` cover? What would be the problem of logging all `kind`s at `error` level?
 19. Which properties does `handleError` receive in SvelteKit 3.1 for the `validation` kind that it does not receive for the others? Is `validation` available in the client hook?
@@ -622,6 +622,7 @@ If you do nothing else (author practice), ship this:
 27. What does `updated.current` become `true` in response to in SvelteKit 3 (beyond hourly polling), and how can you use the signal operationally?
 28. How would you debug a production build in Node with breakpoints, and what must you enable to land on source lines?
 29. **Multiple choice.** Where must `src/instrumentation.server` initialise the SDK relative to the application’s modules?
+
     a.  After, so it can wrap already-loaded exports
     b.  Before, so interceptors are in place when libraries are imported
     c.  Concurrently, in a worker thread

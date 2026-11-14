@@ -34,7 +34,7 @@
 
 16. Load A reruns, because search params are tracked per key and `q` changed. Load B does not rerun: `request.url` is not tracked, so its data goes stale. Read `url` (the tracked proxy) in `load`. (Ch. 4, Ch. 5)
 
-17. i\. No: only the `page` key was read. (ii) Yes: `depends('app:cart')`. (iii) Yes: the `page` key changed. (iv) No: server loads never auto-register fetched URLs as dependencies, because dependency sets are sent to the browser; use an identifier with `depends`. (Ch. 5)
+17. (i) No: only the `page` key was read. (ii) Yes: `depends('app:cart')`. (iii) Yes: the `page` key changed. (iv) No: server loads never auto-register fetched URLs as dependencies, because dependency sets are sent to the browser; use an identifier with `depends`. (Ch. 5)
 
 18. **c.** Only server loads stream; without a no-op catch an unawaited rejection can crash the process; status, headers, cookies and redirects cannot change after streaming starts; streamed pages get no `ETag`. (Ch. 5, Ch. 16)
 
@@ -90,13 +90,13 @@
 
 16. **b.** Prerender functions run at build time, are excluded from the server bundle unless `dynamic: true`, store results in the browser’s Cache API per deployment version, and are the only remote reads usable on fully prerendered pages. (Ch. 7)
 
-17. 1.  Field names must come from `.as(...)`: `<input {...createPost.fields.title.as('text')} />`; a hand-written `name` makes the submission be rejected. (2) Unchecked checkboxes are not sent, so the boolean must be optional with a default in the schema (`v.optional(v.boolean(), false)`) and rendered with `.as('checkbox')`. (Ch. 8)
+17. (1) Field names must come from `.as(...)`: `<input {...createPost.fields.title.as('text')} />`; a hand-written `name` makes the submission be rejected. (2) Unchecked checkboxes are not sent, so the boolean must be optional with a default in the schema (`v.optional(v.boolean(), false)`) and rendered with `.as('checkbox')`. (Ch. 8)
 
 18. **a.** `public.d.ts` declares `validate({ all?, preflightOnly? })`; the docs’ `includeUntouched` wording is outdated. `validate()` contacts the server unless `preflightOnly` is set. (Ch. 8)
 
 19. Throw the server-side issue with `invalid(issue.email('Already registered'))`, using the typed `issue` builder passed to the handler. `fail()` belongs to form actions; in remote forms use `invalid`, which populates `fields.email.issues()` and re-renders in place. (Ch. 8)
 
-20. a\. By default `refreshAll()`: all active queries and loads are refreshed. (b) Only `getPosts` is refreshed (an explicit `refresh()`/`set()`/`reconnect()` replaces the default), riding the same response as single-flight. (c) Nothing: commands do not invalidate automatically, so call `refresh()`/`set()` yourself. (Ch. 8)
+20. (a) By default `refreshAll()`: all active queries and loads are refreshed. (b) Only `getPosts` is refreshed (an explicit `refresh()`/`set()`/`reconnect()` replaces the default), riding the same response as single-flight. (c) Nothing: commands do not invalidate automatically, so call `refresh()`/`set()` yourself. (Ch. 8)
 
 21. The handler must opt in with `requested(getViews, limit)` and handle each entry by `refresh()`, `set()`, `reconnect()` or `ignore()` (or `refreshAll()`, `ignoreAll()`). The limit bounds client-controlled work (DoS). In SvelteKit 3 an entry that is left unhandled makes that query error on the client. (Ch. 8)
 
@@ -140,7 +140,19 @@
 
 13. **b.** `snapshot()` registers capture/restore pairs from any component, stores devalue-serialised data in `sessionStorage` per history entry and honours `transport`. Use explicit ids and keep payloads small; the `export const snapshot` form is deprecated. (Ch. 12)
 
-14. `ts // src/env.ts import { defineEnvVars } from '@sveltejs/kit/env'; import * as v from 'valibot'; export const variables = defineEnvVars({ DATABASE_URL: { schema: v.pipe(v.string(), v.url()), description: 'Postgres URL' }, PUBLIC_API_BASE: { public: true, static: true }, PUBLIC_FEATURE_BANNER: { public: true } });` Server code: `import { DATABASE_URL } from '$app/env/private';`. Public values come from `$app/env/public`. (Ch. 13)
+14. ```ts
+    // src/env.ts
+    import { defineEnvVars } from '@sveltejs/kit/env';
+    import * as v from 'valibot';
+
+    export const variables = defineEnvVars({
+      DATABASE_URL: { schema: v.pipe(v.string(), v.url()), description: 'Postgres URL' },
+      PUBLIC_API_BASE: { public: true, static: true },
+      PUBLIC_FEATURE_BANNER: { public: true }
+    });
+    ```
+
+    Server code: `import { DATABASE_URL } from '$app/env/private';`. Public values come from `$app/env/public`. (Ch. 13)
 
 15. **d.** A `server` filename segment (`db.server.ts`) or any `server` directory (except `src/routes` and `static`) makes a module server-only; `serverless.ts` has no `server` segment. (Ch. 13, Ch. 20)
 
@@ -148,7 +160,7 @@
 
 17. Relax validation while `building` is true (import `building` from `$app/env` in the validator) and enforce at runtime. `src/env.ts` may import `$app/env`, but not the generated env modules (`$app/env/private`/`public`). (Ch. 13)
 
-18. a\. Static variables are validated at build time; (b) dynamic variables when the server starts, so a bad rollout never becomes ready. Use dynamic variables for per-environment secrets so one build is promoted unchanged; static variables are inlined and baked into the build. (Ch. 13, Ch. 18)
+18. (a) Static variables are validated at build time; (b) dynamic variables when the server starts, so a bad rollout never becomes ready. Use dynamic variables for per-environment secrets so one build is promoted unchanged; static variables are inlined and baked into the build. (Ch. 13, Ch. 18)
 
 19. Use `node --env-file=.env build` (or inject real environment variables, which is preferable for secrets). `.env`, `.env.local` and mode variants are loaded automatically in dev and during build, with an empty prefix and `env.dir` to relocate. (Ch. 13, Ch. 18)
 
@@ -178,7 +190,7 @@
 
 4.  `svelte-trusted-html`, unless every page has `csr = false`, because Svelte’s runtime uses that policy for `{@html}` and template cloning (a missing entry fails the build); `sveltekit-trusted-url`, when the service worker is registered. (Ch. 15)
 
-5.  a\. Rejected: form content type with a foreign `Origin`. (b) Not rejected by this check, since JSON requests are governed by CORS; the browser blocks the cross-origin read/preflight unless you implemented permissive CORS, so keep CORS strict and authenticate such APIs explicitly. (c) Rejected in SvelteKit 3 (cross-origin mutative request without `Content-Type`). (d) Rejected: remote function non-GET calls require the same origin and ignore `trustedOrigins`. (Ch. 8, Ch. 15, Ch. 20)
+5.  (a) Rejected: form content type with a foreign `Origin`. (b) Not rejected by this check, since JSON requests are governed by CORS; the browser blocks the cross-origin read/preflight unless you implemented permissive CORS, so keep CORS strict and authenticate such APIs explicitly. (c) Rejected in SvelteKit 3 (cross-origin mutative request without `Content-Type`). (d) Rejected: remote function non-GET calls require the same origin and ignore `trustedOrigins`. (Ch. 8, Ch. 15, Ch. 20)
 
 6.  Allow-list the destination hosts or schemes, resolve and block private/loopback/link-local addresses, use `redirect: 'manual'` and re-check each hop, set a timeout and response-size limit, and do not forward credentials. Central policy can live in `handleFetch` for `event.fetch` calls (not for plain `fetch`). (Ch. 9, Ch. 15)
 
@@ -196,7 +208,7 @@
 
 13. The inlined response carries a `data-ttl` derived from `max-age` (minus `Age`), so for 30 seconds client-side reruns replay the stored response and do not hit the endpoint. It is a side effect of the inlining system, not a managed cache; use remote `query` for designed client caching and never for correctness. (Ch. 4, Ch. 16)
 
-14. a\. Import it as a Vite asset (hashed, cacheable). (b) `@sveltejs/enhanced-img` for build-time optimisation (formats, sizes, dimensions). (c) An image CDN or service with URL-based transforms, since the images are dynamic. (Ch. 16)
+14. (a) Import it as a Vite asset (hashed, cacheable). (b) `@sveltejs/enhanced-img` for build-time optimisation (formats, sizes, dimensions). (c) An image CDN or service with URL-based transforms, since the images are dynamic. (Ch. 16)
 
 15. `self` from `$app/service-worker`; `version` from `$app/env`; immutable build files, static assets and prerendered pages (`immutable`, `assets`, `prerendered`) from `$app/manifest`; `resolve`/`asset` from `$app/paths`. `$service-worker` is removed. Never cache data requests (`__data.json`), remote function calls and `query.live` streams (they are `no-store`), or personalised HTML. (Ch. 16, Ch. 20)
 
@@ -212,9 +224,21 @@
 
 21. Cloud Run sends `SIGTERM` and then `SIGKILL` after a short grace period (about ten seconds), while adapter-node waits up to `SHUTDOWN_TIMEOUT` (default 30) for open connections; long-lived `query.live` connections count as in flight, so the process is killed before cleanup. Set `SHUTDOWN_TIMEOUT` below the grace period (for example 8) and use an async `sveltekit:shutdown` listener to end the pool and flush the SDK; confirm the grace period for your configuration. (Ch. 7, Ch. 18, Ch. 20)
 
-22. a\. `adapter-node` in a container: long-lived connections and workers. (b) `adapter-static` with `prerender = true` (and `strict`). (c) `adapter-cloudflare` (Workers Static Assets or Pages). (d) Edge runtime is removed in 3.0: move to `nodejs22.x`/`nodejs24.x` (or `bun1.x`) in `adapter-vercel`. (Ch. 18)
+22. (a) `adapter-node` in a container: long-lived connections and workers. (b) `adapter-static` with `prerender = true` (and `strict`). (c) `adapter-cloudflare` (Workers Static Assets or Pages). (d) Edge runtime is removed in 3.0: move to `nodejs22.x`/`nodejs24.x` (or `bun1.x`) in `adapter-vercel`. (Ch. 18)
 
-23. `ts import { env, waitUntil } from 'cloudflare:workers'; export async function GET({ request }) { const value = await env.KV.get('k'); waitUntil(log(value)); const country = request.cf.country; const cached = await caches.default.match(request); return new Response(value); }` `env` and `waitUntil` come from `cloudflare:workers`, `cf` is on `request.cf`, `caches` is a global. Install `wrangler` (\^4.67) and run `wrangler types`. (Ch. 18, Ch. 20)
+23. ```ts
+    import { env, waitUntil } from 'cloudflare:workers';
+
+    export async function GET({ request }) {
+      const value = await env.KV.get('k');
+      waitUntil(log(value));
+      const country = request.cf.country;
+      const cached = await caches.default.match(request);
+      return new Response(value);
+    }
+    ```
+
+    `env` and `waitUntil` come from `cloudflare:workers`, `cf` is on `request.cf`, `caches` is a global. Install `wrangler` (\^4.67) and run `wrangler types`. (Ch. 18, Ch. 20)
 
 24. **c.** ISR on prerendered routes has no effect, `bypassToken` must be at least 32 characters, and personalised HTML would be shared between users. `allowQuery` defines which query parameters form the cache key. (Ch. 18)
 
@@ -226,7 +250,7 @@
 
 ## Test 5
 
-1. ``` {.sourceCode .json}
+1. ```json
       {
        "files": ["dist", "!dist/**/*.test.*", "!dist/**/*.spec.*"],
        "sideEffects": ["**/*.css"],
@@ -247,7 +271,7 @@
 
 5.  The maps contain relative paths, so the sources must be published: add `src/lib` to `files` (with the same exclusions for tests). It enlarges the package, so it is optional. (Ch. 19)
 
-6. ``` {.sourceCode .ts}
+6. ```ts
       import { vi, test, expect } from 'vitest';
       import { isRedirect } from '@sveltejs/kit';
       vi.mock('$app/server', () => ({
@@ -274,7 +298,21 @@
 
 12. `params` consolidates `src/params/*` into `src/params.ts`; `lib-alias` replaces `$lib` with `#lib`; `app-state` migrates `$app/stores` to `$app/state`; `collect-migration-instructions` writes `MIGRATION_TASKS.md`; `external-redirects` opts existing external redirects into the new behaviour. (Ch. 20)
 
-13. `ts // vite.config.ts export default defineConfig({ plugins: [ sveltekit({ preprocess: vitePreprocess(), adapter: adapter(), paths: { origin: 'https://shop.example' }, tracing: { server: true } }) ] });` `csrf.checkOrigin: false` has no equivalent: CSRF protection is always on, so list legitimate cross-origin posts in `csrf.trustedOrigins` (none are needed if you simply remove it). `prerender.origin` becomes `paths.origin`; `files.lib` and the experimental keys are removed (`experimental.instrumentation` is automatic when `src/instrumentation.server.js` exists). (Ch. 1, Ch. 15, Ch. 20)
+13. ```ts
+    // vite.config.ts
+    export default defineConfig({
+      plugins: [
+        sveltekit({
+          preprocess: vitePreprocess(),
+          adapter: adapter(),
+          paths: { origin: 'https://shop.example' },
+          tracing: { server: true }
+        })
+      ]
+    });
+    ```
+
+    `csrf.checkOrigin: false` has no equivalent: CSRF protection is always on, so list legitimate cross-origin posts in `csrf.trustedOrigins` (none are needed if you simply remove it). `prerender.origin` becomes `paths.origin`; `files.lib` and the experimental keys are removed (`experimental.instrumentation` is automatic when `src/instrumentation.server.js` exists). (Ch. 1, Ch. 15, Ch. 20)
 
 14. Examples: `handleError` now runs for all errors (watch error volume); enhanced form failures return the `fail` status instead of 200 (check status assertions and metrics); `ORIGIN` is ignored, so POSTs fail CSRF behind a proxy (test forms through the real proxy; set `paths.origin`/header variables); cookie path defaults and ASCII names (inspect `Set-Cookie` in staging); 204 responses have no body (client parsing); `version.pollInterval` polling and `updated` flipping more often; universal `config` precedence (diff prerender output and bundle layout). (Ch. 20)
 
@@ -296,13 +334,13 @@
 
 23. Any five of: `$env/*` modules, `$app/environment`, `invalidateAll`, `pushState`/`replaceState`, `json()`/`text()`, `files.*`, `alias`, `typescript.config`, `export const snapshot`, `builder.mkdirp`/`rimraf`, the `Server` class, `adapter-cloudflare-workers`. Enforce with lint rules (for example `no-restricted-imports`) and a tracking issue. (Ch. 20)
 
-24. 1.  Land on latest 2.x and clear warnings; (2) raise Node everywhere (CI, Docker, Vercel), then TypeScript/Vite/Svelte versions and check third-party plugins for Vite 8; (3) clean branch, run codemod tasks one at a time with commits (`package-json`, `tsconfig`, `svelte-config`, `lib-alias`, `imports`, `params`, `paths`, `app-state`), then `collect-migration-instructions`; (4) manual checklist: `paths.origin` instead of `ORIGIN` (the Cloudflare proxy), `trustedOrigins`, edge function to `nodejs22.x`/`24.x`, remote function flags and `field.as()`, `handleError` by `kind` (Sentry), cookies, redirects, server-only directories; (5) production build, E2E on preview, staging behind the real proxy, deploy-skew drill, prerender output diff; (6) canary rollout and keep the 2.x deployment for rollback; (7) schedule v4 deprecations. (Ch. 18, Ch. 20)
+24. (1) Land on latest 2.x and clear warnings; (2) raise Node everywhere (CI, Docker, Vercel), then TypeScript/Vite/Svelte versions and check third-party plugins for Vite 8; (3) clean branch, run codemod tasks one at a time with commits (`package-json`, `tsconfig`, `svelte-config`, `lib-alias`, `imports`, `params`, `paths`, `app-state`), then `collect-migration-instructions`; (4) manual checklist: `paths.origin` instead of `ORIGIN` (the Cloudflare proxy), `trustedOrigins`, edge function to `nodejs22.x`/`24.x`, remote function flags and `field.as()`, `handleError` by `kind` (Sentry), cookies, redirects, server-only directories; (5) production build, E2E on preview, staging behind the real proxy, deploy-skew drill, prerender output diff; (6) canary rollout and keep the 2.x deployment for rollback; (7) schedule v4 deprecations. (Ch. 18, Ch. 20)
 
 25. Unit (Vitest server project): domain functions, schemas, matchers, `handleError` by kind, helpers with `$app/server` mocked. Integration: each `handle` and sequence with `Request`s, endpoints, remaining actions, webhooks. Component tests (Vitest browser project): UI components with props. E2E (Playwright on preview): login with `storageState`, critical flows, no-JS path, 403/404 behaviour, console errors. Remote functions: keep logic in plain functions behind thin wrappers and test the wrappers end to end because they are experimental and hard to call in isolation. Tenant isolation: a dedicated suite that runs every repository method as tenant A against tenant B’s rows (and RLS tests on a real database). (Ch. 19, Ch. 20)
 
 26. Move components to `src/lib` with an `index.ts`, replace `$lib` with `#lib` (rewritten on package) and use full extensions; remove `$app/*`: take `href`/`current` as props or callbacks, or provide a context the app fills; use `esm-env` for browser checks; no per-user module state. Set `exports` (`types` then `svelte`), `sideEffects: ["**/*.css"]`, `files`, peer dependencies. Release checks: `svelte-package`, `publint`, `npm pack --dry-run`, test the tarball in a consumer SvelteKit app (SSR and client), and treat export removal as a breaking change. (Ch. 19, Ch. 20)
 
-27. 1.  `prerender = true` with `actions` fails the build. (2) `$env/static/private` is deprecated: declare the variable in `src/env.ts` and import from `$app/env/private`, and a static inline of a secret bakes it into the build (use a dynamic variable). (3) `next` is unvalidated user input: an open redirect, and SvelteKit 3 throws for external targets unless allowed. (4) Form data is read without schema validation (and `theme` is unvalidated before being signed and set). (5) `redirect()` throws by itself, so `throw redirect(...)` is unnecessary; also the `theme` cookie keeps the default `httpOnly: true`, so client JS cannot read it if that was intended. (Ch. 6, Ch. 11, Ch. 13, Ch. 14)
+27. (1) `prerender = true` with `actions` fails the build. (2) `$env/static/private` is deprecated: declare the variable in `src/env.ts` and import from `$app/env/private`, and a static inline of a secret bakes it into the build (use a dynamic variable). (3) `next` is unvalidated user input: an open redirect, and SvelteKit 3 throws for external targets unless allowed. (4) Form data is read without schema validation (and `theme` is unvalidated before being signed and set). (5) `redirect()` throws by itself, so `throw redirect(...)` is unnecessary; also the `theme` cookie keeps the default `httpOnly: true`, so client JS cannot read it if that was intended. (Ch. 6, Ch. 11, Ch. 13, Ch. 14)
 
 ## Test 6
 
@@ -316,11 +354,11 @@
 
 5.  The cookie is not set: status, headers and cookies are finalised when streaming starts, and the promise resolves later. Decide anything that affects the response head before returning from `load` (await the data you need, or set the cookie before returning). (Ch. 4, Ch. 5)
 
-6.  i\. No: `sort` is read inside `untrack`. (ii) Yes: `q` is tracked per key. (iii) No: `url.hash` is not available/tracked in load. (iv) Yes: `params.id` is used (the component is reused, but data reruns). The `url.pathname` read inside `.then` is not tracked, because only reads before `load` returns are recorded (development warning). (Ch. 4, Ch. 5)
+6.  (i) No: `sort` is read inside `untrack`. (ii) Yes: `q` is tracked per key. (iii) No: `url.hash` is not available/tracked in load. (iv) Yes: `params.id` is used (the component is reused, but data reruns). The `url.pathname` read inside `.then` is not tracked, because only reads before `load` returns are recorded (development warning). (Ch. 4, Ch. 5)
 
 7.  **b.** Live queries have no `.refresh()`; in a handler, `reconnect()` re-establishes the stream and pushes the current value, and (as with `refresh`/`set`) it replaces the default `refreshAll`. (Ch. 7, Ch. 8)
 
-8. ``` {.sourceCode .ts}
+8. ```ts
       // src/hooks.ts
       import type { Transport } from '@sveltejs/kit/hooks';
       export const transport: Transport = {
@@ -335,7 +373,7 @@
 
 9.  Remote `query` cannot be used on fully prerendered pages (there is no server at runtime). Use a remote `prerender` function (the only remote read allowed there), or a prerendered `load`/static data. (Ch. 7, Ch. 11)
 
-10. In `command`, `params` describes the calling page, which the client reports, so `params.tenant` is not a trustworthy tenant, and `memberId` is never checked against the tenant (an IDOR). Authorise from `locals` set in `handle` (verified membership), pass the tenant as an explicit argument compared against `locals.tenant.id`, and scope the delete by tenant: `delete({ where: { id: memberId, tenantId: locals.tenant.id } })`. (Ch. 8, Ch. 14, Ch. 20)
+10. In `command`, `params` describes the calling page, which the client reports, so `params.tenant` is not a trustworthy tenant, and `memberId` is never checked against the tenant (an IDOR). Pass the tenant slug as an explicit, validated argument, re-verify the membership (and role) from the session user (`requireTenantRole(slug, 'admin')` in the capstone), and scope the delete by that verified tenant: `delete({ where: { id: memberId, tenantId: tenant.id } })`. (Ch. 8, Ch. 14, Ch. 20)
 
 11. `paths.origin` is fixed at build time, so one build cannot serve two public origins. Set the runtime header variables on adapter-node (`PROTOCOL_HEADER`, `HOST_HEADER`, and so on) so each environment derives its origin from the trusted proxy’s headers, and only when the server is reachable solely through that proxy. (Ch. 15, Ch. 18, Ch. 20)
 
@@ -355,11 +393,11 @@
 
 19. `redirect()` throws itself, so the `catch` block swallows the redirect, logs it as an error, and returns a 500 failure: the user sees “Could not save” even though the save succeeded. Move `redirect` outside the `try`, or rethrow with `if (isRedirect(e)) throw e`. (Ch. 6, Ch. 10)
 
-20. Returning 404 does not reveal that the tenant exists. The `tenant` handle runs on every request that goes through `handle`, including data requests and remote function calls, and sets `locals.tenant` and `locals.role` from verified membership, so remote functions authorise from `locals` rather than from client-reported URL or params. (Ch. 14, Ch. 20)
+20. Returning 404 does not reveal that the tenant exists. For page and data requests the check runs in the `tenant` handle, which resolves the membership from `params.tenant` and sets `locals.tenant` and `locals.role`. Remote calls also pass through `handle`, but there the tenant cannot be resolved: a query’s URL is the internal remote endpoint, and form/command params are reported by the client. So remote functions take the tenant slug as an argument and call `requireTenantRole`, which repeats the membership lookup (with the same 404) from the session user. (Ch. 14, Ch. 20)
 
-21. Structure: data access only through repositories bound to a tenant scope obtained from `locals.tenant` (no unscoped query API in app code); Postgres row-level security keyed on a per-transaction setting as a backstop; remote functions start with `requireRole(...)` reading `locals`, never `url`/`params`/`route`; destructive commands also take the tenant as an explicit argument and compare it with `locals.tenant.id`; tests: a dedicated suite running each repository method as tenant A against tenant B’s rows, RLS tests on a real database, E2E for 403 and 404, and review rules that grep for remote functions without a guard. (Ch. 14, Ch. 19, Ch. 20)
+21. Structure: data access only through repositories bound to a tenant scope obtained from `locals.tenant` (no unscoped query API in app code); Postgres row-level security keyed on a per-transaction setting as a backstop; remote functions take the tenant slug as an explicit argument and start with `requireTenantRole(...)`, which re-verifies membership from the session user, never trusting `url`/`params`/`route`; destructive commands also pass the tenant ID the page was rendered with and reject a mismatch; tests: a dedicated suite running each repository method as tenant A against tenant B’s rows, RLS tests on a real database, E2E for 403 and 404, and review rules that grep for remote functions without a guard. (Ch. 14, Ch. 19, Ch. 20)
 
-22. Context: several entry points (page loads, actions, endpoints, remote calls) with layouts that may not rerun. Decision: authenticate once in `handle` (session cookie to `locals.user`/tenant), keep a coarse path guard in `handle` for page routes, and authorise per operation inside every load, action, endpoint and remote function through a helper (`requireUser`/`requireRole` using `getRequestEvent()`); layouts only shape UI. Consequences: no reliance on layout loads; remote functions are protected independent of URL; a lint or review rule checks that each entry point calls the helper; prerendered pages must contain no private data because they bypass `handle`. (Ch. 4, Ch. 9, Ch. 14, Ch. 20)
+22. Context: several entry points (page loads, actions, endpoints, remote calls) with layouts that may not rerun. Decision: authenticate once in `handle` (session cookie to `locals.user`/tenant), keep a coarse path guard in `handle` for page routes, and authorise per operation inside every load, action, endpoint and remote function through a helper (`requireUser`/`requireRole` using `getRequestEvent()`, and for remote functions one that re-verifies an explicit tenant argument); layouts only shape UI. Consequences: no reliance on layout loads; remote functions are protected independent of URL; a lint or review rule checks that each entry point calls the helper; prerendered pages must contain no private data because they bypass `handle`. (Ch. 4, Ch. 9, Ch. 14, Ch. 20)
 
 23. Gate on the 5xx ratio per route, p95 latency by route, readiness failures, the rate of `unknown`-kind `handleError` events, database pool saturation and trace sampling health; keep alerts for forced shutdowns and a near-zero tenant-mismatch rate. HTTP status is misleading for remote functions because runtime errors travel in HTTP 200 envelopes, so monitor `handleError` and traces rather than status codes alone. (Ch. 7, Ch. 17, Ch. 20)
 
@@ -369,4 +407,4 @@
 
 26. Streaming and SSE need unbuffered paths: Lambda-style platforms buffer the response; reverse proxies (for example nginx with `proxy_buffering on`) and compression layers buffer; some CDNs do too; `query.live` sends keep-alives that need flushing (adapter-bun adds `X-Accel-Buffering: no` for event streams, but with adapter-node you must configure your proxy yourself). Verify with `curl -N` against the app directly and then through each hop, then disable buffering for those routes (for example `proxy_buffering off`), avoid compressing streamed responses at the proxy, and keep SEO-critical content awaited. (Ch. 5, Ch. 7, Ch. 16, Ch. 18)
 
-27. 1.  `getUser` runs for all dynamic requests including sub-requests and runs before an early return, so lookups multiply; skip on `isSubRequest` or cache per request. (2) The path-prefix admin guard does not protect remote functions (their requests carry endpoint URLs or client-reported pages), nor `+server` endpoints outside the prefix; authorise in each operation. (3) `cache-control: public, max-age=60` is applied to every response, including personalised HTML, data requests and errors, so a CDN or browser can share user A’s page with B; set caching per route and use `private`/`no-store` for personalised responses. (4) `handleFetch` adds the `authorization` token to every server fetch, including external hosts: scope by exact hostname. (5) `{ ...request.headers }` spreads a `Headers` object into nothing, dropping all original headers; use `new Headers(request.headers)` and `.set`. (6) Headers on a response from `resolve` may be immutable for some responses; clone first. The module-level `requestCount` is harmless here but is exactly the pattern that becomes a cross-request leak if it holds per-user data. (Ch. 9, Ch. 12, Ch. 14, Ch. 16)
+27. (1) `getUser` runs for all dynamic requests including sub-requests and runs before an early return, so lookups multiply; skip on `isSubRequest` or cache per request. (2) The path-prefix admin guard does not protect remote functions (their requests carry endpoint URLs or client-reported pages), nor `+server` endpoints outside the prefix; authorise in each operation. (3) `cache-control: public, max-age=60` is applied to every response, including personalised HTML, data requests and errors, so a CDN or browser can share user A’s page with B; set caching per route and use `private`/`no-store` for personalised responses. (4) `handleFetch` adds the `authorization` token to every server fetch, including external hosts: scope by exact hostname. (5) `{ ...request.headers }` spreads a `Headers` object into nothing, dropping all original headers; use `new Headers(request.headers)` and `.set`. (6) Headers on a response from `resolve` may be immutable for some responses; clone first. The module-level `requestCount` is harmless here but is exactly the pattern that becomes a cross-request leak if it holds per-user data. (Ch. 9, Ch. 12, Ch. 14, Ch. 16)

@@ -188,7 +188,7 @@ There are two flattening rules to internalize:
 
 How does Kit know which is which? It has a fixed list of its own option names. Anything not on the list is forwarded verbatim to `vite-plugin-svelte`, which validates it. The `experimental` key is a shared namespace: Kit plucks out the flags it recognises (`remoteFunctions`, `forkPreloads`) and passes the rest to `vite-plugin-svelte`. That is why `compilerOptions: { experimental: { async: true } }` (a Svelte compiler flag) and `experimental: { remoteFunctions: true }` (a Kit flag) appear at different levels in the example above.
 
-> **Warning:** A typo in a Kit option name no longer fails Kit’s validation; it is forwarded to `vite-plugin-svelte`. Rely on the `Config` type from `@sveltejs/kit/vite` for completeness rather than waiting for a runtime error.
+> **Warning:** A typo in a Kit option name is no longer reported by Kit: the unknown key is forwarded to `vite-plugin-svelte`, and whatever that plugin says about it does not point you to the Kit option you meant. Rely on the `Config` type from `@sveltejs/kit/vite` to catch typos at type-check time rather than waiting for a runtime message.
 
 A practical consequence of putting config in `vite.config` is that the same file is read by Vitest, by Vite-based tools, and by the SvelteKit CLI (`svelte-kit sync` resolves the Vite config to find the plugin options). A single source of truth is good; the cost is that the file now executes inside Vite’s config loader, so keep it free of heavy side effects.
 

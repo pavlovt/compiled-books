@@ -274,7 +274,7 @@ Without JavaScript, a successful `POST` yields a full page load of the response,
 - It deserialises the response into an `ActionResult`.
 - On `success` it resets the form element and calls `refreshAll()` (re-running load functions that need it; see Chapter 5).
 - It applies the result: sets `form`, `page.form` and `page.status` for a same-page submission, calls `goto` for a redirect, and renders the nearest `+error.svelte` for an error.
-- It resets focus to a sensible element (Chapter 11 and the accessibility docs).
+- It resets focus to a sensible element (Chapter 12).
 
 `use:enhance` can only be used on `method="POST"` forms that target a page action. In development, putting it on a GET form raises `enhance_invalid_method`, and it throws for forms posting to a `+server` endpoint. If a `+server.ts` sits next to your `+page.server.ts`, a plain `fetch` goes to the endpoint; `use:enhance` always includes `x-sveltekit-action`, which routes to the page action.
 
@@ -564,7 +564,7 @@ If you genuinely need to leave the site (an OAuth provider, a payment page), pas
 
 ### Cookies
 
-`cookies.set` requires you to think about options: in 3.0 the `path` defaults to `/` (previously the current path, which was forbidden to leave unset). Defaults are `httpOnly: true`, `secure: true` (relaxed on localhost in dev) and `sameSite: 'lax'`. Cookies set in an action are applied to whichever response the action produces, including a redirect response. They are not visible through `cookies.get` in a *different* request until the browser sends them back, but they are visible through `cookies.get` in `load` functions running later in the same request.
+`cookies.set` requires you to think about options: in 3.0 the `path` defaults to `/` (in 2.x it had to be set explicitly). Defaults are `httpOnly: true`, `secure: true` (relaxed on localhost in dev) and `sameSite: 'lax'`. Cookies set in an action are applied to whichever response the action produces, including a redirect response. They are not visible through `cookies.get` in a *different* request until the browser sends them back, but they are visible through `cookies.get` in `load` functions running later in the same request.
 
 ### CSRF
 
@@ -670,7 +670,10 @@ Keep using actions when the app is already built on them, when stability matters
 
 21. Multiple choice: after a successful login action, which redirect status is most appropriate?
 
-    a.  200 b) 301 c) 303 d) 307
+    a.  200
+    b.  301
+    c.  303
+    d.  307
 
 22. In SvelteKit 3, what happens when an action calls `redirect(303, url.searchParams.get('redirectTo'))` and the parameter is `//evil.example/path`? Write a safer version.
 

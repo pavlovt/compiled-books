@@ -103,7 +103,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 ```
 
-Two caveats (details in Chapters 6 and 9): `handle` does not rerun for each form action *after* the initial request, so if an action changes the user, update `event.locals` yourself; and `locals` are server-only, so to make a value visible to components you return it from a server `load`.
+Two caveats (details in Chapters 6 and 9): `handle` runs once per request, before the form action, and does not rerun between the action and the `load` functions that follow it in the same request, so if an action changes the user (logging in or out), update `event.locals` yourself or redirect; and `locals` are server-only, so to make a value visible to components you return it from a server `load`.
 
 For *deep* call chains, `getRequestEvent()` lets helper functions read request state without threading `event` through every signature. It works in `handle`, `load`, actions and remote functions, and throws outside a request. This is a form of async-local request context; use it for things like `requireUser()` (Chapter 14), not as a general dependency-injection container.
 
@@ -311,7 +311,7 @@ URL state is shareable state. Sometimes you want state that belongs to a *histor
 <button onclick={open}>Open</button>
 
 {#if page.state.showModal}
-    <Modal close={() => history.back()} />
+    <Modal onclose={() => history.back()} />
 {/if}
 ```
 
@@ -410,7 +410,7 @@ Practical points:
 - **Use `$derived`, not `$:`.** `page` changes are only reflected with runes. `const id = $derived(page.params.id)` updates; a legacy `$:` statement referencing it does not.
 - **`page.data` is the merged data of every active `load`.** It is `$state.raw` internally, so replace, don’t mutate. Type the shared part via `App.PageData`. Prefer the `data` prop in the component that owns the route; use `page.data` in *layout-level chrome* (a header that needs the page title from whichever page is active).
 - **`page.error` and `page.status`** let a layout react to error pages; error boundaries are covered in Chapter 10.
-- **`navigating` has no server meaning.** It is `null` fields on the server and during hydration; render a progress indicator only from it.
+- **`navigating` has no server meaning.** All its fields are `null` on the server and during hydration, so use it only for client-side indicators such as a progress bar.
 - **Server reads must happen during render.** Reading `page.url` in a `load`, in module scope or after an `await` in server code throws (in dev with an explicit message). In `load`, use the event’s `url` instead.
 
 ### `updated`: detecting a new deployment

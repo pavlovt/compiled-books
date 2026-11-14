@@ -626,6 +626,7 @@ Pitfalls specific to this migration: the action’s `fail` data payload has no a
 14. A handler calls `redirect(303, '/done')` after `void getTodos().refresh()`. What does the client do, and when does `submit()` resolve?
 15. Why can a command not redirect, and how do you navigate after one?
 16. Multiple choice: which is **not** true of `command`?
+
     a.  it accepts `File` arguments
     b.  it automatically refreshes all queries on success
     c.  it can set cookies

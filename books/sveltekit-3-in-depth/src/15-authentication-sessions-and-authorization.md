@@ -31,7 +31,7 @@ Where does the session identifier live in a browser app? In a cookie that JavaSc
 |------------------------|------------------------|------------------------|
 | `httpOnly` | `true` | Keep `true`: script cannot read the session via XSS |
 | `secure` | `true` (false during development on localhost) | Keep `true` in production |
-| `path` | `'/'` | Set it explicitly; v2 and v3 require a `path` for `set`/`delete` types |
+| `path` | `'/'` (since 3.0; in 2.x it was required) | Pass it explicitly anyway, and use the same `path` in `set` and `delete`, so the code reads unambiguously |
 | `sameSite` | `'lax'` | `'lax'` suits most apps; `'strict'` breaks arriving via links from other sites while logged in |
 | `maxAge`/`expires` | none (session cookie) | Set an expiry that matches your session lifetime |
 
@@ -540,8 +540,7 @@ Prefer a `form` (progressive enhancement) for logout. A `command` also works for
 
 ```ts
 // src/lib/auth.remote.ts
-import { command, form } from '$app/server';
-import { getRequestEvent } from '$app/server';
+import { command, form, getRequestEvent } from '$app/server';
 import { redirect } from '@sveltejs/kit';
 import { invalidateSession } from '#lib/server/session.js';
 import { deleteSessionCookie } from '#lib/server/session-cookie.js';
@@ -554,9 +553,18 @@ export const logout = form(async () => {
     locals.session = null;
     redirect(303, '/');
 });
+
+// SPA variant: no redirect allowed, so the caller navigates afterwards
+export const signOut = command(async () => {
+    const { locals, cookies } = getRequestEvent();
+    if (locals.session) await invalidateSession(locals.session.id);
+    deleteSessionCookie(cookies);
+    locals.user = null;
+    locals.session = null;
+});
 ```
 
-(A `form` with no schema takes no fields.)
+(A `form` with no schema takes no fields.) Use the form as `<form {...logout}><button>Sign out</button></form>`; call the command from a button handler with `await signOut(); await goto('/');` (`goto` from `$app/navigation`), so the navigation reruns the loads with the cookie already gone.
 
 ## Passwords: hashing, rate limiting, enumeration
 

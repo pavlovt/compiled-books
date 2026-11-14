@@ -102,7 +102,7 @@ With the explicit env system (Chapter 13), variables declared in `src/env.ts` ar
 | `KEEP_ALIVE_TIMEOUT`, `HEADERS_TIMEOUT` | Node defaults | Seconds |
 | `LISTEN_PID`, `LISTEN_FDS` | set by systemd | Socket activation, never prefixed |
 
-`ORIGIN` no longer exists in 3.x. The `envPrefix` option renames all of these (for example `MY_CUSTOM_PORT`).
+`ORIGIN` no longer exists in 3.x. The adapter’s `envPrefix` option prefixes all of these except the systemd variables: with `envPrefix: 'MY_CUSTOM_'`, `PORT` becomes `MY_CUSTOM_PORT`.
 
 ### The origin problem and `paths.origin`
 
@@ -468,7 +468,7 @@ export const config: Config = {
 
 `expiration` (seconds, or `false` for never) is required. `bypassToken` (at least 32 characters, fixed at build time) enables Draft Mode (cookie `__prerender_bypass=<token>`) and on-demand revalidation (`GET` or `HEAD` with `x-prerender-revalidate: <token>`). `allowQuery` lists query parameters that form the cache key; others are ignored. ISR on a prerendered route has no effect. Use ISR only where every visitor sees identical content; anything driven by a session cookie leaks across users (for example, user A’s name rendered into HTML that is then served to B).
 
-`BYPASS_TOKEN` is imported from `$app/env/private`, so declare it in `src/env.ts`. Vercel system variables are identical at build and run time, so declare them `static: true` for inlining and dead-code elimination:
+`BYPASS_TOKEN` is imported from `$app/env/private`, so declare it in `src/env.ts`. Vercel system variables describe the deployment, so their build-time values remain correct at run time, and some of them are not available to functions at run time at all. The adapter documentation therefore says to declare them `static: true`, which inlines them (and enables dead-code elimination):
 
 ```ts
 // src/env.ts

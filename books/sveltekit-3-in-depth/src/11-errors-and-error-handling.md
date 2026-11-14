@@ -117,7 +117,7 @@ export const handleError: HandleServerError = async ({ kind, error, issues, even
 
 The argument is the discriminated union `CaughtError & { event: RequestEvent }`:
 
-- `kind: 'app'` with `error: App.Error`,
+- `kind: 'app'` with `error: App.Error` (the error body, which always includes `status` and `message`),
 - `kind: 'framework'` with `error: { status, message }`,
 - `kind: 'unknown'` with `error: unknown`,
 - `kind: 'validation'` with `error: { status: 400, message: 'Bad Request' }` and `issues` (typed through the generic: `HandleServerError<MyIssue>` gives validator-specific issue properties).
@@ -448,7 +448,7 @@ Principles: distinguish *expected, user-actionable* outcomes (4xx with specific 
 
 11. A `handleError` is declared `async` and awaits a network call. Under which condition is its result discarded for render-time errors?
 
-12. Why might the server’s `handleError` not run for an error shown in the browser from a failed server `load`, and which hook reports a failed universal `load` in the browser?
+12. A server `load` fails during a client-side navigation and the error is shown in the browser. Why does the client’s `handleError` not run for it, and which hook reports a failed universal `load` in the browser?
 
 13. Which kind is absent from the client hook, and why?
 

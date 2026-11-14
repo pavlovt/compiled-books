@@ -306,7 +306,7 @@ A universal `load` running in the browser calls your API across the public inter
 
 ### Remote function batching
 
-`query.batch` (Chapter 7) is the remote-function answer to the N+1 waterfall: a list of 40 components each calling `getAuthor(id)` in the same macrotask become one HTTP request and one database query. If you see a component-per-row data pattern, this is the fix rather than hoisting data into the parent.
+`query.batch` (Chapter 7) is the remote-function answer to the N+1 waterfall: 40 components in a list, each calling `getAuthor(id)` in the same macrotask, become one HTTP request and one database query. If you see a component-per-row data pattern, this is the fix rather than hoisting data into the parent.
 
 ### Non-essential data
 
@@ -623,7 +623,7 @@ Points of care that are easy to get wrong:
 
 ### Updating
 
-The browser checks for a new worker on full-page navigations within scope and on functional events. A SvelteKit app mostly navigates client-side, so a user can stay on an old worker for a long time. SvelteKit itself calls `registration.update()` only in error recovery: when a route module fails to load or a navigation hits an error status, and version polling (`version.pollInterval`, default one hour; `0` disables) finds a redeploy. To check eagerly, call `update()` from `afterNavigate` in the root layout, as the docs show. A new worker installs in the background and takes over when the number of tabs controlled by the old one drops to zero; you can offer a reload prompt using `updated.current` from `$app/state`, which in SvelteKit 3 also refreshes on focus, visibility change, server-data navigations and remote calls, not only by polling.
+The browser checks for a new worker on full-page navigations within scope and on functional events. A SvelteKit app mostly navigates client-side, so a user can stay on an old worker for a long time. SvelteKit itself calls `registration.update()` only during error recovery: when a route module fails to load or a navigation hits an error status *and* the version check (`updated`, polled every `version.pollInterval`, default one hour; `0` disables polling) has found a new deployment. To check eagerly, call `update()` from `afterNavigate` in the root layout, as the docs show. A new worker installs in the background and takes over when the number of tabs controlled by the old one drops to zero; you can offer a reload prompt using `updated.current` from `$app/state`, which in SvelteKit 3 also refreshes on focus, visibility change, server-data navigations and remote calls, not only by polling.
 
 If you want Workbox-style recipes (stale-while-revalidate, background sync, runtime caching rules), the docs point to the Vite PWA plugin as the alternative. Use the built-in support for precaching and simple fallbacks; reach for a PWA plugin once you need a manifest, installability and runtime strategies.
 
@@ -671,7 +671,7 @@ The earlier table-row example violates accessibility: a clickable `<tr>` is not 
 import type { RequestHandler } from './$types';
 import { listPublishedSlugs } from '#lib/server/cms.js';
 
-export const prerender = false;
+export const prerender = false; // the CMS changes between deploys; use true if it does not
 
 export const GET: RequestHandler = async ({ url }) => {
     const slugs = await listPublishedSlugs();

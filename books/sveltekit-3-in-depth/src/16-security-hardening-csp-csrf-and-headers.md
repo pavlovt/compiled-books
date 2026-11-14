@@ -261,7 +261,7 @@ A request is rejected with `403` (“Cross-site POST form submissions are forbid
 Several consequences follow:
 
 - The check targets exactly the requests a malicious *HTML form* on another site can produce. A cross-site `fetch` with `Content-Type: application/json` is not a “simple” request, so browsers preflight it; CORS (not this check) decides whether it runs. SvelteKit therefore does not check JSON requests: a `+server.ts` `POST` handler consuming JSON relies on CORS and `sameSite` cookies.
-- **Missing `Origin` header on a form-style mutating request is rejected.** Browsers send `Origin` on cross-site posts; non-browser clients (curl, server-to-server) that post form data without it are blocked. Webhooks that post JSON are unaffected; webhooks that post form-encoded data from a provider’s servers must either send a matching `Origin` (they will not) or be served from an endpoint on a `trustedOrigins` entry. Since provider servers rarely send `Origin`, the practical choice is to have such providers use JSON, or to receive webhooks on a separate service.
+- **Missing `Origin` header on a form-style mutating request is rejected.** Browsers send `Origin` on cross-site posts; non-browser clients (curl, server-to-server) that post form data without it are blocked. Webhooks that post JSON are unaffected. Webhooks that post form-encoded data from a provider’s servers are a problem: server-to-server requests rarely carry an `Origin` header at all, and `trustedOrigins` cannot help, because it is compared against that header. The practical choices are to have such providers post JSON (or another non-form content type), or to receive these webhooks on a separate service.
 - `GET`, `HEAD` and `OPTIONS` are never checked. **State changes on `GET` are your bug**, and no framework feature protects them.
 
 ### Remote function requests
@@ -281,7 +281,7 @@ sveltekit({
 
 or, for `adapter-node` behind a *trusted* proxy, tell the adapter which headers carry the original values: `PROTOCOL_HEADER=x-forwarded-proto HOST_HEADER=x-forwarded-host`. Only set these when a proxy you control overwrites them; otherwise clients can spoof the origin the check compares against.
 
-`paths.origin` is a *build-time* config value. If one build is promoted across environments with different origins (a preview deployment per branch), it cannot be a constant; either derive it from an environment variable read when the config is evaluated for the build that targets a specific environment, or use the forwarded-header approach, which is evaluated at runtime.
+`paths.origin` is a *build-time* config value. If one build is promoted across environments with different origins (staging, production, a preview deployment per branch), no single constant is right for all of them. Either build once per environment, reading the origin from an environment variable when `vite.config.ts` is evaluated, or use the forwarded-header approach, which is evaluated at runtime.
 
 ### `csrf.trustedOrigins`
 
@@ -327,8 +327,8 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
         headers.set('strict-transport-security', 'max-age=63072000; includeSubDomains');
     }
 
-    // clickjacking defence for non-prerendered pages when you do not set a CSP frame-ancestors via config
-    if (!headers.has('content-security-policy')) {
+    // clickjacking defence for dynamic pages when the CSP (from the csp config) has no frame-ancestors
+    if (!headers.get('content-security-policy')?.includes('frame-ancestors')) {
         headers.set('x-frame-options', 'DENY');
     }
 

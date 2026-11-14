@@ -230,7 +230,7 @@ export const load: PageServerLoad = async ({ params }) => ({
 {/await}
 ```
 
-Only the **top level** of the returned object is awaited if you `await` it; in SvelteKit 2 and 3, a promise value is no longer auto-awaited at the top level (SvelteKit 1 did that and only streamed nested promises). Nested promises are also streamed: the serializer walks the returned structure and replaces any thenable, at any depth, with a placeholder. With `async` Svelte enabled you can alternatively `await data.comments` directly in markup under a boundary; the `{#await}` block is the framework-neutral form.
+SvelteKit 2 and 3 never await a returned promise for you (SvelteKit 1 awaited top-level promises and streamed only nested ones): whatever you did not `await` yourself is streamed, at any depth, because the serializer walks the returned structure and replaces every thenable with a placeholder. With `async` Svelte enabled you can alternatively `await data.comments` directly in markup under a boundary; the `{#await}` block is the framework-neutral form.
 
 ### What the wire looks like
 

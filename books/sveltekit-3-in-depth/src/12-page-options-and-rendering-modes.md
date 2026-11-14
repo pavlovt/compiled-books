@@ -30,7 +30,7 @@ export const prerender = false;      // ...except this route
 export const ssr = true;
 ```
 
-Resolution is straightforward: SvelteKit walks the layout chain from the root down to the page and takes the last defined value. Universal and server files can both export options; for `config`, the universal file takes precedence over the server file as of 3.0 (Chapter 1’s stability table lists this among the 3.0 changes), and `config` objects are merged at the top level only.
+Resolution is straightforward: SvelteKit walks the layout chain from the root down to the page and takes the last defined value. Universal and server files can both export options; for `config`, the universal file takes precedence over the server file as of 3.0, and `config` objects are merged at the top level only.
 
 ### Static analysis versus importing your module
 
@@ -518,7 +518,7 @@ In SvelteKit 3, the `base` and `assets` exports of `$app/paths` are removed. Bui
 
 <a href={resolve('/pricing')}>Pricing</a>
 <a href={resolve('/blog/[slug]', { slug: 'hello' })}>Hello</a>
-<img src={asset('/logo.svg')} alt="Logo" />
+<img src={asset('logo.svg')} alt="Logo" />
 ```
 
 `paths.assets` must be an absolute `http(s)` URL (or empty) and is used when your build artefacts live on a CDN or bucket. `paths.relative` (default `true`) makes server-rendered HTML use relative asset URLs, which makes prerendered output portable: you can serve the same files from `/`, `/preview/pr-123/` or a `file://` path. Set it to `false` if the page uses a `<base>` element, because relative URLs would then resolve against the base URL. The SPA fallback ignores this option and always uses absolute paths.

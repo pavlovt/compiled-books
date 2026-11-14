@@ -82,7 +82,7 @@ The reasoning ties to Chapter 13: the import-chain check that blocks server-only
     "version": "1.0.0",
     "license": "MIT",
     "type": "module",
-    "files": ["dist", "!dist/**/*.spec.*"],
+    "files": ["dist", "!dist/**/*.test.*", "!dist/**/*.spec.*"],
     "sideEffects": ["**/*.css"],
     "svelte": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -155,7 +155,7 @@ The docs’ guidance, with the reasoning:
 1.  **Avoid SvelteKit modules unless the library is explicitly SvelteKit-only.** `$app/state`, `$app/navigation`, `$app/paths`, `$app/env` do not exist outside a SvelteKit build; a Vite-only or Astro consumer fails to resolve them. Use `esm-env` (`BROWSER`, `DEV`) instead of `$app/env`’s `browser` and `dev`. Pass the current URL or a navigation callback as a prop rather than reading `page.url` inside a shared component. This also makes the component testable in isolation and usable in a UI workshop.
 2.  **SSR safety.** Library code runs on the server during SSR. No module-scope access to `window`, `document` or `localStorage`. Guard with `BROWSER` or run in `onMount`/an `$effect`. Module-level mutable state is shared across all requests on the server (Chapter 12); libraries that hold per-user state at module scope leak it between users. Prefer context or instances created per use.
 3.  **Treat `exports` as API.** Removing a path, or changing a condition from `svelte` to `default`, is a breaking change; adding a new path is fine.
-4.  **Runes.** A library compiled with the consumer’s settings: the sv template sets `compilerOptions.runes` to true except for files under `node_modules`, so libraries can keep legacy syntax without forcing the app. For library code, use runes anyway and declare the Svelte peer range accordingly.
+4.  **Runes.** A library is compiled with the consumer’s settings. The sv template sets `compilerOptions.runes` to true except for files under `node_modules`, so a library that still uses legacy syntax keeps working without forcing the app back to it. For library code, use runes anyway and declare the Svelte peer range accordingly.
 
 ### Shipping remote functions
 
@@ -333,11 +333,11 @@ describe('requireUser', () => {
 });
 ```
 
-`vi.mock` is hoisted above imports; the factory refers to `event`, which works because the factory runs lazily when the module is first imported (after the `const` line has executed in this file layout). If you hit a “cannot access before initialization” error, use `vi.hoisted`.
+`vi.mock` is hoisted above the imports, so the factory may run before the `const event` line. That is fine here because the factory only creates a closure: `event` is read when a test calls `getRequestEvent()`, long after it was initialised. A factory that reads a top-level variable *immediately* fails with “cannot access before initialization”; declare such values with `vi.hoisted`.
 
 **Server-only modules in tests.** The import-chain check that blocks server-only modules from the client would otherwise reject a test importing `#lib/server/db.js` from a component test. It is disabled under Vitest: `process.env.TEST === 'true'` (Vitest sets it) turns off the check, which is why the `server` project can import server modules freely. The corollary is that a test cannot detect an accidental client import of server code; catch that with a build (`vite build` fails) or an E2E run.
 
-**Module state and `building`.** Anything that checks `building` from `$app/env` sees `false` in tests. Initialisation code that must not run during build is unaffected.
+**Module state and `building`.** Anything that checks `building` from `$app/env` sees `false` in tests, so code guarded with `if (!building)` (opening a database pool, starting a scheduler) does run when a test imports its module. Mock such modules, or keep those side effects out of the modules your unit tests import.
 
 ### Integration tests with `Request` objects
 
@@ -621,6 +621,7 @@ A short list to calibrate effort (author practice):
 27. Describe the hydration race that makes clicks flaky in SvelteKit E2E tests and two ways to avoid it.
 28. How does the `storageState` pattern speed up authenticated E2E tests? Where must the saved file not live?
 29. **Multiple choice.** Which is the best signal to fail an E2E test on hydration problems?
+
     a.  A `waitForTimeout(2000)` after navigation
     b.  A `pageerror`/console error listener fixture
     c.  Checking only the HTTP status

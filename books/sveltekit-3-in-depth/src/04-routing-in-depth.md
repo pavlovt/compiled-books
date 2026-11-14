@@ -14,7 +14,7 @@ Three properties of the tree matter for design:
 2.  **Only `.js`/`.ts` (the `moduleExtensions` option) and `.svelte` files count as route modules.** Two files of the same kind in one directory (for example `+page.ts` and `+page.js`) are an error.
 3.  **A route needs a `+page` or `+server` to be matchable.** A directory with only a `+layout.svelte` is not a route; it is a node in the layout chain of its descendants. This is why `manifest_data.routes` contains entries that never reach `event.route.id`.
 
-The build also detects **route conflicts**. Two routes conflict if, after removing groups and expanding optional parameters, they would match the same set of URLs in the same position, for example `src/routes/[a]/+page.svelte` and `src/routes/[b]/+page.svelte`, or `src/routes/(x)/about/+page.svelte` and `src/routes/(y)/about/+page.svelte`. The error reads `The "/(x)/about" and "/(y)/about" routes conflict with each other`. This is a useful guarantee: if the app builds, no two routes are indistinguishable (matchers do not count; `[a=x]` and `[b=y]` at the same level are still reported as the same *shape*, except that matchers affect the sort, covered below).
+The build also detects **route conflicts**. Two routes conflict if, after removing groups and expanding optional parameters, they would match the same set of URLs in the same position, for example `src/routes/[a]/+page.svelte` and `src/routes/[b]/+page.svelte`, or `src/routes/(x)/about/+page.svelte` and `src/routes/(y)/about/+page.svelte`. The error reads `The "/(x)/about" and "/(y)/about" routes conflict with each other`. This is a useful guarantee: if the app builds, no two routes are indistinguishable. Matchers do count here: parameters with different matchers at the same position (`[id=number]` beside `[slug=slug]`) can coexist, because the matchers tell them apart, and they also affect the sort, covered below.
 
 > **Note:** If a route has both a `+page` and a `+server`, any page options they export (`prerender`, `trailingSlash`, `config`) must agree, or the build fails with a “Mismatched route config” error. Chapter 11 covers the options themselves; the routing consequence is that a page and an endpoint on the same path are one route with one configuration.
 
@@ -50,7 +50,7 @@ When navigating between two pages that share a layout, SvelteKit keeps the share
 
 ### `+layout.svelte` and its loads
 
-A layout must render its children with `{@render children()}`. A layout’s `data` contains only what *its* `+layout(.server).ts` returned plus its ancestors’ layout data (not the page’s). Child layouts and pages see all ancestor layout data, the page can also see sibling-layout merges via `page.data` from `$app/state`. Data merge order is root to leaf, so later keys win.
+A layout must render its children with `{@render children()}`. A layout’s `data` contains only what *its* `+layout(.server).ts` returned plus its ancestors’ layout data (not the page’s). Child layouts and pages see all ancestor layout data, and any component can read the fully merged data, including the page’s, through `page.data` from `$app/state`. Data merge order is root to leaf, so later keys win.
 
 The compile step warns if a `+layout.svelte` never renders `children`, and warns if a page option such as `export const ssr` is placed inside a `.svelte` file rather than in `+page.ts`.
 
