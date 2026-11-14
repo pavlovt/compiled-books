@@ -459,7 +459,7 @@ export const server = {
       input: z.object({ name: z.string().trim().min(1).max(40) }),
       handler: async ({ name }, ctx) => {
         // A real login would verify credentials, then rotate the session id:
-        ctx.session?.regenerate();
+        await ctx.session?.regenerate();
         ctx.session?.set('name', name);
         return { name };
       },
@@ -626,7 +626,7 @@ curl -s -b cj.txt "$BASE/_server-islands/Greeting?e=...&p=...&s=" | grep -o 'dat
 # data-testid="greeting">Welcome, guest
 ```
 
-Two things to note. The locale is passed as a prop, because inside a server island `Astro.url` is the island endpoint, not the page (Chapter 9). And the island URL is a GET: if CDN caching is in front, make sure the greeting response is not shared (`Cache-Control: private, no-store`); a CDN in front may cache GET island requests unless the response says otherwise.
+Two things to note. The locale is passed as a prop, because inside a server island `Astro.url` is the island endpoint, not the page (Chapter 9). And the island URL is a GET: `Greeting.astro` as shown sets no cache headers, which is fine with the memory provider here, but behind a CDN add `Astro.response.headers.set('Cache-Control', 'private, no-store')` to its frontmatter, because a CDN may cache GET island requests unless the response says otherwise.
 
 The language switcher builds each link from the current pathname minus its locale prefix, so `/en/products/lamp/` links to `/bg/products/lamp/`.
 
@@ -732,7 +732,7 @@ Per-request timing goes through `context.logger` and therefore through whatever 
 19:42:32 GET /bg/cart 200 2ms
 ```
 
-Note that on-demand middleware runs for these routes; the i18n routing runs in the built-in pipeline order (Chapter 5), so the middleware sees the final locale from `context.currentLocale`.
+Every page in this project is on-demand, so the middleware runs for every page request, as well as for action and server-island requests (Chapter 10).
 
 ## Hardening: security and environment
 
@@ -959,14 +959,10 @@ Deployment checklist for this project:
 26. In the Playwright test, why wait for `not.toHaveAttribute('ssr')` before clicking?
 27. Multiple choice: which statement about `getLiveEntry` results is correct?
 
-<!-- -->
-
-a.  They are stored in the data store and refreshed at build time.
-b.  They are fetched on each request and may carry a `cacheHint` with tags.
-c.  They support MDX rendering and image optimisation.
-d.  They require `prerender = true`.
-
-<!-- -->
+    a.  They are stored in the data store and refreshed at build time.
+    b.  They are fetched on each request and may carry a `cacheHint` with tags.
+    c.  They support MDX rendering and image optimisation.
+    d.  They require `prerender = true`.
 
 28. Find the bug: a developer changes `CartBadge.svelte` to initialise `cart.lines` from a prop on the server (`cart.lines = initial`) at the top of the script. What goes wrong in production?
 29. Design question: the shop must support three locales where product descriptions differ by market. Describe how you would change the collection schema and routes, and what happens to cache tags.

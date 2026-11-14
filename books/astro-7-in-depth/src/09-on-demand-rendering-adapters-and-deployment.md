@@ -500,7 +500,15 @@ The page is on-demand, sets an explicit shared-cache policy, returns a real 404 
 
 11. Name the options of `RenderOptions` and say which one is meant to let cache providers do background work.
 
-12. Complete the code so unmatched requests get a custom 404 instead of Astro’s: `ts const app = createApp(); export async function handler(request: Request) { // ??? }`
+12. Complete the code so unmatched requests get a custom 404 instead of Astro’s:
+
+    ```ts
+    const app = createApp();
+
+    export async function handler(request: Request) {
+      // ???
+    }
+    ```
 
 13. Standalone versus middleware mode of the Node adapter: which serves static files, and which export do you mount in Express?
 

@@ -29,7 +29,7 @@ import hero from '../assets/hero.png'; // 1600x900
 <Picture src={hero} formats={['avif', 'webp']} alt="A green field" />
 ```
 
-Real output from the test build (prerendered):
+Real output from the test build (prerendered; the test page used shorter `alt` texts):
 
 ```html
 <img src="/_astro/hero.4P1X1SD5_ZO2IX1.webp" alt="hero" loading="lazy" decoding="async" width="800" height="450">
@@ -85,7 +85,7 @@ Layout values:
 - `fixed`: keeps its size and only generates density variants (`1x`, `2x`). Logos and icons.
 - `none`: opt out when a global default is set.
 
-Two precise points. First, the layout attributes in 7.4.1 are emitted as `data-astro-image`, `data-astro-image-fit` and `data-astro-image-pos` (the docs’ older examples show `style="--fit: cover"`; the facts for this book note that responsive styles now use a hash class plus these `data-` attributes, which matches what I saw). Second, the styles that make `constrained` and `full-width` images actually resize (`max-width: 100%` and `width: 100%`, wrapped in `:where()` so specificity is zero) are *not* added unless you set `image.responsiveStyles: true`. The default is `false`. Enable it unless you style the images yourself; with Tailwind 4 the docs recommend leaving it off because Tailwind’s cascade layers lose to unlayered CSS.
+Two precise points. First, the layout attributes in 7.4.1 are emitted as `data-astro-image`, `data-astro-image-fit` and `data-astro-image-pos` (the docs’ older examples show `style="--fit: cover"`; current versions use a hash class plus these `data-` attributes, which is what I saw). Second, the styles that make `constrained` and `full-width` images actually resize (`max-width: 100%` and `width: 100%`, wrapped in `:where()` so specificity is zero) are *not* added unless you set `image.responsiveStyles: true`. The default is `false`. Enable it unless you style the images yourself; with Tailwind 4 the docs recommend leaving it off because Tailwind’s cascade layers lose to unlayered CSS.
 
 The generated `sizes` assumes the image spans nearly the viewport on small screens. In a two-column grid that is wrong, and the browser will download images that are too large. Override with `sizes` and `widths` manually (both together: `widths` requires `sizes`), or `densities` for fixed-size images. `densities` and `widths` are mutually exclusive, and both are ignored when a layout is set.
 
@@ -141,14 +141,14 @@ const blog = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
   schema: ({ image }) => z.object({
     title: z.string(),
-    cover: image().refine((img) => img.width >= 1200, { error: 'Cover must be at least 1200px wide' }),
+    cover: image(),
     coverAlt: z.string(),
   }),
 });
 export const collections = { blog };
 ```
 
-Because validation runs on the metadata, you can enforce minimum dimensions at build time, a cheap guard against low-resolution covers. Live collections do not support image optimization (Chapter 6).
+Because `cover` is resolved to metadata, its `width` and `height` are known at build time. `image().refine()` is not supported (Chapter 6), so enforce rules such as a minimum width where you consume the entries, for example by checking `entry.data.cover.width >= 1200` in `getStaticPaths()` and throwing, which fails the build: a cheap guard against low-resolution covers. Live collections do not support image optimization (Chapter 6).
 
 ## `getImage()`, and images in Svelte islands
 
@@ -591,6 +591,7 @@ Using `color-scheme` on `:root` also themes native controls and scrollbars, and 
 3.  Given a 1600x900 import, what `height` does `<Image src={hero} width={800} alt="" />` produce?
 4.  What does `priority` set, and when is it appropriate to use it?
 5.  Multiple choice. Which statement about `<Picture formats={['avif','webp']} />` is correct?
+
     a.  The `<img>` fallback is always WebP.
     b.  `<source>` elements are emitted in the order of `formats`; the fallback `<img>` uses the original format by default.
     c.  Only the first format is generated.

@@ -17,7 +17,7 @@
 13. The server HTML is emitted as authored (`<div>` inside `<p>`), but the browser’s parser rewrites the DOM, so the DOM no longer matches what Svelte expects during `hydrate()`, causing hydration mismatches. Fix the nesting in the template.
 14. `'static'` (default) and `'server'`. `'hybrid'` was folded into this model: choose the default that suits most routes and override individual routes with `export const prerender = true|false`. (The docs still list a `hybridOutput` adapter feature name.)
 15. Node 22.22.0 or newer (raised in 7.4.0), Vite 8, Zod 4 and Shiki 4 (the latter two since 6.0).
-16. Stable in 7.4: advanced routing, the Rust compiler, the logger, queued/streaming rendering, route caching (`cache`/`routeRules`). Stable since 6.0: CSP, fonts, live collections. Still experimental: `clientPrerender`, `collectionStorage`, `incrementalBuild`, `parallelPrerender`, `redirectPage`, `svgOptimizer`.
+16. Experimental in 6.x and promoted in 7.0: advanced routing, the Rust compiler, the logger, queued/streaming rendering, route caching (`cache`/`routeRules`). (CSP, fonts and live collections were promoted earlier, in 6.0.) Still experimental: `clientPrerender`, `collectionStorage`, `incrementalBuild`, `parallelPrerender`, `redirectPage`, `svgOptimizer`.
 17. False. Route caching is stable, but the adapter CDN cache providers (`cacheNetlify()`, `cacheVercel()`, `cacheCloudflare()`) are documented as experimental and must be manually enabled.
 18. It is the reserved advanced-routing entrypoint that replaces the built-in request pipeline with a default-exported `{ fetch(request) }`. For an unrelated `src/fetch.ts`, rename the file (and its imports), or set `fetchFile` to another filename or `null` to disable advanced routing.
 19. `astro check` does not check `.svelte` files. Run `svelte-check --tsconfig ./tsconfig.json` as well, for example `astro check && svelte-check`.
@@ -45,13 +45,15 @@
 
 7.  Fallback content renders only when no matching slot content is passed. If an element with the slot name is passed (even if it is empty), the slot is considered provided and the fallback is suppressed. An expression that evaluates to nothing, like `{}`, passes no node, so the fallback is shown.
 
-8. ``` {.sourceCode .html}
-      ---
-      ---
-      <div class="callout"><slot />
-        {Astro.slots.has('footer') && <footer><slot name="footer" /></footer>}
-      </div>
-   ```
+8.  ```html
+    ---
+    // src/components/Callout.astro
+    ---
+    <div class="callout">
+      <slot />
+      {Astro.slots.has('footer') && <footer><slot name="footer" /></footer>}
+    </div>
+    ```
 
 9.  It returns a `Promise<string>` of the slot’s rendered HTML, calling any function children with the given arguments (here `[message]`). Function children are invoked on the server while Astro renders, which only works between Astro components. A hydrated Svelte component receives children as static HTML strings, never functions.
 
@@ -71,9 +73,17 @@
 
 17. In `tsconfig.json` `compilerOptions.paths`; Astro and Vite pick it up and the dev server restarts. There is no built-in `$lib` alias in Astro; you define your own.
 
-18. a\. and (b). `astro check` does not check `.svelte` files, so (c) and (d) require `svelte-check`.
+18. (a) and (b). `astro check` does not check `.svelte` files, so (c) and (d) require `svelte-check`.
 
-19. `json { "scripts": { "build": "astro check && svelte-check --tsconfig ./tsconfig.json && astro build" } }` The `&&` chain stops the build on the first failure.
+19. ```json
+    {
+      "scripts": {
+        "build": "astro check && svelte-check --tsconfig ./tsconfig.json && astro build"
+      }
+    }
+    ```
+
+    The `&&` chain stops the build on the first failure.
 
 20. With `verbatimModuleSyntax` TypeScript requires `import type` for type-only imports, which avoids Astro’s bundler treating a type as a runtime import. Violation: `import { CollectionEntry } from 'astro:content';` (should be `import type`).
 
@@ -93,20 +103,31 @@
 
 1.  The `astro.config.mjs` value (`runes: true`) wins. The editor and `svelte-check` read only `svelte.config.js`, so they analyze the component under `runes: false` while the build uses `true`; keep each option in one place.
 2.  Without `svelte.config.js` no preprocessor is configured (not added by default since integration 6.0.0), so the SCSS block is not processed and the build fails or the styles are broken. Fix: create `svelte.config.js` with `preprocess: vitePreprocess()` imported from `@astrojs/svelte` (and install `sass`).
-3.  1.  Server render: renderer `check` + `renderToStaticMarkup`; (2) wrap in `<astro-island>` with `component-url`, `renderer-url`, `props`, `client`, `opts`; (3) the directive script (`Astro.load/idle/...`) decides when to start; (4) the island imports component and renderer, parses `props`, collects `<astro-slot>`/templates, hydrates, removes `ssr`, dispatches `astro:hydrate`.
+3.  (1) Server render: renderer `check` + `renderToStaticMarkup`; (2) wrap in `<astro-island>` with `component-url`, `renderer-url`, `props`, `client`, `opts`; (3) the directive script (`Astro.load/idle/...`) decides when to start; (4) the island imports component and renderer, parses `props`, collects `<astro-slot>`/templates, hydrates, removes `ssr`, dispatches `astro:hydrate`.
 4.  During streaming the island’s children may still be arriving; `await-children` makes it wait until the `<!--astro:end-->` comment (or DOMContentLoaded/interactive state) before starting, so hydration never sees partial markup.
 5.  Outer first, then inner. `hydrate` looks for a parent `astro-island[ssr]` and, if found, waits for that parent’s `astro:hydrate` event once.
 6.  Never, in practice. `client:visible` observes the island’s element children; with `open = false` it renders only comment nodes, so there is nothing to observe. Give it a real root element.
 7.  Create an integration whose `astro:config:setup` hook calls `addClientDirective({ name: 'hover', entrypoint: './directives/hover.js' })`; `hover.js` default-exports `(load, opts, el) => el.addEventListener('pointerenter', async () => { (await load())() }, { once: true })`. Type it by augmenting `AstroClientDirectives` in module `'astro'` with `'client:hover'?: boolean`.
-8.  a\. a `Date`; (b) a `RegExp` `/ab/` with flags lost; (c) `null`; (d) a `Map`; (e) a plain object with the own enumerable properties, no prototype or methods.
+8.  (a) a `Date`; (b) a `RegExp` `/ab/` with flags lost; (c) `null`; (d) a `Map`; (e) a plain object with the own enumerable properties, no prototype or methods.
 9.  Functions are not serializable: the serializer emits `null` without error, so the server render (which received the real function) works but the client gets `null`. Alternatives: dispatch a `CustomEvent`/use a shared rune module; or move the logic into the island and pass only data.
 10. `Cyclic reference detected while serializing props…`. For a prerendered page the build fails; for an on-demand page the request fails with a 500 at render time.
 11. The whole payload is embedded in the HTML `props` attribute regardless of when the island hydrates, bloating every response and leaking data. Pass an id and fetch lazily or pass only the fields the island shows.
 12. Supported: (a), (c), (e). Not: (b) Float32Array, (d) Symbol, (f) Promise.
-13. `svelte <script lang="ts"> import type { Snippet } from 'svelte'; let { children, footer }: { children?: Snippet; footer?: Snippet } = $props(); </script> <div>{@render children?.()}</div> {#if footer}<footer>{@render footer()}</footer>{/if}` An absent slot leaves the `footer` prop `undefined`, so `{#if footer}` is false.
+13. ```html
+    <script lang="ts">
+      import type { Snippet } from 'svelte';
+      let { children, footer }: { children?: Snippet; footer?: Snippet } = $props();
+    </script>
+
+    <div>{@render children?.()}</div>
+    {#if footer}<footer>{@render footer()}</footer>{/if}
+    ```
+
+    An absent slot leaves the `footer` prop `undefined`, so `{#if footer}` is false.
 14. Both receive it. `slot="my-slot"` is preserved as the key `'my-slot'`, so `<slot name="my-slot" />` and `{ 'my-slot': mySlot }` match. `slot="mySlot"` provides key `mySlot`, which matches neither (it would match `let { mySlot } = $props()`).
 15. The slot is static HTML rendered on the server; there is no function to call with `item`. Workaround: wrap the generic component in a Svelte component that supplies the snippet, import that wrapper, or pass data and render inside Svelte.
-16. `$props.id()` is used twice (a second `$props.id()` is fine only as a top-level declaration, and inline use in the template is invalid: `props_id_invalid_placement`). Also `$props()` is called once, fine. Fix: `const uid = $props.id();` and use `uid` in both places.
+16. `$props.id()` may only be used as the initializer of a top-level declaration (`const uid = $props.id();`). Here it is called inside a template literal and inline in the template, and both placements are `props_id_invalid_placement` compile errors (two calls would also yield two different ids, so `id` and `label` would not match). Fix: declare `const uid = $props.id();` once and use `uid` in both places.
+
 17. It is visible until the island mounts, then removed. For `client:only` the client entrypoint empties `innerHTML` and calls `mount()`, not `hydrate()`, because there is no server-rendered markup to hydrate.
 18. With `client:only` the component is never run on the server, so Astro cannot detect which renderer owns it via `check`; the hint selects the renderer. `client:load` renders on the server and `check` identifies it.
 19. The server render executes the script top level where `localStorage` is undefined, so it throws `ReferenceError` and the build/request fails. Fixes: read it in `onMount`/`$effect`; or use `client:only="svelte"`; or guard with `typeof localStorage !== 'undefined'`.
@@ -118,43 +139,44 @@
 25. A new `setProps` call assigns the new props into the `$state` proxy that was passed to `hydrate()`/`mount()` and deletes keys no longer present; Svelte’s reactivity updates the running component without remounting.
 26. It is dispatched on the island root when the island is removed from the document (e.g. client-router swap). The renderer calls Svelte `unmount()` through `component.destroy()`. Snippet: `document.querySelector('astro-island[component-url*="Cart"]')?.addEventListener('astro:unmount', () => console.log('removed'), { once: true })`.
 27. (b).
-28. Map: `client:only="svelte"` or `client:visible` with `client:only`? Best: `client:only="svelte"` with a sized fallback (browser-only lib; no SEO value) loaded immediately, or wrap lazily-loaded import in a `client:visible` island that dynamically imports the lib in `onMount`. Search box: `client:load`. Recently viewed: a server island (`server:defer`) rendering HTML with a fallback, costing no JavaScript and giving content to no-JS users, or a `client:visible` island fetching data (costs JS, no SEO).
+28. Map: the library touches `window`, so use `client:only="svelte"` with a fallback sized like the map. Because it is below the fold, you can defer the cost further with a small `client:visible` wrapper that imports the map library dynamically in `onMount`. Either way it costs the map’s JavaScript, and search engines and no-JS users see only the fallback. Search box: `client:load`, because it must work immediately; it costs its JavaScript, but the server-rendered input is still in the HTML. Recently viewed: a server island (`server:defer`) with a fallback: personalized server HTML with no framework JavaScript, deferred so the rest of the page can stay cacheable. A `client:visible` island that fetches the data would also work, but it costs JavaScript and shows nothing without JS.
+
 
 ## Chapter 4: State, Events and Scripts Across Islands
 
-1.  1.  A shared module instance (or global channel) in the browser; (2) late subscribers must see current state; (3) server-render consistency with the first client render. Plain `CustomEvent`s fail (2): an event dispatched before a listener hydrates is lost.
+1.  (1) A shared module instance (or global channel) in the browser; (2) late subscribers must see current state; (3) server-render consistency with the first client render. Plain `CustomEvent`s fail (2): an event dispatched before a listener hydrates is lost.
 
 2.  Islands have no common component tree, so Svelte context (which requires an ancestor) cannot span them. Nano Stores are plain modules that work across frameworks and `.astro` scripts.
 
-3. ``` {.sourceCode .html}
-      <script lang="ts">
-        import { fromStore } from 'svelte/store';
-        import { isOpen } from '../store';
-        const open = fromStore(isOpen);
-      </script>
-      <button onclick={() => isOpen.set(!open.current)}>Toggle</button>
-   ```
+3.  ```html
+    <script lang="ts">
+      import { fromStore } from 'svelte/store';
+      import { isOpen } from '../store';
+      const open = fromStore(isOpen);
+    </script>
+    <button onclick={() => isOpen.set(!open.current)}>Toggle</button>
+    ```
 
-4.  a\. Writes from frontmatter or non-hydrated components change only the server’s module instance, not the browser’s. (b) A store cannot be a prop because it is not serializable. (c) `.astro` frontmatter cannot subscribe because Astro components render once and never re-render.
+4.  (a) Writes from frontmatter or non-hydrated components change only the server’s module instance, not the browser’s. (b) A store cannot be a prop because it is not serializable. (c) `.astro` frontmatter cannot subscribe because Astro components render once and never re-render.
 
 5.  It increments a module-level `$state` during render. In a Node server the module is evaluated once per process, so the counter accumulates across requests (1, 2, 3, …) and shows other visitors’ effects.
 
 6.  A static build renders each page once at build time in a fresh process, so the accumulated state is never observed; it appears only when the route is rendered on demand repeatedly.
 
-7.  a\. Move the write into an event handler or `onMount` (client only); (b) make state per-component or per-render with `$state` local to the component or a factory/`setContext`; (c) pass the value from the server as a prop (e.g. from `Astro.locals`/session) instead of a module singleton.
+7.  (a) Move the write into an event handler or `onMount` (client only); (b) make state per-component or per-render with `$state` local to the component or a factory/`setContext`; (c) pass the value from the server as a prop (e.g. from `Astro.locals`/session) instead of a module singleton.
 
 8.  Svelte forbids exporting state that is reassigned, because importers hold a binding they cannot update. Alternatives: export a `$state` object and mutate its properties, or export a class instance with `$state` fields, or getter/setter functions.
 
-9. ``` {.sourceCode .ts}
-      class Counter {
-        n = $state(0);
-        double = $derived(this.n * 2);
-        increment() { this.n++; }
-      }
-      export const counter = new Counter();
-   ```
+9.  ```ts
+    class Counter {
+      n = $state(0);
+      double = $derived(this.n * 2);
+      increment() { this.n++; }
+    }
+    export const counter = new Counter();
+    ```
 
-   A class allows reactive fields, derived values and methods behind one exported, never-reassigned binding.
+    A class allows reactive fields, derived values and methods behind one exported, never-reassigned binding.
 
 10. When creating effects outside a component (module level), since there is no component lifecycle to own them. `$effect.root(fn)` returns a cleanup function; the caller must invoke it to dispose of the effects.
 
@@ -170,7 +192,27 @@
 
 16. Problems: the script runs once per page, so it must bind all instances; and it may run before framework-rendered elements are hydrated/exist or miss later insertions. Fix: a custom element (`connectedCallback` per instance) or event delegation on a stable ancestor.
 
-17. `ts class Tabs extends HTMLElement { #abort?: AbortController; connectedCallback() { this.#abort = new AbortController(); const { signal } = this.#abort; this.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => this.select(b), { signal })); } disconnectedCallback() { this.#abort?.abort(); } select(b: Element) {} } if (!customElements.get('x-tabs')) customElements.define('x-tabs', Tabs);`
+17. ```ts
+    class Tabs extends HTMLElement {
+      #abort?: AbortController;
+
+      connectedCallback() {
+        this.#abort = new AbortController();
+        const { signal } = this.#abort;
+        this.querySelectorAll('button').forEach((b) =>
+          b.addEventListener('click', () => this.select(b), { signal })
+        );
+      }
+
+      disconnectedCallback() {
+        this.#abort?.abort();
+      }
+
+      select(b: Element) {}
+    }
+
+    if (!customElements.get('x-tabs')) customElements.define('x-tabs', Tabs);
+    ```
 
 18. `define` throws if the name is already registered, which can happen if the script is evaluated twice or bundled twice.
 
@@ -198,7 +240,7 @@
 4.  On-demand dynamic routes must not use `getStaticPaths` (it is for prerendered routes) and cannot receive props. Read `Astro.params.id` and fetch the data in the frontmatter.
 5.  `/[...locale]/[files]/[slug]` (the original dynamic definition; the docs show it without the leading slash, 7.4 printed it with one). It is more useful than `params` when generating params generically for many segments, because `params` are only the explicit values of one page.
 6.  `[...page].astro`: `/blog`, `/blog/2`, `/blog/3` (`dist/blog/index.html`, `blog/2/index.html`, `blog/3/index.html`). `[page].astro`: `/blog/1`, `/blog/2`, `/blog/3`.
-7.  `format` is a function that transforms each computed URL before it is rendered, for example `(url) =>`\${url}.html\`\`. It was added in 7.1.0.
+7.  `format` is a function that transforms each computed URL before it is rendered, for example ``(url) => `${url}.html` ``. It was added in 7.1.0.
 8.  `/posts/create` -\> `posts/create.astro`; `/posts/7` -\> `posts/[page].astro`; `/posts/a/b` -\> `posts/[...slug].astro`; `/about` and `/` -\> `[...slug].astro` (`/` with `slug` undefined).
 9.  Both are the same pattern; the endpoint wins (“endpoints beat pages”). The build warns that a dynamic SSR route cannot be defined more than once and that a collision will become a hard error in a following version.
 10. When a file-based route with the same pattern exists (for example `src/pages/old-page.astro`): file routes take precedence over configured redirects.
@@ -211,7 +253,18 @@
 17. Astro partially decodes pathnames during normalization, so `Astro.url.pathname` is the decoded/normalized path while `request.url` keeps the raw one. Security checks on the raw string can disagree with the route actually matched.
 18. (b).
 19. Rename the file (and fix imports), or set `fetchFile` to another filename. `fetchFile: null` disables advanced routing.
-20. `ts import { FetchState, astro } from 'astro/fetch'; export default { async fetch(request: Request) { const state = new FetchState(request); const res = await astro(state); res.headers.set('x-request-id', crypto.randomUUID()); return res; }, };`
+20. ```ts
+    import { FetchState, astro } from 'astro/fetch';
+
+    export default {
+      async fetch(request: Request) {
+        const state = new FetchState(request);
+        const res = await astro(state);
+        res.headers.set('x-request-id', crypto.randomUUID());
+        return res;
+      },
+    };
+    ```
 21. Trailing-slash normalization, redirects, sessions, actions, user middleware, page rendering, i18n, with caching around rendering. Call `sessions(state)` before middleware, and `i18n(state, response)` after rendering.
 22. RPC action: a `Response`. HTML form submission and non-action requests: `undefined` (so you continue to page rendering).
 23. 7.4 added `notFound()` which renders the custom 404 (including a prerendered `404.astro`) when no route matches; it returns `undefined` for a matching route and an empty 400 response for an over-encoded path.
@@ -229,7 +282,8 @@
 4.  `image` is not defined. Image fields require the function form of the schema, `schema: ({ image }) => z.object({ cover: image(), ... })`, because `image()` comes from `SchemaContext`.
 5.  (b). In Zod 4 `.default()` must match the output type (so `'[]'` and `null` are wrong), and `.prefault([])` supplies a pre-parse default. (c) does not give an empty array.
 6.  Only that the value is a string (transformed into `{ collection, id }`). Existence is checked when you call `getEntry()` or `getEntries()`; a dangling reference yields `undefined` (in an array from `getEntries()`).
-7.  Every entry has an undefined digest, so `cacheKey` is the string `'undefined'` for all pages, and (since the loader never signals change) cache behaviour is meaningless: pages would be treated as unchanged when only code is unchanged, so content updates can be missed. Loaders must set a digest, e.g. with `generateDigest(data)`.
+7.  Every entry has an undefined digest, so `cacheKey` is the string `'undefined'` for every page and never changes. Incremental builds then skip those pages whenever their code is unchanged, even when their content changed, so content updates are never rendered: the pages are frozen. Loaders must set a digest, for example with `generateDigest(data)`.
+
 8.  It returns `false` (and does not update the entry). That lets loaders re-set every item cheaply and detect which entries actually changed.
 9.  `schema` is a static Zod schema. `createSchema()` is an async function that builds the schema at build time and returns `{ schema, types }`. The `types` string is written to a TypeScript file and must export an `Entry` type or interface. `createSchema()` replaced function-valued `schema` in 6.0.
 10. The user’s collection-level schema. A schema defined in `content.config.ts` overrides the loader’s `schema`/`createSchema()`, which lets users extend or transform your shape.
@@ -250,20 +304,20 @@
 25. Props to a hydrated island are serialized into the HTML (the `props` attribute of `astro-island`), so the secret is exposed to every visitor. Keep secrets on the server, and give the island only data it may publish, or route calls through an endpoint.
 26. `astro:env/server` secrets are validated whenever the module is imported unless `validateSecrets` is disabled; CI therefore needs values. Provide dummy/placeholder values in the CI environment, or disable `validateSecrets` (and validate at runtime).
 27. Add `loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/<name>' })` to each collection and drop `type`; replace `entry.slug` with `entry.id`; replace `entry.render()` with `render(entry)` imported from `astro:content`; re-check ids because loader ids are slugified rather than path-based; finally remove the flag.
-28. In order: (1) `glob({ deferRender: true })` so rendered HTML is not held in the store (loses rendered-HTML caching across builds); (2) `retainBody: false` if the raw bodies are not needed (smaller store, `entry.body` undefined); (3) `experimental.collectionStorage: 'chunked'` if store size is the problem (experimental); (4) `experimental.incrementalBuild` with `cacheKey: entry.digest` to skip unchanged pages (experimental, needs `build.concurrency` 1 and CI cache restore); (5) split the collection or raise the Node heap as a last resort.
+28. In order: (1) `glob({ deferRender: true })` so rendered HTML is not held in the store (loses rendered-HTML caching across builds); (2) if you did not use (1), `retainBody: false` when the raw bodies are not needed (smaller store, `entry.body` undefined; it does not combine with `deferRender`, which renders from the body); (3) `experimental.collectionStorage: 'chunked'` if store size is the problem (experimental); (4) `experimental.incrementalBuild` with `cacheKey: entry.digest` to skip unchanged pages (experimental, needs `build.concurrency` 1 and CI cache restore); (5) split the collection or raise the Node heap as a last resort.
 
 ## Chapter 7: Markdown and MDX
 
 1.  Sätteri is the default (no install needed). To use unified you install `@astrojs/markdown-remark` and set `markdown.processor: unified()`. (Installing `@astrojs/markdown-satteri` is optional, for configuring Sätteri.)
 
-2. ``` {.sourceCode .js}
-      import { unified } from '@astrojs/markdown-remark';
-      export default defineConfig({
-        markdown: { processor: unified({ remarkPlugins: [remarkToc], smartypants: false }) },
-      });
-   ```
+2.  ```js
+    import { unified } from '@astrojs/markdown-remark';
+    export default defineConfig({
+      markdown: { processor: unified({ remarkPlugins: [remarkToc], smartypants: false }) },
+    });
+    ```
 
-   The old top-level options are deprecated; they still work but require `@astrojs/markdown-remark`.
+    The old top-level options are deprecated; they still work but require `@astrojs/markdown-remark`.
 
 3.  `satteri({ features: { smartPunctuation: false, gfm: false } })`.
 
@@ -321,16 +375,21 @@
 
 1.  The page needs `export const prerender = false` (a literal), and an adapter must be installed and configured; otherwise the build fails because there is no runtime to render it.
 2.  None in terms of features: `'server'` only flips the default so every route is on demand unless `prerender = true`. Both modes support the same on-demand features; static plus opt-outs keeps most pages as static files.
-3.  `false` is not what you get: while building a prerendered page it is `true`. Middleware runs at build time for prerendered pages (classic mode) so it can set `locals` and transform output; request-specific logic must be guarded.
+3.  `true`. Middleware runs at build time for prerendered pages (in classic mode) so that it can set `locals` and transform the output that is baked into the HTML; request-specific logic in it must therefore be guarded with `isPrerendered`.
+
 4.  The build fails with `PrerenderClientAddressNotAvailable`: `clientAddress` is only available on demand.
 5.  Correct: have the adapter/custom entrypoint map a trusted header (for example pass `clientAddress` to `app.render()` from the proxy’s header), or configure the proxy and trusted-header handling at the platform layer. Incorrect: reading a client-supplied `X-Forwarded-For` directly from `Astro.request.headers` without a trusted proxy that overwrites it.
 6.  (c). Status and headers are page-level (plus middleware and endpoints); components and layouts run after headers may be sent.
-7.  a\. chunked transfer: the early markup arrives first, the slow part and following siblings arrive after the delay. (b) one buffered response with a `content-length` after the delay.
+7.  (a) chunked transfer: the early markup arrives first, the slow part and following siblings arrive after the delay. (b) one buffered response with a `content-length` after the delay.
 8.  Setting status in the template is too late: components render while streaming, headers may already be sent. Set `Astro.response.status = 404` (or return a `Response`) in the frontmatter before any output.
 9.  Astro uses the exact method handler first, then `ALL`, and only falls back to `GET` for `HEAD` when neither exists. With `ALL` defined, `HEAD` hits `ALL`.
 10. Multiple cookies would be folded into one comma-joined header; the generator yields each `Set-Cookie` value so each is appended as a separate header. (Alternatively use `addCookieHeader: true`.)
 11. `addCookieHeader`, `clientAddress`, `locals`, `prerenderedErrorPageFetch`, `waitUntil`, `routeData`. `waitUntil` is for background work.
-12. `ts const route = app.match(request); if (!route) return new Response('Custom 404', { status: 404 }); return app.render(request, { routeData: route });`
+12. ```ts
+    const route = app.match(request);
+    if (!route) return new Response('Custom 404', { status: 404 });
+    return app.render(request, { routeData: route });
+    ```
 13. Standalone starts a server and serves static files; middleware mode does not serve files. In Express you mount the exported `handler` from `dist/server/entry.mjs` (and serve `dist/client` yourself).
 14. `HOST=0.0.0.0` (the default listens on localhost); usually with `PORT`.
 15. Neither Astro nor the adapter loads `.env` at runtime. Provide variables via the process environment: inline, Docker `ENV`/orchestrator secrets, or a loader such as `dotenvx`.
@@ -370,9 +429,9 @@
 18. The request body size of POST island requests; default 1 MB.
 19. Each island is a separate request with its own bootstrap script and render, which adds load and bytes. Reduce by merging into fewer islands, deferring only what is truly dynamic, hydrating lazily (`client:visible`/`idle`) and caching island responses.
 20. Pages with server islands embed a per-build key, so they are re-rendered every build and not reused from the incremental cache until a stable `ASTRO_KEY` is set.
-21. Reserved routes (`_astro`, `_server_islands`, `_actions`) win priority over everything, so no page can shadow it.
+21. Reserved routes (`_astro`, `_server-islands`, `_actions`) win priority over everything, so no page can shadow it.
 22. The island script has `data-astro-rerun`, so it re-executes on each swap to a page containing the island. `transition:persist` keeps an island (and its state) across navigations.
-23. a\. server island with a generic fallback (cacheable shell); (b) client fetch from a Svelte island (continuous interaction); (c) on-demand page (everything is dynamic, an island adds only a round trip); (d) server island (slow, non-critical fragment; page streams or caches without it).
+23. (a) server island with a generic fallback (cacheable shell); (b) client fetch from a Svelte island (continuous interaction); (c) on-demand page (everything is dynamic, an island adds only a round trip); (d) server island (slow, non-critical fragment; page streams or caches without it).
 24. Prerendered product page with `<Stock sku={sku} server:defer>` whose frontmatter calls `getLiveEntry('inventory', { sku })` and `Astro.cache.set(cacheHint)` plus `maxAge/swr`. The page shell is cached at the CDN; the island response is cached per its policy; invalidate with tags via `Astro.cache.invalidate` (route caching provider required).
 25. It removes the fallback nodes between the start marker and the script and inserts the response HTML. If sizes differ, content below moves, causing layout shift.
 26. The page author’s value is decrypted in the server render and the ciphertext is replayable; encryption stops tampering and casual reading, not misuse by anyone holding the page. Never treat it as a secret store.
@@ -398,7 +457,7 @@
 16. Return `props` from `getStaticPaths()` and read them from the context. On-demand endpoints are plain functions with no `getStaticPaths`, so props are not supported.
 17. No: endpoints that explicitly return 404/500 skip rerouting to `404.astro`/`500.astro`. The body you return is what the client gets.
 18. A `clientAddress` option from a trusted source; otherwise reading `ctx.clientAddress` throws.
-19. a\. and (e). Date, functions and Map fail.
+19. (a) and (e). Date, functions and Map fail.
 20. It is JSON-serialized into a header to the serverless function; the function rejects requests not coming from the generated edge function with 403.
 21. Any three: `locals` must be JSON-serializable; restricted edge runtime (no Node built-ins/filesystem, bundle limits); no sessions in edge middleware; extra invocations (every ISR cache hit on Vercel); different execution rules for static content; changes not invalidating incremental builds.
 22. The middleware is bundled into the ISR function, which only runs on a miss or regeneration. Set `middlewareMode: 'edge'` or exclude routes from ISR.
@@ -417,18 +476,18 @@
 6.  `null`, not `""`. Empty non-optional fields are converted to `null`, so `z.string()` reports “expected string, received null” rather than a min-length message; supply a custom `{ error }` message or make the field `.nullable()` and handle it.
 7.  `address.city`. Astro builds nested objects from `parent.child` keys.
 8.  `error.fields.address` (only the first path segment is used as key, so all nested issues are grouped there). The full path is in `error.issues[i].path`, e.g. `['address', 'city']`.
-9.  1.  Top-level `await` on an action in a component’s script runs during SSR, where `actions.x()` called outside `Astro.callAction()` throws `ActionCalledFromServerError`; (2) even if it ran, a Svelte component script is not an async context unless experimental async is enabled, and issuing an RPC at render time couples render to the network. Fix: call actions inside event handlers or `$effect`, or fetch the data in the `.astro` parent (via `Astro.callAction()` or the data layer) and pass it as a prop.
+9.  (1) Top-level `await` on an action in a component’s script runs during SSR, where `actions.x()` called outside `Astro.callAction()` throws `ActionCalledFromServerError`; (2) even if it ran, a Svelte component script is not an async context unless experimental async is enabled, and issuing an RPC at render time couples render to the network. Fix: call actions inside event handlers or `$effect`, or fetch the data in the `.astro` parent (via `Astro.callAction()` or the data layer) and pass it as a prop.
 10. `isInputError` narrows to `ActionInputError` (validation failure, with `fields` and `issues`). `isActionError` narrows to the general `ActionError` (anything produced by the handler or runtime, including input errors since they extend it). Input errors are the more specific case.
 11. When another layer handles errors (a data-fetching library, `{#await}`/`{:catch}`) or while prototyping. `orThrow` carries no progressive-enhancement information, so it cannot back a no-JS form `action`.
 12. It reads the result of `createProduct` for this request (`undefined` if that action was not submitted); on success it redirects to the new product page. The recommended status is `303 See Other` (the default is 302).
 13. Because `getActionResult` is specific to the action passed: it compares that action’s query string with the stored payload name. If a different action was submitted, or no action, it returns `undefined`.
 14. Calling `setActionResult()` records the result on the request’s locals, so Astro treats the action as already handled; `getActionContext()` afterwards returns `action: undefined`, and Astro’s own action execution is skipped for the request.
 15. On the redirected `GET` the flash must be replayed so the page sees the result; that request is not an action request. If the flash check ran after the form branch it would still work for `GET`, but on a stale-flash edge (flash exists and a new form `POST` arrives) the new submission would run first and overwrite the pending flash. Reading first also guarantees one-shot semantics: delete then replay.
-16. b\. Only form-like (and missing) content types are checked; JSON is protected by browser CORS preflight (and the source marks this as a TODO for Astro 8).
+16. **b.** Only form-like (and missing) content types are checked; JSON is protected by browser CORS preflight (and the source marks this as a TODO for Astro 8).
 17. `403` (“Cross-site POST form submissions are forbidden”). The handler does not run.
 18. 1 MB (`1024 * 1024` bytes), configurable with `security.actionBodySizeLimit`; the error code is `CONTENT_TOO_LARGE` (413).
 19. Actions are public endpoints at `/_actions/<name>`; anyone can POST to them directly with curl, bypassing the admin page. Authorization must be in the handler (and optionally duplicated in middleware).
-20. c\. Server-side calls must go through `Astro.callAction()` (or `context.callAction()`), otherwise `ActionCalledFromServerError` is thrown.
+20. **c.** Server-side calls must go through `Astro.callAction()` (or `context.callAction()`), otherwise `ActionCalledFromServerError` is thrown.
 21. `500`, code `INTERNAL_SERVER_ERROR`, and the original message `db password rejected` (verified in 7.4.1), which leaks internals. Catch exceptions inside the handler, log with `ctx.logger`, and throw an `ActionError` with a safe message.
 22. No. A webhook needs the raw body for HMAC verification, a specific status (202) and is a third-party contract. Actions parse and re-serialize bodies, use a devalue/JSON envelope and are not a documented public API. Use an endpoint.
 23. Client: disable the control while pending and send an idempotency key (e.g. `crypto.randomUUID()` created when the form mounts). Server: store the key (or rely on a unique constraint) and return the previous result for a repeated key.
@@ -446,7 +505,7 @@
 4.  `cart.push(sku)` happens after `set()`. `set()` stores a serialized clone, so the push is not persisted. Mutate first, then call `session.set('cart', cart)`.
 5.  `c` is `undefined`. The server log shows a warning that `Astro.session` was accessed but no session storage is configured.
 6.  The runtime value is `undefined` (matching the type `AstroSession | undefined` and the API reference), while the changelog describes the property as always present on the context, with access logging a message. In the test, `String(Astro.session)` gave `undefined` and a `[WARN] [session]` line was logged on access.
-7.  c\. The cookie is set on the first `set()` (also `regenerate()` or `load()`); `get()` alone does not create one.
+7.  **c.** The cookie is set on the first `set()` (also `regenerate()` or `load()`); `get()` alone does not create one.
 8.  To prevent session fixation: after authentication the identifier must change so an ID known before login is useless. `regenerate()` creates a new ID and preserves the existing data (the old ID is removed from storage).
 9.  The driver config is evaluated at build time, so `process.env.REDIS_URL` is inlined with the build-time value; both environments use the same URL. Fix: move the driver into an entrypoint module (`session.driver: { entrypoint: new URL(...) }`) that reads runtime configuration (for example via `astro:env/server`).
 10. Astro’s `ttl` stores an expiry timestamp per value and ignores expired values on load; it does not delete them until accessed. Redis’s `ttl` makes the server delete the key. Only the driver’s TTL frees storage.
@@ -458,7 +517,7 @@
 16. In the server-side session (the browser holds only the opaque session cookie). That keeps tokens out of JavaScript, so XSS in an island cannot steal them.
 17. Rule applied first, code merged on top: `maxAge` is last-write-wins so 60; tags accumulate in order: `['products', 'p-7']`.
 18. It disables caching for the request and clears accumulated options and tags. A later `set({...})` re-enables caching starting from a clean state.
-19. b\. A response that sets a cookie is skipped (and a warning logged). Query strings and `Vary: Accept-Language` are supported; request cookies are ignored for the key (so d is still cached).
+19. **b.** A response that sets a cookie is skipped (and a warning logged). Query strings and `Vary: Accept-Language` are supported; request cookies are ignored for the key (so d is still cached).
 20. No. The memory provider needs a positive `maxAge`; tags alone do not cause caching (tested: it never produced `X-Astro-Cache` headers).
 21. The entry is past `maxAge` but within the `swr` window: the stale response is served immediately and a background refresh updates the entry, so the next request is a `HIT`.
 22. The first visitor’s greeting is cached and served to everyone (the cache ignores cookies). Fixes: exclude the route from rules and/or call `Astro.cache.set(false)`; or move the greeting into a server island (uncached) or a client-fetched Svelte island, keeping the shell cacheable.
@@ -477,7 +536,7 @@
 2.  `src` (a URL path), `width` and `height`. Files in `public/` are never analyzed or processed, so Astro cannot read their dimensions.
 3.  `450`; the aspect ratio is preserved.
 4.  `loading="eager"`, `decoding="sync"` and `fetchpriority="high"`. Use it only for the above-the-fold (LCP) image.
-5.  b\. `<source>` elements follow the `formats` order and the fallback `<img>` defaults to the source format (PNG for PNG, JPEG for JPEG).
+5.  **b.** `<source>` elements follow the `formats` order and the fallback `<img>` defaults to the source format (PNG for PNG, JPEG for JPEG).
 6.  It points at the image endpoint (`/_image?href=...&w=...&f=webp`), and the transform runs on demand at request time. Put an HTTP cache or CDN in front, since each variant is computed per request.
 7.  `image.responsiveStyles: true`. Without it the `max-width: 100%` / `width: 100%` styles are not added.
 8.  The generated `sizes` assumes the image spans roughly the viewport on small screens and its max width on large ones; in a column layout it overestimates. Provide `widths` together with a matching `sizes` string (or `densities` for fixed layouts).
@@ -510,7 +569,7 @@
 2.  A full browser navigation. Both source and destination must include the router for the swap to happen.
 3.  `astro:before-preparation` (spinner, replace `loader`, set `direction`), `astro:after-preparation` (hide spinner), `astro:before-swap` (mutate `newDocument`, replace `swap`), `astro:after-swap` (re-apply DOM state, scroll reset), `astro:page-load` (initialize behavior).
 4.  `astro:before-swap`. Setting e.g. `data-theme` on `event.newDocument` means the new page is already themed when it replaces the old one, so there is no flash.
-5.  c\. It cannot be canceled, fires after fetching and parsing, and fires for all navigation types.
+5.  **c.** It cannot be canceled, fires after fetching and parsing, and fires for all navigation types.
 6.  A bundled module script executes once; after the body is replaced the element is new and has no listener. Fixes: bind inside an `astro:page-load` handler; use a custom element with `connectedCallback`; use an inline script with `data-astro-rerun` (idempotent); or an island.
 7.  It fires on the first load and after every client navigation, so one handler covers both. `DOMContentLoaded` fires only on the real document load.
 8.  With plain `transition:persist` the instance is kept and receives the new props, so it shows the new label (reactively). With `transition:persist-props` it keeps the old label. `onMount` does not run again in either case, because the instance is not remounted.
@@ -534,7 +593,8 @@
 26. Hover/viewport prefetching issues the GET, triggering the side effect (logout, mark as read). Use POST actions or forms for mutations, and `data-astro-prefetch="false"` on any unavoidable link.
 27. It appends `<script type="speculationrules">` instead of a `<link>` or `fetch()`, so supporting browsers prerender the page. `eagerness` (`immediate`, `eager`, `moderate`, `conservative`, default `immediate`) hints how aggressively the browser should speculate.
 28. The target page runs before the user visits it, so analytics, side effects and personalized renders execute early; gate them on `document.prerendering`/`prerenderingchange`.
-29. All of them except none were removed as follows: `TRANSITION_AFTER_SWAP` (7.0; use `'astro:after-swap'`), `isTransitionBeforeSwapEvent` (7.0; `event.type === 'astro:before-swap'`), `createAnimationScope` (7.0; remove), `<ViewTransitions />` (6.0; `<ClientRouter />`), `handleForms` (6.0; always on, `data-astro-reload` to opt out).
+29. Three of them were removed in 7.0: `TRANSITION_AFTER_SWAP` (use the string `'astro:after-swap'`), `isTransitionBeforeSwapEvent` (compare `event.type === 'astro:before-swap'`) and `createAnimationScope` (remove it; no replacement is needed). The other two were removed earlier, in 6.0: `<ViewTransitions />` (use `<ClientRouter />`) and `handleForms` (form handling is always on; opt out with `data-astro-reload`).
+
 30. Put the player and cart badge islands in the shared layout with `transition:persist` (named keys), so instances survive. Share state through a `.svelte.ts` rune module (survives navigation) and pass page-specific props with default prop updating. The nav island keeps `path` state initialized from a server prop and updated on `astro:page-load`, setting `aria-current`. Clean up listeners with `$effect` returns, apply theme in `before-swap`, and provide `<title>` per page.
 
 ## Chapter 15: Internationalization
@@ -542,7 +602,7 @@
 1.  Astro provides locale-aware routing (folders, prefixes, redirects), fallback behavior, URL helpers (`astro:i18n`), `currentLocale`/`preferredLocale`, and optional domain mapping. You build the message dictionaries, pluralization/number/date formatting (use `Intl`), translated content structure, language switcher UI, `hreflang` markup and browser-language redirect policy.
 2.  `src/pages/about.astro` serves `/about/` (default locale unprefixed); `src/pages/es/about.astro` serves `/es/about/`.
 3.  The URL segment becomes `french` while the language tags are `fr` and `fr-CA`. Codes are used by `Astro.currentLocale` (first code) and by `Accept-Language` matching for `preferredLocale`/`preferredLocaleList`. The helpers also accept any code.
-4.  c\. Fallback keys (and values naming this locale) are locale paths, not codes; `fr` is rejected.
+4.  **c.** Fallback keys (and values naming this locale) are locale paths, not codes; `fr` is rejected.
 5.  `/french/x/` and `french`.
 6.  The root URL has no page, so you get a 404 unless you write `src/pages/index.astro`. Options: a static meta refresh to `/en/`, `Astro.redirect('/en/')` on a server build, or `redirectToDefaultLocale: true`.
 7.  False. `redirectToDefaultLocale: true` requires `prefixDefaultLocale: true`; with the default at the root there is nothing to redirect to, and Astro rejects the config.
@@ -574,7 +634,7 @@
 
 1.  `import.meta.env.API_URL` is statically replaced during `astro build`, so the value is baked into the bundle. A `server`/`secret` field from `astro:env/server` is not bundled; the adapter resolves it at runtime on each process, so the same artifact can run with different values.
 2.  Astro evaluates the config before Vite loads `.env` files, so `import.meta.env` has no values there. Use `process.env` (for variables set by the shell or CI) or Vite’s `loadEnv(mode, process.cwd(), '')` to read `.env` files manually.
-3.  c\. `client` with `secret` is invalid because there is no safe way to deliver a secret to the browser. The others are valid.
+3.  **c.** `client` with `secret` is invalid because there is no safe way to deliver a secret to the browser. The others are valid.
 4.  At the first request that imports `astro:env/server` (lazy validation). The server starts normally, then the request fails with HTTP 500 and an `EnvInvalidVariables` error stating the variable is missing.
 5.  It validates secrets when dev or build starts, so a missing or malformed secret fails the build immediately. In CI this converts a runtime 500 into a failed pipeline.
 6.  The client-public import works and the value is inlined into the client chunk. The `astro:env/server` import in a bundled script fails the build.
@@ -591,13 +651,13 @@
 17. Astro stops emitting hashes on that directive, because a browser ignores `'unsafe-inline'` when a hash or nonce is present. The directive is then only as strong as `'unsafe-inline'`.
 18. `security.csp.styleDirective.resources: ["'self'", { resource: "'unsafe-inline'", kind: 'attribute' }]` puts `'unsafe-inline'` only in `style-src-attr`.
 19. Using `kind: 'element'` creates `script-src-elem`, which browsers do not fall back from to `script-src`. The CDN in the default (`script-src`) resources therefore no longer applies to `<script>` elements. Move the CDN to `{ resource, kind: 'element' }`.
-20. 1.  `<ClientRouter />`: use native view transitions or skip CSP. (2) Shiki’s inline styles: switch to Prism or allow `style-src-attr`. (3) No dev mode support: test with build and preview. Also: external scripts need explicit resources or hashes.
+20. (1) `<ClientRouter />`: use native view transitions or skip CSP. (2) Shiki’s inline styles: switch to Prism or allow `style-src-attr`. (3) No dev mode support: test with build and preview. Also: external scripts need explicit resources or hashes.
 21. It compiles to inline style attributes/updates, which `style-src` (without `'unsafe-inline'`) blocks. You need classes or a `kind: 'attribute'` allowance.
 22. Headers can express directives meta cannot (and do not depend on parsing the HTML), and prerendered responses get them too. `frame-ancestors` (also `report-uri`, `sandbox`) only works in a header.
 23. The dev server injects unhashable scripts and Astro disables CSP there; you would not see the real policy or violations.
 24. In the checkout page frontmatter (or checkout-specific middleware) call `Astro.csp?.insertScriptResource('https://js.pay.example')` and `insertDirective("frame-src https://pay.example")`, so only that route’s policy is widened.
 25. Encoded or differently normalized paths, trailing slashes and rewrites can make the matched string differ from the route that ultimately renders, bypassing the check. Authorize in middleware using the resolved route/locals or use a router such as Hono with proper route patterns, plus data-layer checks.
-26. b\.
+26. **b.** The session cookie defaults to `{ name: 'astro-session', sameSite: 'lax', httpOnly: true, secure: true }` (Astro relaxes `secure` in `astro dev`, and `httpOnly` cannot be turned off; Chapter 12).
 
 27. To prevent session fixation: an attacker who planted a known session ID before login would otherwise share the authenticated session.
 
@@ -618,7 +678,7 @@
 13. The status code and headers are sent with the first chunk. Once the body has started streaming, a component can no longer change them. Redirects and cookies belong in middleware or at the top of the page before output.
 14. It applies your Astro configuration and plugins (aliases, Svelte plugin, virtual modules) to Vitest’s Vite config. By default it loads the project’s Astro config; a second argument overrides it.
 15. `environment: 'node'`. Astro components cannot be rendered in client-like environments such as jsdom or happy-dom.
-16. b\.
+16. **b.** Since Astro 7, `getContainerRenderer()` is imported from the package’s `container-renderer` entrypoint (the package-root import in (a) is deprecated); `loadRenderers()` comes from the virtual module `astro:container`, not `astro/container`, and (d) is not a public entrypoint.
 
 17. The container was created without renderers, so the Svelte island cannot be server-rendered and rendering fails or lacks `Count: 0`. Create it with `renderers: await loadRenderers([getContainerRenderer()])`.
 18. `renderToString()` returns the markup; `renderComponent()` (7.3.5) also includes the component’s inlined scripts and styles. Import the component with the `?container` query, e.g. `Card.astro?container`; without it the result equals `renderToString()`.
@@ -645,7 +705,7 @@
 6.  `injectRoute({ pattern: '/_acme/health', entrypoint: '@acme/health/health.ts', prerender: false })` with `"exports": { "./health.ts": "./health.ts" }`.
 7.  When Astro cannot detect an `export const prerender` in the entrypoint.
 8.  `pre` runs before the user’s middleware (`post` after). Middleware runs at request time only for on-demand pages; prerendered pages are static files, so the header is not added by the middleware (in classic mode it ran at build time only).
-9.  a\. `page-ssr` (import in every page’s frontmatter); (b) `before-hydration`; (c) `head-inline`; (d) `page`.
+9.  (a) `page-ssr` (import in every page’s frontmatter); (b) `before-hydration`; (c) `head-inline`; (d) `page`.
 10. It writes `.astro/integrations/<normalized_integration_name>/<normalized_filename>.d.ts` (filename must end in `.d.ts`) and returns its URL. Astro includes it for the user automatically, so users need no manual `tsconfig` edits.
 11. It marks the module as virtual (Rollup convention) so other plugins do not try to resolve it from disk.
 12. Check `this.environment.name === 'client'` in `load` (or `resolveId`) and throw, so the build fails rather than bundling the secrets.
@@ -666,7 +726,8 @@
 27. `client`, `server`, `prerender` (URLs). Integrations and plugins may relocate output, so the resolved directories are authoritative.
 28. A `PrerenderResult` (`{ response, metadata? }`); returning a bare `Response`, returning a bare array from `getStaticPaths`, and the `collectMetadata` option are deprecated.
 29. Hook unit tests with fake arguments (cheap; cannot detect Vite behaviour) and fixture builds that run `build`/`dev` and request output (realistic; slower and cannot easily cover every hook edge case). Test both dev and build.
-30. d\.
+30. **d.** The documented discoverability keywords are `astro-integration`, `astro-component` and `withastro`; `astro-adapter-svelte` is made up.
+
 
 ## Chapter 19: Migrating to Astro 7
 
@@ -680,7 +741,7 @@
 8.  `import.meta.env` values are inlined and never coerced, so the value is the string `"false"`, which is truthy. Compare explicitly: `import.meta.env.FEATURE_X === 'true'`.
 9.  `import.meta.env` is now inlined at build and non-public variables are no longer rewritten to `process.env`. Fix by reading `process.env.DB_PASSWORD` at runtime or, better, declaring it with `astro:env` as a server secret.
 10. They now render in the order defined (Astro 5 reversed them). Rules that depended on the reversed cascade, such as overriding `body` background, may produce different results and need reordering.
-11. Heading IDs now follow `github-slugger`: trailing hyphens are no longer stripped for headings ending in special characters (so `## \`\<Picture /\>\`\` ends with a hyphen). Hand-written anchors must be updated.
+11. Heading IDs now follow `github-slugger`: trailing hyphens are no longer stripped for headings ending in special characters (so ``## `<Picture />` `` ends with a hyphen). Hand-written anchors must be updated.
 12. It crops to the given dimensions by default (no `fit` needed) and never upscales. An SVG with `format="avif"` is now rasterized, so guard with `src.format === 'svg' ? 'svg' : 'avif'`.
 13. With `prefixDefaultLocale: false` the old default of `true` could produce redirect loops. Set `prefixDefaultLocale: true` and `redirectToDefaultLocale: true` to recreate it (manual routing middleware options likewise).
 14. Any three of: `astro:ssr-manifest`, `RouteData.generate()`, `entryPoints` on `astro:build:ssr`, `routes` on `astro:build:done`, the old `app.render()` signature, `app.setManifestData()`.
@@ -696,7 +757,7 @@
 24. `undefined`, with a `[WARN] [session]` message that `Astro.session` was accessed with no session storage configured. The API reference is right for the unconfigured/disabled case; the changelog’s “always defined” holds when storage exists (e.g. an adapter default driver). Guard with `Astro.session?.`.
 25. `session: { driver: sessionDrivers.redis({ url }) }` with `sessionDrivers` imported from `astro/config`.
 26. 7.x with Astro 5 (e.g. `$props.id()` fix), 8.x with Astro 6 (Vite 7, plugin-svelte 6), 9.x with Astro 7 (Vite 8, plugin-svelte 7, container-renderer path); 9.1 raises Node to 22.22.0.
-27. c\.
+27. **c.** Since integration 6.0.0 `vitePreprocess()` is no longer added by default; import it from `@astrojs/svelte` in `svelte.config.js` (the editor tooling reads that file too). It can be omitted entirely, and it was not removed.
 
 28. `+page.svelte` to `src/pages/*.astro`; `+layout.svelte` to an Astro layout with `<slot />`; `load` to frontmatter/collections; `handle` to middleware `onRequest`; `$env/static/private` to `astro:env/server` secrets.
 29. Put the cart in a rune module or Nano Store that all cart islands import (and persist with `transition:persist` if using `<ClientRouter />`). On the server avoid module-level singletons that leak across requests, and remember Astro (non-island) components cannot subscribe.
@@ -730,7 +791,7 @@
 24. With `validateSecrets: false` secrets are validated at runtime on first import, so the server starts but the webhook fails on first call. Catch it with `validateSecrets: true` in CI builds and a health check route that imports `astro:env/server`.
 25. It proves the component renders and picks the localized guest text without a server. It cannot prove session-dependent behaviour (the container has no real session), hydration, or the server island fetch.
 26. A `client:visible` island is plain server HTML until it hydrates; clicking earlier does nothing. Astro removes the `ssr` attribute after hydration, so it is the reliable synchronization signal.
-27. b\.
+27. **b.** Live entries are fetched on each request (no data store), may carry a `cacheHint` with tags for route caching, do not support MDX or image optimisation, and need on-demand rendering rather than `prerender = true`.
 
 28. The server would write per-user data into a module-level store shared by all requests, leaking one user’s cart into others’ renders (and cached HTML). Initialization must happen only in the browser (`onMount`) or from request-scoped data.
 29. Make description (and possibly price/availability) per-market, either one entry per locale/market or a market-keyed field validated with Zod, with `[market]` routes; give tags market-scoped names (`sku:<id>:<market>` or add `market:` tags) so invalidation targets the right pages, and extend the webhook accordingly.

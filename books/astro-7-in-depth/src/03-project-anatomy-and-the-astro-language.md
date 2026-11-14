@@ -436,7 +436,7 @@ export const partial = true;
 <li>3 items</li>
 ```
 
-The `partial` export must be statically analyzable: the literal `true` or an `import.meta.env.X` reference. Partials with scoped `<style>` or bundled `<script>` lose them, since there is no head to hoist them into. I verified that a server-rendered partial returns `<li>partial</li>` with no doctype. `.md` pages cannot be partials; `.astro` and `.mdx` can.
+The `partial` export must be statically analyzable: the literal `true` or an `import.meta.env.X` reference. Partials with scoped `<style>` or bundled `<script>` lose them, since there is no head to hoist them into. I verified that a server-rendered partial returns just its `<li>` element, with no doctype. `.md` pages cannot be partials; `.astro` and `.mdx` can.
 
 ## Imports, aliases and globs
 
@@ -482,7 +482,7 @@ Aliases from `tsconfig.json` work for `.astro` files, `.ts` files and, with the 
 
 ### `import.meta.glob()`
 
-`import.meta.glob()` is Vite’s bulk-import primitive and replaces the removed `Astro.glob()` (removed in 6.0). It takes a glob pattern and returns an object mapping paths to either lazy loader functions or, with `eager: true`, the modules themselves.
+`import.meta.glob()` is Vite’s bulk-import primitive and replaces `Astro.glob()`, which was removed in 6.0. It takes a glob pattern and returns an object mapping paths to either lazy loader functions or, with `eager: true`, the modules themselves.
 
 ```html
 ---

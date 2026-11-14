@@ -683,7 +683,7 @@ Decision heuristics I apply in reviews:
 
 Loaders and live loaders usually need credentials. There are two safe routes and one trap.
 
-**Safe route 1: `process.env` / `loadEnv` in the config and loader.** `.env` files are *not* loaded into `process.env` inside `astro.config.*`; use `loadEnv` from `vite` there. Inside `content.config.ts` and `live.config.ts`, which are modules processed by Vite, `import.meta.env` works for `VITE_`-prefixed variables only, and `process.env` works at runtime on Node. Be explicit about where each runs, since live configs execute on the server at request time while build-time configs run during the build.
+**Safe route 1: `process.env` / `loadEnv` in the config and loader.** `.env` files are *not* loaded into `process.env` inside `astro.config.*`; use `loadEnv` from `vite` there. Inside `content.config.ts` and `live.config.ts`, which are modules processed by Vite, `import.meta.env` gives you the values present when the build ran (it is statically inlined, Chapter 16). That suits build-time collections but not live collections, which should read the deployment’s environment at request time: there `process.env` works on Node, and `astro:env/server` everywhere. Be explicit about where each runs, since live configs execute on the server at request time while build-time configs run during the build.
 
 **Safe route 2: `astro:env`.** Declare the variable once in the config schema:
 
@@ -810,7 +810,11 @@ export async function postWithRelations(id: string) {
 
 11. What happens if you write entries directly with `store.set()` and never call `parseData()`?
 
-12. Complete the code so that rendered Markdown from a CMS can be shown with `render()`: `ts store.set({ id: item.id, data, /* ??? */ });`
+12. Complete the code so that rendered Markdown from a CMS can be shown with `render()`:
+
+    ```ts
+    store.set({ id: item.id, data, /* ??? */ });
+    ```
 
 13. Where is the collection data store written in 7.4.1 under default settings, and what does `experimental.collectionStorage: 'chunked'` change?
 
@@ -820,7 +824,14 @@ export async function postWithRelations(id: string) {
 
 16. Why must a CI pipeline restore `node_modules/.astro/` before `astro build` when incremental builds are enabled?
 
-17. What is wrong with this live-collection page and how do you fix it? `astro --- import { getLiveEntry, LiveEntryNotFoundError } from 'astro:content'; const { entry, error } = await getLiveEntry('products', Astro.params.id!); ---`
+17. What is wrong with this live-collection page and how do you fix it?
+
+    ```html
+    ---
+    import { getLiveEntry, LiveEntryNotFoundError } from 'astro:content';
+    const { entry, error } = await getLiveEntry('products', Astro.params.id!);
+    ---
+    ```
 
 18. What does a live loader’s `loadEntry()` returning `undefined` become at the call site?
 

@@ -387,7 +387,7 @@ MDX children passed to a framework component arrive as static HTML strings via A
 
 ### MDX in collections
 
-`glob({ pattern: '**/*.{md,mdx}' })` loads both. `retainBody: false` dramatically shrinks the store for MDX because there is otherwise no pre-rendered HTML; MDX is compiled when `render()` runs (like `deferRender`). If the MDX integration is missing, the loader warns `No entry type found for <file>.mdx` and skips the file rather than failing.
+`glob({ pattern: '**/*.{md,mdx}' })` loads both. `retainBody: false` dramatically shrinks the store for MDX: MDX entries store no pre-rendered HTML, so the raw body is most of what they occupy, and rendering does not need it, because MDX is compiled from the source file when `render()` runs (like `deferRender`). If the MDX integration is missing, the loader warns `No entry type found for <file>.mdx` and skips the file rather than failing.
 
 MDX is never available from live collections, since it cannot be compiled at request time.
 
@@ -574,9 +574,15 @@ The island receives only `{ depth, slug, text }` objects. The `Content` componen
 
 15. Why would a CSP-enabled site avoid Shiki?
 
-16. Which does this MDX do? `mdx import Counter from '../components/Counter.svelte'; <Counter client:load start={3} />`
+16. What does this MDX do?
 
-    a.  Errors because Svelte is unsupported in MDX (b) Renders and hydrates an island (c) Renders statically without hydration (d) Requires `export const components`.
+    ```markdown
+    import Counter from '../components/Counter.svelte';
+
+    <Counter client:load start={3} />
+    ```
+
+    (a) Errors because Svelte is unsupported in MDX; (b) renders and hydrates an island; (c) renders statically without hydration; (d) requires `export const components`.
 
 17. What is the output of mapping a Svelte component with `<Content components={{ h2: Counter }} />`? Can you put `client:load` on it?
 

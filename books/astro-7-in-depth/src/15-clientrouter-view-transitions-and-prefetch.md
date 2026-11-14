@@ -227,11 +227,12 @@ A typical global loading bar, with typing:
 // src/scripts/progress.ts  (imported from the layout's <script>)
 import type { TransitionBeforePreparationEvent } from 'astro:transitions/client';
 
-const bar = document.querySelector<HTMLElement>('#progress');
+// #progress lives in the body, which is replaced on every navigation: query it inside each handler
+const bar = () => document.querySelector<HTMLElement>('#progress');
 
 document.addEventListener('astro:before-preparation', (e) => {
   const event = e as TransitionBeforePreparationEvent;
-  bar?.classList.add('active');
+  bar()?.classList.add('active');
   const originalLoader = event.loader;
   event.loader = async () => {
     const started = performance.now();
@@ -240,10 +241,10 @@ document.addEventListener('astro:before-preparation', (e) => {
   };
 });
 
-document.addEventListener('astro:after-preparation', () => bar?.classList.remove('active'));
+document.addEventListener('astro:after-preparation', () => bar()?.classList.remove('active'));
 ```
 
-Because a bundled `<script>` runs once, and the `#progress` element lives in the persisted or replaced body, re-query it inside handlers (as above, by evaluating it once only if it lives in a persisted element, otherwise query inside each handler).
+Because a bundled `<script>` runs once, a reference captured at the top of the script would keep pointing at the first page’s `#progress` element after the body is replaced; that is why the handlers above re-query it. Only an element marked `transition:persist` can safely be queried once.
 
 ### Theme and direction examples
 
@@ -486,6 +487,7 @@ The 7.0 migration is mechanical: search the codebase for these identifiers. Libr
 3.  List, in order, the five lifecycle events and one thing each is typically used for.
 4.  In which event is the old page still visible while you can mutate the incoming document? Why does that matter for a theme attribute?
 5.  Multiple choice. Which is true of `astro:before-swap`?
+
     a.  It can be canceled with `preventDefault()`.
     b.  It fires before any network request.
     c.  It exposes `newDocument` and a replaceable `swap()`.

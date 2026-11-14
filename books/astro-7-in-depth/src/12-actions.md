@@ -17,7 +17,7 @@ Two constants name the form-mode query parameters: `ACTION_QUERY_PARAMS.actionNa
 
 The call sequence for an RPC request, as implemented in 7.4.1:
 
-1.  The request reaches the built-in pipeline. Actions run *after* your middleware (your `onRequest` sees action requests) and *before* page dispatch (see Chapter 5 for the built-in order).
+1.  The request reaches the built-in pipeline, where the `actions` stage comes before page dispatch (Chapter 5 lists the order). Your `onRequest` middleware still sees action requests, which is what makes the `getActionContext()` patterns later in this chapter possible.
 2.  The handler rejects invalid percent-encoding, skips prerendered routes, and applies the origin check (described later) if `security.checkOrigin` is enabled.
 3.  The body is parsed, with a size limit, as JSON or `FormData` depending on `Content-Type`.
 4.  The action is looked up by name; unknown names produce a `NOT_FOUND` action error.
@@ -317,7 +317,7 @@ import { z } from 'astro/zod';
 
 export const server = {
   placeOrder: defineAction({
-    input: z.object({ cartId: z.string().uuid() }),
+    input: z.object({ cartId: z.uuid() }),
     handler: async ({ cartId }, ctx) => {
       if (!ctx.locals.user) {
         throw new ActionError({ code: 'UNAUTHORIZED', message: 'Sign in to check out.' });
@@ -600,7 +600,14 @@ Because the transport is plain HTTP, you can test an action by running the serve
 
 11. When would you choose `.orThrow()` over destructuring `{ data, error }`? What does the implementation say about its progressive-enhancement support?
 
-12. What does the following frontmatter do on a page that renders a form for `actions.createProduct`, and what status is the recommended redirect? `` astro --- const result = Astro.getActionResult(actions.createProduct); if (result && !result.error) return Astro.redirect(`/products/${result.data.id}`); --- ``
+12. What does the following frontmatter do on a page that renders a form for `actions.createProduct`, and what status is the recommended redirect?
+
+    ```html
+    ---
+    const result = Astro.getActionResult(actions.createProduct);
+    if (result && !result.error) return Astro.redirect(`/products/${result.data.id}`);
+    ---
+    ```
 
 13. Why can `Astro.getActionResult(actions.a)` be `undefined` even though the page just handled a form submission?
 

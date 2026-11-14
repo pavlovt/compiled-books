@@ -32,7 +32,7 @@ const user = session ? await lookupUser(session) : null;
 {user ? <img alt={user.name} src={user.avatar} width="32" height="32" /> : <a href="/login">Sign in</a>}
 ```
 
-The page can be **prerendered**: the island’s content is not part of the static HTML. Inside the island you can do anything an on-demand page can: read cookies and headers, query a database, call `Astro.rewrite`-free logic. The rest of the page stays a static file.
+The page can be **prerendered**: the island’s content is not part of the static HTML. Inside the island you can do anything an on-demand page can: read cookies and headers, query a database, set its own response headers. The rest of the page stays a static file.
 
 ### `server:defer` is for Astro components, not Svelte
 

@@ -540,35 +540,31 @@ These features matter for your test automation too: a Playwright global setup ca
 11. What did the 7.0 changelog remove from the experimental `queuedRendering` feature, and what replaced the queue?
 12. Explain how the following page behaves in terms of time to first byte, and rewrite it to improve it:
 
-```html
----
-const a = await fetch(urlA).then((r) => r.json());
-const b = await fetch(urlB).then((r) => r.json());
----
-<html><body><h1>Shop</h1><Reviews data={a} /><Stock data={b} /></body></html>
-```
+    ```html
+    ---
+    const a = await fetch(urlA).then((r) => r.json());
+    const b = await fetch(urlB).then((r) => r.json());
+    ---
+    <html><body><h1>Shop</h1><Reviews data={a} /><Stock data={b} /></body></html>
+    ```
 
 13. Why can a component not redirect after a streamed body has started?
 14. Why does `getViteConfig()` exist, and what does it load by default?
 15. Which Vitest environment must you use to render `.astro` components, and why?
 16. Multiple choice: which import loads Svelte’s renderer for the Container API in a Vitest test?
 
-<!-- -->
-
-a.  `import { getContainerRenderer } from '@astrojs/svelte'`
-b.  `import { getContainerRenderer } from '@astrojs/svelte/container-renderer'`
-c.  `import { loadRenderers } from 'astro/container'`
-d.  `import svelte from '@astrojs/svelte/server.js'`
-
-<!-- -->
+    a.  `import { getContainerRenderer } from '@astrojs/svelte'`
+    b.  `import { getContainerRenderer } from '@astrojs/svelte/container-renderer'`
+    c.  `import { loadRenderers } from 'astro/container'`
+    d.  `import svelte from '@astrojs/svelte/server.js'`
 
 17. Find the bug:
 
-```ts
-const container = await AstroContainer.create();
-const html = await container.renderToString(Card);  // Card.astro renders <Counter client:load />
-expect(html).toContain('Count: 0');
-```
+    ```ts
+    const container = await AstroContainer.create();
+    const html = await container.renderToString(Card);  // Card.astro renders <Counter client:load />
+    expect(html).toContain('Count: 0');
+    ```
 
 18. What is the difference between `renderToString()` and `renderComponent()`, and how do you import a component for the latter?
 19. What does `partial: true` (the default) mean for container output?

@@ -90,7 +90,7 @@ export const prerender = false;
 export const GET: APIRoute = () => Response.json({ ok: true, header });
 ```
 
-I started the built server and requested the route: 200 with `{"ok":true,"header":"x-ledger-demo"}`. Injected routes take part in normal route priority (Chapter 5); the reserved `_astro`, `_server_islands` and `_actions` prefixes cannot be shadowed, which is why the example uses `/_ledger/`, an unreserved namespace.
+I started the built server and requested the route: 200 with `{"ok":true,"header":"x-ledger-demo"}`. Injected routes take part in normal route priority (Chapter 5); the reserved `_astro`, `_server-islands` and `_actions` prefixes cannot be shadowed, which is why the example uses `/_ledger/`, an unreserved namespace.
 
 ### `addMiddleware`
 
@@ -468,9 +468,8 @@ Astro components, integrations and adapters publish to npm as ordinary packages.
 29. Describe a two-layer test strategy for an integration, and one thing each layer cannot detect.
 30. Multiple choice: which is NOT a documented keyword for npm discoverability?
 
-<!-- -->
+    a.  `astro-component`
+    b.  `astro-integration`
+    c.  `withastro`
+    d.  `astro-adapter-svelte`
 
-a.  `astro-component`
-b.  `astro-integration`
-c.  `withastro`
-d.  `astro-adapter-svelte`

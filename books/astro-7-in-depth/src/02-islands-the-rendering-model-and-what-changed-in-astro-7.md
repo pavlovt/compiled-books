@@ -106,7 +106,7 @@ Details, custom directives and failure modes are in Chapter 3. For now, the desi
 
 It helps to see, in order, what happens when Astro handles a request for a page. This is simplified, but each stage is a place where behaviour in later chapters is decided.
 
-1.  **Routing.** The request URL is matched against the routes derived from `src/pages` (Chapter 5). Reserved routes (`/_astro/`, `/_server_islands/`, `/_actions/`) win first.
+1.  **Routing.** The request URL is matched against the routes derived from `src/pages` (Chapter 5). Reserved routes (`/_astro/`, `/_server-islands/`, `/_actions/`) win first.
 2.  **Built-in handlers.** In the default pipeline, in this order: trailing-slash normalization, redirects, sessions, actions, your middleware, page rendering, i18n, and caching. In 7.x this pipeline is itself replaceable through `src/fetch.ts` (“advanced routing”, Chapter 5).
 3.  **Page rendering.** The `.astro` page is a compiled module whose default export is a render function. Astro runs the frontmatter, then walks the template. Components are rendered recursively; framework components are handed to their renderer (`@astrojs/svelte`’s server entrypoint); `client:*` components are wrapped in `<astro-island>`.
 4.  **Response.** The result is a `Response` whose body is a stream.
@@ -172,7 +172,7 @@ Chapter 8 treats on-demand rendering, adapters and deployment in depth; the prer
 
 ### Prerendered pages and dynamic routes
 
-A prerendered dynamic route (`[slug].astro`) must tell Astro which paths to build via `getStaticPaths()`; an on-demand dynamic route must not. This asymmetry, and the string-only rule for `params` (verified below in Chapter 5), is a frequent source of confusion when a route is switched between modes.
+A prerendered dynamic route (`[slug].astro`) must tell Astro which paths to build via `getStaticPaths()`; an on-demand dynamic route must not. This asymmetry, and the string-only rule for `params` (verified in Chapter 5), is a frequent source of confusion when a route is switched between modes.
 
 ## The Vite environments
 
@@ -273,7 +273,7 @@ export default defineConfig({
 });
 ```
 
-Note that `compressHTML` applies to Astro-rendered HTML; Svelte renders its own markup (and its own whitespace rules, `preserveWhitespace` compiler option aside) inside islands. Svelte’s output above shows exactly this: in the island markup, spaces between `</h2>` and `<div>` were preserved by Svelte’s collapse-to-one-space behaviour.
+Note that `compressHTML` applies to Astro-rendered HTML; Svelte renders its own markup (and its own whitespace rules, `preserveWhitespace` compiler option aside) inside islands. In my test build, for example, the whitespace between a Svelte component’s `</h2>` and `<div>` survived inside the island as a single space, because Svelte collapses whitespace rather than dropping it.
 
 ## Platform baselines in Astro 7.4
 

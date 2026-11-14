@@ -237,7 +237,7 @@ const locale = Astro.currentLocale!;
 </nav>
 ```
 
-The module exports these functions (from the reference and the facts file for 7.4.1):
+The module exports these functions (from the 7.4.1 reference):
 
 - `getRelativeLocaleUrl(locale, path?, options?)` and `getAbsoluteLocaleUrl(locale, path?, options?)` return one URL.
 - `getRelativeLocaleUrlList(path?, options?)` and `getAbsoluteLocaleUrlList(path?, options?)` return one URL per configured locale, in `locales` order. They are what you use to render `<link rel="alternate" hreflang>` elements.
@@ -335,7 +335,7 @@ The `src/fetch.ts` entrypoint of advanced routing replaces the default request p
 
 ## Translating content
 
-Pages are one half of a localized site. The other half is content. Chapter 9 covered content collections; here the question is how to structure them for several languages. The Astro recipe uses one subfolder per locale inside each collection:
+Pages are one half of a localized site. The other half is content. Chapter 6 covered content collections; here the question is how to structure them for several languages. The Astro recipe uses one subfolder per locale inside each collection:
 
 ```text
 src/content/blog/
@@ -432,16 +432,19 @@ export const ui = {
     'nav.home': 'Home',
     'nav.about': 'About',
     'cart.items': 'Items in cart',
+    'cart.empty': 'Your cart is empty',
   },
   es: {
     'nav.home': 'Inicio',
     'nav.about': 'Acerca de',
     'cart.items': 'Artículos en el carrito',
+    'cart.empty': 'Tu carrito está vacío',
   },
   fr: {
     'nav.home': 'Accueil',
     'nav.about': 'À propos',
     'cart.items': 'Articles dans le panier',
+    'cart.empty': 'Votre panier est vide',
   },
 } as const satisfies Record<Lang, Record<string, string>>;
 
@@ -559,7 +562,7 @@ const t = useTranslations(lang);
 </section>
 ```
 
-Only the strings the island needs are serialized into the page, so the client bundle does not carry the whole dictionary. When the island needs a large catalog (a rich editor, a data grid), load it lazily instead: `const messages = await import(`../i18n/\${locale}.json`)` inside an `$effect` or an event handler, with a loading state. Dynamic import with a variable path is resolved by the bundler to a chunk per locale, so each visitor downloads one language.
+Only the strings the island needs are serialized into the page, so the client bundle does not carry the whole dictionary. When the island needs a large catalog (a rich editor, a data grid), load it lazily instead: ``const messages = await import(`../i18n/${locale}.json`)`` inside an `$effect` or an event handler, with a loading state. Dynamic import with a variable path is resolved by the bundler to a chunk per locale, so each visitor downloads one language.
 
 ### A locale-aware module with runes
 
@@ -712,6 +715,7 @@ When you read older tutorials, adjust for the following:
 2.  A project has `locales: ['en', 'es']`, `defaultLocale: 'en'` and no `routing` key. Where does `src/pages/about.astro` serve, and where does `src/pages/es/about.astro` serve?
 3.  What does `{ path: 'french', codes: ['fr', 'fr-CA'] }` change compared with the string `'fr'`? Give two places where the codes are used.
 4.  Multiple choice. With that object entry, which `fallback` configuration is valid?
+
     a.  `fallback: { fr: 'en' }`
     b.  `fallback: { 'fr-CA': 'en' }`
     c.  `fallback: { french: 'en' }`

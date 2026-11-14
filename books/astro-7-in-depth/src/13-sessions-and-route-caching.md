@@ -358,7 +358,7 @@ import AccountMenu from '../components/AccountMenu.svelte';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/login', 303);
 ---
-<AccountMenu client:load name={Astro.locals.user!.id} />
+<AccountMenu client:load userId={user.id} />
 ```
 
 Props are serialized into the page HTML, so never pass secrets or whole session objects. Actions called from the island re-check authorization themselves (Chapter 11). If the header must show the user’s name on otherwise cacheable pages, render it in a server island (Chapter 9), covered at the end of this chapter.
@@ -632,7 +632,7 @@ Authoring notes:
 
 **Actions and endpoints.** Only `GET` is cached. Actions are `POST`, so they are never cached but are the natural place to invalidate (`ctx.cache.invalidate`).
 
-**Server islands.** A server island is fetched with `GET /_server-islands/<Name>?e=<encrypted props>&p=...&s=...` (note the hyphen in the path; see Chapter 9) and is rendered by the same pipeline, so it has its own `Astro.cache`. I confirmed that a deferred component calling `Astro.cache.set({ maxAge: 30 })` is cached independently of the surrounding page: the second fetch of the island URL returned `HIT` with the same timestamp. The cache key is the island URL, which includes the encrypted props, so identical props share one entry. This gives a powerful composition for personalization:
+**Server islands.** A server island is fetched with `GET /_server-islands/<Name>?e=<export>&p=<encrypted props>&s=<encrypted slots>` (note the hyphen in the path; see Chapter 9) and is rendered by the same pipeline, so it has its own `Astro.cache`. I confirmed that a deferred component calling `Astro.cache.set({ maxAge: 30 })` is cached independently of the surrounding page: the second fetch of the island URL returned `HIT` with the same timestamp. The cache key is the island URL, which includes the encrypted props, so identical props share one entry. This gives a powerful composition for personalization:
 
 ```html
 ---
@@ -719,7 +719,11 @@ The shell is cached and the header is a separate, uncached request that reads th
 
 14. The default cookie is documented as `secure: true`, yet it works on `http://localhost` in development. Why, and what is the production implication behind a TLS-terminating proxy?
 
-15. What is wrong with this middleware, and what would you use instead? `ts if (context.url.pathname.startsWith('/admin') && !context.locals.user) return context.redirect('/login');`
+15. What is wrong with this middleware, and what would you use instead?
+
+    ```ts
+    if (context.url.pathname.startsWith('/admin') && !context.locals.user) return context.redirect('/login');
+    ```
 
 16. In a BFF design, where are the access and refresh tokens stored, and why is that safer than keeping them in a Svelte island’s state?
 

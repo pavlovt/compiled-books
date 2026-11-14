@@ -548,7 +548,11 @@ describe('middleware', () => {
 
 12. What does Astro return for `PATCH` on a route that exports only `GET` and `POST`?
 
-13. Why is this endpoint wrong? `ts export const GET = () => ({ ok: true });`
+13. Why is this endpoint wrong?
+
+    ```ts
+    export const GET = () => ({ ok: true });
+    ```
 
 14. Multiple choice: A static endpoint file `src/pages/feed.xml.ts` is requested as `/feed.xml/`. (a) works (b) 404 because extension endpoints have no trailing slash (c) redirects to `/feed.xml` always (d) depends on `build.format`.
 

@@ -287,9 +287,9 @@ Astro passes slot content to a renderer as `Record<string, string>`: slot name t
 
 The server entrypoint turns every slot into a Svelte *raw snippet* wrapping the HTML in an `<astro-slot>` element (an `<astro-static-slot>` for components that will not hydrate, which Astro then strips), and passes it in three forms at once:
 
-1.  a `children` snippet prop for the default slot, and a snippet prop *named after each named slot*;
-2.  a legacy `$$slots` map with the same snippets, for `<slot />`-style components;
-3.  the legacy default `children` prop (the same default snippet).
+1.  a `children` snippet prop for the default slot;
+2.  a snippet prop *named after each named slot*;
+3.  a legacy `$$slots` map with the same snippets, for `<slot />`-style components.
 
 The client entrypoint reconstructs the same snippets from the `<astro-slot>` elements’ `innerHTML` and passes them to `hydrate()`, so server and client output match, and no child component code runs in the browser.
 

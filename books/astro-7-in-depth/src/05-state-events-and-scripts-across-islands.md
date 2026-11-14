@@ -60,7 +60,7 @@ The official Svelte examples use the legacy `$store` auto-subscription. In Svelt
 </button>
 ```
 
-It server-rendered `open 0` for the initial state and hydrated against the same store module used by other islands. From an `.astro` `<script>` you can use the store directly:
+It server-rendered `Cart (0)` for the initial state and hydrated against the same store module used by other islands. From an `.astro` `<script>` you can use the store directly:
 
 ```html
 <button id="open-cart">Open</button>
@@ -143,7 +143,7 @@ Both islands, hydrated separately, import one module. In a verified build the ou
 Rules for rune modules:
 
 - **Export an object, not a reassigned primitive.** `export let count = $state(0)` cannot be reassigned from other modules (Svelte forbids exporting reassigned state). Export a `$state` object and mutate its properties, or export getter/setter functions, or a class with `$state` fields.
-- **Derived values across modules** must be wrapped: `export const total = $derived(...)` is not allowed at module level for export of a reassignable binding. Export a function (`count()` above) or use a class with `get total()`.
+- **Derived values cannot be exported directly**: Svelte rejects `export const total = $derived(...)` in a module, because derived state cannot be exported. Export a function (`count()` above), or use a class with a `$derived` field or a `get total()` getter.
 - **Class-based stores** read well and avoid the primitive limitation:
 
 ```ts
@@ -454,7 +454,7 @@ If a bundled script queries for an element rendered by a Svelte island, it may r
 
 ### `is:inline`, third-party scripts and `data-astro-rerun`
 
-Inline scripts are emitted verbatim, once per component instance. With the client router (Chapter 14), bundled module scripts execute only once for the lifetime of the session, because the browser caches module evaluation, while inline scripts re-execute only if marked `data-astro-rerun` (and, per the docs, that attribute applies to inline scripts). For code that must run on every navigation, use the `astro:page-load` event:
+Inline scripts are emitted verbatim, once per component instance. With the client router (Chapter 14), bundled module scripts execute only once for the lifetime of the session, because the browser caches module evaluation, while inline scripts re-execute only if marked `data-astro-rerun` (the attribute has no effect on bundled scripts). For code that must run on every navigation, use the `astro:page-load` event:
 
 ```html
 <script>

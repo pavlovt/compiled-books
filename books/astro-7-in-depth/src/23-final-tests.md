@@ -1,6 +1,6 @@
 # Final Tests
 
-Six tests of 26 to 29 questions each, progressively harder. Test 1 checks the foundations (Chapters 1 to 4); Test 6 is expert level and spans the whole book. Questions mix multiple choice, code reading, short answer and design scenarios. Work without the chapters open, then check yourself against `tests-answers.md`. Unless a question says otherwise, assume Astro 7.4, `@astrojs/svelte` 9.1 and Svelte 5 with runes.
+Six tests of 26 to 29 questions each, progressively harder. Test 1 checks the foundations (Chapters 1 to 4); Test 6 is expert level and spans the whole book. Questions mix multiple choice, code reading, short answer and design scenarios. Work without the chapters open, then check yourself against the next chapter, “Final Tests: Answer Key”. Unless a question says otherwise, assume Astro 7.4, `@astrojs/svelte` 9.1 and Svelte 5 with runes.
 
 ## Test 1: Islands, Astro Components and Svelte Islands
 

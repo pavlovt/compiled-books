@@ -87,8 +87,8 @@ These make no noise at build time. Review each against your site:
 - **`i18n.routing.redirectToDefaultLocale`** now defaults to `false`, and can be used only with `prefixDefaultLocale: true`. Projects that relied on `/` redirecting to `/en/` must set both explicitly (Chapter 15).
 - **Scripts and styles render in source order** (the former `preserveScriptOrder`). Astro 5 reversed their order; CSS that depended on the reversed cascade needs reordering.
 - **`import.meta.env` is always inlined and never coerced** (the former `staticImportMetaEnv`). `"true"` stays a string; `import.meta.env.DB_PASSWORD` is no longer rewritten to `process.env`. Convert manually (`=== 'true'`), use `process.env` for runtime values, and prefer `astro:env` (Chapter 16).
-- **Markdown heading IDs** follow `github-slugger` (the former `headingIdCompat`): trailing hyphens are no longer stripped, so `## \`\<Picture /\>\`\` yields an ID ending in a hyphen. Update hand-written anchor links.
-- **Responsive image styles** are emitted as a hash class and `data-astro-fit`/`data-astro-pos` attributes instead of inline CSS variables, for CSP compatibility.
+- **Markdown heading IDs** follow `github-slugger` (the former `headingIdCompat`): trailing hyphens are no longer stripped, so ``## `<Picture />` `` yields an ID ending in a hyphen. Update hand-written anchor links.
+- **Responsive image styles** are emitted as a hash class and `data-astro-image-fit`/`data-astro-image-pos` attributes (as observed on 7.4.1, Chapter 13) instead of inline CSS variables, for CSP compatibility.
 - **Image service:** crops by default (no `fit` needed), never upscales, and now rasterizes SVG when `format` is set (guard with `src.format === 'svg'`).
 - **`getImage()` throws on the client.** Call it on the server and pass `.src`.
 - **Endpoints with a file extension** (`sitemap.xml.ts`) are not reachable with a trailing slash.
@@ -355,10 +355,10 @@ Set this as a CI check, and read the build log for deprecation warnings after ea
 15. List the three kinds of failure the Rust compiler can introduce and how each shows up.
 16. What does this render in 7.0 and how do you fix it?
 
-```html
-<a href="/a">A</a>
-<a href="/b">B</a>
-```
+    ```html
+    <a href="/a">A</a>
+    <a href="/b">B</a>
+    ```
 
 17. A page contains `<p><div>x</div></p>`. What did the Go compiler do, what does the Rust compiler do, and what does the browser do afterwards?
 18. You have an `src/fetch.ts` that exports an HTTP helper. What happens after upgrading to 7 and what are your two options?
@@ -372,14 +372,10 @@ Set this as a CI check, and read the build log for deprecation warnings after ea
 26. Match each `@astrojs/svelte` major to its Astro major and give one change for each.
 27. Multiple choice: which statement about `vitePreprocess` is correct for the Svelte integration?
 
-<!-- -->
-
-a.  It is applied by default and cannot be disabled.
-b.  It must be imported from `@sveltejs/vite-plugin-svelte` in Astro 7 only.
-c.  In `svelte.config.js`, import it from `@astrojs/svelte`; it is not added by default.
-d.  It was removed in 6.0.
-
-<!-- -->
+    a.  It is applied by default and cannot be disabled.
+    b.  It must be imported from `@sveltejs/vite-plugin-svelte` in Astro 7 only.
+    c.  In `svelte.config.js`, import it from `@astrojs/svelte`; it is not added by default.
+    d.  It was removed in 6.0.
 
 28. Map five SvelteKit concepts to their Astro equivalents (route, layout, `load`, `handle`, `$env/static/private`).
 29. A SvelteKit app keeps a global cart store in a layout. Describe how you would re-home it in Astro and what to watch for during SSR.

@@ -104,7 +104,7 @@ return tags.flatMap((tag) =>
 
 When several routes could build the same URL, Astro sorts them with these rules, applied in order:
 
-1.  Reserved routes: `_astro/` (bundled assets, optimized images), `_server_islands/` (server islands, Chapter 9), `_actions/` (actions, Chapter 11).
+1.  Reserved routes: `_astro/` (bundled assets, optimized images), `_server-islands/` (server islands, Chapter 9), `_actions/` (actions, Chapter 11).
 2.  Routes with more path segments beat routes with fewer.
 3.  Static routes beat dynamic ones.
 4.  Named parameters (`[page]`) beat rest parameters (`[...slug]`).
@@ -281,7 +281,7 @@ Imported from `astro/fetch`:
 | `pages` | `(state) => Promise<Response>` | Dispatches to the matched page/endpoint/fallback |
 | `i18n` | `(state, response) => Promise<Response>` | Post-processes a response: locale redirects, 404s, fallbacks |
 
-The built-in order, which `astro(state)` reproduces, is the table’s list of stages: trailing slash, redirects, sessions, actions, middleware, pages, i18n, with caching wrapped around rendering.
+The built-in order, which `astro(state)` reproduces, is: trailing slash, redirects, sessions, actions, the custom 404 for unmatched routes (`notFound`), middleware, pages, i18n, with caching wrapped around rendering.
 
 ### Pattern 1: wrap the default pipeline
 
@@ -386,7 +386,7 @@ async function requireAuth(c: any, next: () => Promise<void>) {
 
 A Hono app exports `fetch`, so it satisfies the entrypoint contract. In my test, installing `hono` and exporting the app from `src/fetch.ts` worked, with `Server-Timing` set on pages, endpoints, redirects and the 500 page. Hono gives you routing, typed context variables, validators and ecosystem middleware (CORS, secure headers, rate limiting) before requests reach Astro.
 
-Note the interplay: `state.locals.user` above is only populated if something earlier set it. Your own Hono middleware (before `requireAuth`) or Astro middleware (which runs *after* `middleware()` in the order shown, so too late for a guard placed before it) must populate it. Ordering is the whole point of the feature, and the most common bug.
+Note the interplay: `state.locals.user` above is only populated if something earlier set it. Your own Hono middleware registered before `requireAuth` must populate it. Astro middleware cannot: it runs inside `middleware()`, which is registered after `requireAuth`, so it runs too late for that guard. Ordering is the whole point of the feature, and the most common bug.
 
 ## Authorization pitfalls: do not trust pathname matching
 

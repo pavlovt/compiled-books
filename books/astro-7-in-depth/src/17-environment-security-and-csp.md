@@ -195,7 +195,7 @@ security: {
 Two knobs cap request bodies for built-in endpoints, both defaulting to 1 MB (1048576 bytes):
 
 - `security.actionBodySizeLimit` (since 5.18) for `/_actions/*`.
-- `security.serverIslandBodySizeLimit` (since 6.0) for `/_server_islands/*` POST requests, whose bodies carry encrypted props and slot HTML.
+- `security.serverIslandBodySizeLimit` (since 6.0) for `/_server-islands/*` POST requests, whose bodies carry encrypted props and slot HTML.
 
 Raise them deliberately and only as far as needed (for example, `actionBodySizeLimit: 10 * 1024 * 1024` for an upload action). The Node adapter has its own `bodySizeLimit` (default 1 GB) for the server as a whole (Chapter 8); treat that 1 GB figure as a ceiling that you should lower for public deployments.
 
@@ -244,7 +244,7 @@ content-security-policy: img-src 'self' data:;frame-ancestors 'none'; script-src
 The eight script hashes are not eight scripts you wrote. Astro’s own island bootstrap (the `astro-island` custom element, the directive scripts, the deserializer) is inlined into the page as `<script>` elements, and each one must be allowed. The page also contains a style rule for `astro-island` and your component styles. Two observations follow:
 
 1.  You do not hand-maintain these hashes. They change whenever Astro or your code changes, which is precisely why the feature exists.
-2.  The hashes you do *not* get: any `<script is:inline>` you author is treated like any other inline script and receives a hash, but changes to its content change the hash on rebuild. Dynamic content in an inline script (`define:vars`, interpolated JSON) produces a per-request hash on server-rendered pages; this works because the hash is computed at render time, not only at build time.
+2.  Your own `<script is:inline>` blocks are hashed too, like any other inline script; the hash changes whenever their content changes, which is harmless because it is recomputed on every build. Dynamic content in an inline script (`define:vars`, interpolated JSON) produces a per-request hash on server-rendered pages; this works because the hash is computed at render time, not only at build time.
 
 ### Per-page and runtime configuration
 
@@ -358,7 +358,7 @@ Astro does not ship an authentication system. The guide points to Better Auth, C
 
 - **Cookies.** `Astro.cookies.set(name, value, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge })`. `Astro.cookies` defaults to no `httpOnly` and no `secure`; you must ask. The session cookie, by contrast, defaults to `{ name: 'astro-session', sameSite: 'lax', httpOnly: true, secure: true }`. `secure: true` means local HTTP development needs care: browsers treat `localhost` as secure, which is why it generally works.
 - **Sessions.** Prefer `Astro.session` (Chapter 12) for server-side state: only an opaque ID is in the cookie. Call `session.regenerate()` on privilege change (login) to prevent session fixation, and `session.destroy()` on logout.
-- **Authorization in middleware, not in pages.** Check `context.locals.user` in `onRequest` and redirect or return 401/403 there. Chapter 5 explains why gating by `url.pathname` string matching in advanced-routing pre-processing is unsafe: encoded paths, trailing slashes and rewrites can bypass it. Gate on route patterns or on the resolved resource, not on a pathname you matched yourself.
+- **Authenticate in middleware, authorize at the handler.** Populate `context.locals.user` in `onRequest`; a coarse redirect there for whole protected sections is a useful outer gate, but each page, endpoint and action still checks what it serves (Chapter 10). Chapter 5 explains why gating by `url.pathname` string matching in advanced-routing pre-processing is unsafe: encoded paths, trailing slashes and rewrites can bypass it. Gate on route patterns or on the resolved resource, not on a pathname you matched yourself.
 - **Check at the data layer.** Every action handler and endpoint must authorize independently. `/_actions/*` is a public HTTP surface regardless of where your UI calls it from.
 - **Server islands and personalization.** Props to a server island are encrypted but the island URL is a GET endpoint. Do not assume the island request carries the page’s authorization context unless you read cookies inside the island (which you can; they are sent with the request).
 - **Error pages.** The `error` prop on `500.astro` is `unknown`; never print its stack in production.
@@ -438,13 +438,14 @@ kill $PID
 - CSP hashes Astro’s inline scripts and styles automatically; overriding `resources` replaces defaults, so re-add `'self'`.
 - `kind` (7.1) targets `-elem` and `-attr` directives; default resources are not copied into them.
 - CSP does not work with `<ClientRouter />`, Shiki or the dev server; prefer headers (Node `staticHeaders`) over meta.
-- Authorization belongs in middleware and at the data layer, never in pathname matching.
+- Populate identity in middleware and authorize again at the handler and data layer; never rely on pathname matching.
 
 ## Review Questions
 
 1.  Explain the difference between when `import.meta.env.API_URL` and a `server`/`secret` field from `astro:env/server` receive their values in a server-rendered build.
 2.  Why can you not read `.env` values through `import.meta.env` inside `astro.config.mjs`? Name two workarounds.
 3.  Which of the following `envField` definitions is invalid, and why?
+
     a.  `envField.string({ context: 'server', access: 'secret' })`
     b.  `envField.string({ context: 'client', access: 'public', default: 'x' })`
     c.  `envField.string({ context: 'client', access: 'secret' })`
@@ -473,13 +474,9 @@ kill $PID
 25. A teammate proposes gating `/admin/*` by testing `new URL(request.url).pathname.startsWith('/admin')` in a pre-processing handler in `src/fetch.ts`. Give two reasons this is unsafe and a safer approach.
 26. Multiple choice: which statement about the session cookie defaults is correct?
 
-<!-- -->
-
-a.  `httpOnly: false`, `secure: false`
-b.  `httpOnly: true`, `secure: true`, `sameSite: 'lax'`
-c.  `httpOnly: true`, `sameSite: 'none'`
-d.  No defaults; you must set all options
-
-<!-- -->
+    a.  `httpOnly: false`, `secure: false`
+    b.  `httpOnly: true`, `secure: true`, `sameSite: 'lax'`
+    c.  `httpOnly: true`, `sameSite: 'none'`
+    d.  No defaults; you must set all options
 
 27. Why should `session.regenerate()` be called after login?
