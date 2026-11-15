@@ -34,6 +34,10 @@ def output_name(book):
 CODE_WIDTH = 62
 _ATOM = re.compile(r"<[^>]*>|&[#\w]+;|[^<&]", re.S)
 _PRE = re.compile(r"(<pre\b[^>]*>)(.*?)(</pre>)", re.S)
+# pandoc puts each heading's id on the wrapping <section>. Some readers
+# (SumatraPDF among them) do not resolve links to a <section> id, so TOC
+# entries for subchapters land at the start of the chapter file instead.
+_SECTION_ID = re.compile(r'<section id="([^"]+)"([^>]*)>(\s*)<(h[1-6])>')
 
 
 def _wrap_line(line, width=CODE_WIDTH):
@@ -86,6 +90,7 @@ def wrap_code(epub):
     ebook view among them) ignore CSS wrapping on <pre>. For readers that do
     follow CSS, pandoc's injected `white-space: pre` on highlighted code is
     turned into pre-wrap, and style.css inside the book is refreshed.
+    Heading ids are also moved from their <section> onto the heading itself.
     """
     css = open(os.path.join(ROOT, "style.css"), encoding="utf-8").read()
     tmp = epub + ".tmp"
@@ -100,6 +105,7 @@ def wrap_code(epub):
                 text = re.sub(r"(pre > code\.sourceCode > span \{[^}]*?)display:\s*inline-block;(?! max-width)",
                               r"\1display: inline-block; max-width: 100%;", text)
                 text = _PRE.sub(_wrap_pre, text)
+                text = _SECTION_ID.sub(r'<section\2>\3<\4 id="\1">', text)
                 data = text.encode("utf-8")
             elif name.endswith(".css") and "stylesheet" in os.path.basename(name):
                 data = css.encode("utf-8")
