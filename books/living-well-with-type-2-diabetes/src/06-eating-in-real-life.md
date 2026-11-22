@@ -46,6 +46,20 @@ Here is an example of a day of eating that fits the principles in Chapter 4. Adj
 | Crisps and salty snacks | Raw vegetables with yogurt dip, or a handful of nuts |
 | Sugary coffee drinks | Coffee with milk, no sugar |
 
+## Homemade soup
+
+Homemade chicken, beef or vegetable soup is a good choice with diabetes. It is filling, low in calories, and brings protein and vegetables together. A few things decide how healthy a given soup is:
+
+- **Salt is the main risk.** Stock cubes, packet soups and ready-made broths are very salty. Make the broth yourself, add salt at the end, and season with herbs, lemon, pepper or garlic.
+- **Remove the fat.** Skim it while the soup cooks, or chill the broth and lift off the fat layer. Use skinless chicken and lean beef, such as shin or shoulder.
+- **Add plenty of vegetables:** carrots, celery, onion, peppers, courgettes, cabbage and greens.
+- **Go easy on the starchy parts.** Noodles, rice and potatoes raise blood sugar. Use a little, or use barley, lentils, chickpeas or beans instead.
+- **Zastroyka is fine.** The egg-and-yogurt thickening adds protein and little fat, and is better than thickening with flour.
+- **Eat the meat too.** Most of the protein is in the meat, not the broth, so a bowl with meat and vegetables can be a full meal.
+- **Ignore “bone broth” claims.** There is no good evidence that it does anything special for joints, skin or the gut beyond being a nutritious soup.
+
+A bowl of soup eaten before your bread or other carbohydrates also fits the “vegetables and protein first” rule from Chapter 4.
+
 ## Shopping and reading labels
 
 - **Shop with a list,** and not when you are hungry.

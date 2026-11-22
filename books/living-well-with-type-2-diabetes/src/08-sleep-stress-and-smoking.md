@@ -38,12 +38,39 @@ Living with diabetes is itself stressful. Many people experience **diabetes dist
 **Practical tools:**
 
 - **Physical activity** is one of the most effective stress relievers.
-- **Breathing exercises:** breathe in slowly for 4 seconds and out for 6 seconds, for 5 minutes.
+- **Breathing exercises and meditation,** described below.
 - **Time outdoors,** especially walking in green spaces.
 - **Social contact:** time with family and friends, or a diabetes support group.
 - **Limit news and social media** if they raise your stress.
 - **Break goals into small steps,** and notice progress.
 - **Talk about it.** If you feel low most days for more than two weeks, lose interest in things you used to enjoy, or feel hopeless, tell your doctor. Depression is treatable, and treating it improves diabetes control.
+
+### Slow breathing
+
+Stress hormones tell the liver to release glucose and make cells respond less well to insulin. Slow breathing, about 5–6 breaths a minute, activates the calming “rest and digest” side of the nervous system through the vagus nerve. Within minutes it lowers heart rate and stress hormones. With regular practice it lowers blood pressure by a few mmHg, improves heart rate variability (a marker of a healthy nervous system that is often reduced in diabetes), and helps you fall asleep.
+
+Small studies of breathing and relaxation programmes in type 2 diabetes have shown modest improvements in fasting glucose and HbA1c. The studies are small and mixed, so treat breathing as a helpful extra, not a treatment. Walking, food and medicines have far bigger effects.
+
+**A simple exercise:**
+
+1.  Sit comfortably and relax your shoulders.
+2.  Breathe in slowly through your nose for 4 seconds, letting your belly rise.
+3.  Breathe out slowly through your nose or pursed lips for 6 seconds.
+4.  Continue for 5 minutes, once or twice a day, for example when you feel tense or before bed.
+
+The longer out-breath is what calms the nervous system. If you feel dizzy, slow down or breathe less deeply.
+
+### Meditation
+
+Meditation works in much the same way, and many methods start with slow breathing. It also adds:
+
+- **Less diabetes distress.** Mindfulness programmes reliably reduce stress, anxiety and low mood in people with diabetes, which makes it easier to keep up good habits.
+- **Better eating habits.** Mindfulness helps you notice real hunger and fullness, and catch stress or boredom eating before it happens.
+- **A small effect on blood sugar.** Reviews of mindfulness programmes in type 2 diabetes found modest improvements in HbA1c and fasting glucose, from small studies of varying quality.
+
+To start, sit for 5–10 minutes a day with your eyes closed and focus on the feeling of your breath. When your mind wanders, which it will, notice it without judging yourself and bring your attention back. You can also practise **mindful walking** on your after-meal walk: leave your phone in your pocket and pay attention to your steps, your surroundings and your breathing. You get the blood sugar benefit and the calming effect together.
+
+Free apps make it easier. **Medito** (run by a nonprofit, no ads) has step-by-step beginner courses, and **Insight Timer** has the largest free library of guided sessions and a timer for practising on your own. **The Breathing App** paces the slow in- and out-breaths described above. Headspace and Calm are polished but mostly paid. What counts is doing it regularly, even for a few minutes a day.
 
 ## Smoking
 

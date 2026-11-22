@@ -73,8 +73,10 @@ Diabetic kidney disease develops silently for years. The first sign is albumin l
 5.  **Ask about a GLP-1 receptor agonist.** Semaglutide has been shown to slow kidney disease progression in people with type 2 diabetes.
 6.  **Control blood sugar.**
 7.  **Avoid kidney-harming medicines:** regular use of ibuprofen, diclofenac and other NSAIDs can damage kidneys. Use paracetamol for occasional pain, and ask your pharmacist.
-8.  **Stay hydrated,** and follow your sick-day rules.
-9.  **Do not smoke.**
+8.  **Stay hydrated,** and follow your sick-day rules. This matters more with SGLT2 inhibitors such as Xigduo, which remove glucose and some water through the urine.
+9.  **Eat less salt,** under 5 g a day. Salt raises blood pressure and strains the kidneys.
+10. **Eat normal amounts of protein,** not very high amounts. If tests show kidney disease, ask your doctor what amount is right for you.
+11. **Do not smoke,** and limit alcohol.
 
 ## Heart failure
 

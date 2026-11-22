@@ -25,7 +25,7 @@ Foot problems are among the most serious and most preventable complications of d
 4.  **Cut toenails straight across** and file sharp edges. If you have nerve damage, poor vision or thick nails, see a podiatrist.
 5.  **Never walk barefoot,** even at home.
 6.  **Wear well-fitting shoes** with enough room for your toes, and check inside them for stones or rough seams before putting them on.
-7.  **Wear clean, seamless socks** and change them daily.
+7.  **Wear clean, seamless socks** and change them daily, or more often if your feet sweat. Damp or dirty socks feed athlete’s foot and nail fungus, which crack the skin and let bacteria in. Choose cotton, wool or moisture-wicking blends rather than nylon, and avoid tight elastic tops that leave marks; “diabetic socks” have loose tops and flat seams. Light-coloured socks show blood or discharge from a wound you cannot feel. Do not wear darned socks or socks with holes, which create pressure points. Dry well between your toes before putting socks on.
 8.  **Do not treat corns or calluses yourself** with blades or corn plasters. See a podiatrist.
 9.  **Avoid heating pads and hot water bottles** on your feet.
 
