@@ -37,7 +37,7 @@ Big changes are easier in small steps. This plan builds one habit at a time over
 
 **Week 9 – Swap the snacks.** Replace sweets, pastries and salty snacks with nuts, yogurt, fruit or vegetables. Keep tempting foods out of the house.
 
-**Week 10 – Stress.** Add one daily stress-relief habit: a walk outdoors, a breathing exercise, or time with friends.
+**Week 10 – Stress.** Add one daily stress-relief habit: a walk outdoors, 5 minutes of slow breathing or meditation (Chapter 7), or time with friends.
 
 **Week 11 – Intensity.** If your doctor agrees, add short higher-intensity intervals to two cardio sessions a week.
 

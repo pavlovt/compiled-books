@@ -11,7 +11,7 @@ The 2026 American Diabetes Association Standards of Care and European guidelines
 | Group | Examples | How it works | Main benefits | Main cautions |
 |---------------|---------------|---------------|---------------|---------------|
 | Biguanide | Metformin | Reduces glucose release by the liver; improves insulin sensitivity | Effective, cheap, weight-neutral, very low risk of low blood sugar | Stomach upset; vitamin B12 deficiency over years; stop temporarily when dehydrated or before some scans |
-| SGLT2 inhibitors | Dapagliflozin, empagliflozin, canagliflozin | Make the kidneys pass extra glucose into the urine | Protect the heart and kidneys; reduce heart failure; modest weight and blood pressure loss | Genital yeast infections; dehydration; rare ketoacidosis, even with normal sugar |
+| SGLT2 inhibitors | Dapagliflozin, empagliflozin, canagliflozin | Make the kidneys pass extra glucose into the urine | Protect the heart and kidneys; reduce heart failure; modest weight loss and lower blood pressure | Genital yeast infections; dehydration; rare ketoacidosis, even with normal sugar |
 | GLP-1 receptor agonists | Semaglutide, dulaglutide, liraglutide | Boost insulin after meals, slow stomach emptying, reduce appetite | Strong HbA1c and weight reduction; several protect the heart and kidneys | Nausea at first; expensive; injections for most |
 | GIP/GLP-1 agonist | Tirzepatide | Acts on two gut hormone receptors | Largest HbA1c and weight reductions | Nausea; cost |
 | DPP-4 inhibitors | Sitagliptin, linagliptin, vildagliptin | Prolong the action of your own GLP-1 | Well tolerated, weight-neutral | Modest effect |

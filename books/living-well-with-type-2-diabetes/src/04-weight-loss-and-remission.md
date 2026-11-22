@@ -43,7 +43,7 @@ There is no single best diet. Low-fat, low-carbohydrate, Mediterranean and meal-
 ## Structured options to discuss with your doctor
 
 - **Meal-replacement programmes.** Formula shakes or soups replacing some or all meals for a period, followed by careful food reintroduction. This is the DiRECT approach. It is very effective but needs supervision and medicine adjustment.
-- **Weight-loss medicines.** GLP-1 receptor agonists such as semaglutide, and the combined GIP/GLP-1 agonist tirzepatide, lower blood sugar and typically produce 10–20% weight loss over a year or more. Many of them also protect the heart and kidneys. They are covered in Chapter 8. They are not a substitute for healthy habits; muscle loss is a risk if protein intake and strength training are low.
+- **Weight-loss medicines.** GLP-1 receptor agonists such as semaglutide, and the combined GIP/GLP-1 agonist tirzepatide, lower blood sugar and typically produce about 5–15% weight loss over a year or more in people with type 2 diabetes, with the largest losses on higher doses of tirzepatide. Many of them also protect the heart and kidneys. They are covered in Chapter 8. They are not a substitute for healthy habits; muscle loss is a risk if protein intake and strength training are low.
 - **Metabolic surgery.** For people with a BMI of 35 or more (sometimes lower) whose diabetes is hard to control, surgery such as a gastric bypass leads to remission in many cases. It is a major decision with lifelong follow-up.
 
 ## Keeping it off

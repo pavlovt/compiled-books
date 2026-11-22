@@ -25,9 +25,19 @@ Foot problems are among the most serious and most preventable complications of d
 4.  **Cut toenails straight across** and file sharp edges. If you have nerve damage, poor vision or thick nails, see a podiatrist.
 5.  **Never walk barefoot,** even at home.
 6.  **Wear well-fitting shoes** with enough room for your toes, and check inside them for stones or rough seams before putting them on.
-7.  **Wear clean, seamless socks** and change them daily, or more often if your feet sweat. Damp or dirty socks feed athlete’s foot and nail fungus, which crack the skin and let bacteria in. Choose cotton, wool or moisture-wicking blends rather than nylon, and avoid tight elastic tops that leave marks; “diabetic socks” have loose tops and flat seams. Light-coloured socks show blood or discharge from a wound you cannot feel. Do not wear darned socks or socks with holes, which create pressure points. Dry well between your toes before putting socks on.
+7.  **Wear clean, seamless socks** and change them daily, or more often if your feet sweat. See “Choosing socks” below.
 8.  **Do not treat corns or calluses yourself** with blades or corn plasters. See a podiatrist.
 9.  **Avoid heating pads and hot water bottles** on your feet.
+
+### Choosing socks
+
+Damp or dirty socks feed athlete’s foot and nail fungus, which crack the skin and let bacteria in. A sock that is too tight or worn through can cause a pressure sore you do not feel.
+
+- **Choose cotton, wool or moisture-wicking blends,** not plain nylon socks that trap sweat.
+- **Avoid tight elastic tops** that leave marks, because they reduce circulation. “Diabetic socks” have loose tops and flat or no seams.
+- **Wear light-coloured socks,** which show blood or discharge from a wound you cannot feel.
+- **Throw away socks with holes or darns,** which create pressure points.
+- **Dry well between your toes** before putting socks on.
 
 ### Annual foot examination
 
@@ -91,7 +101,7 @@ Recommendations vary by country and change over time, so check with your doctor 
 - **Hearing:** hearing loss is more common in diabetes. Get a hearing check if you notice problems.
 - **Bones:** diabetes increases fracture risk. Strength training, enough protein, calcium and vitamin D, and preventing falls all help.
 - **Mood and memory:** good diabetes control, exercise and blood pressure control protect the brain.
-- **Cancer screening:** type 2 diabetes is linked to higher risk of some cancers, including colorectal and liver cancer. Keep up with recommended screening, such as bowel cancer screening from age 50.
+- **Cancer screening:** type 2 diabetes is linked to higher risk of some cancers, including colorectal and liver cancer. Keep up with recommended screening, such as bowel cancer screening, which usually starts at age 45–50.
 
 > **What to do**
 >

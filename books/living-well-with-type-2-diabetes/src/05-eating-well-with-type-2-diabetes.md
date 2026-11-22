@@ -61,13 +61,13 @@ Increase fibre gradually over 2–3 weeks and drink more water, or you may feel 
 
 Protein has little effect on blood sugar and helps you feel full. During weight loss, it protects your muscles, and after age 50 muscle loss accelerates. A reasonable goal for most people with normal kidney function is 1.0–1.2 g of protein per kg of body weight per day, spread across meals. If you have kidney disease, ask your doctor about the right amount.
 
-Good sources: fish (especially oily fish such as mackerel, sardines and salmon, twice a week), chicken and turkey, eggs, plain yogurt and kefir, cottage cheese, white cheese in moderation, beans, lentils, chickpeas and tofu. Limit processed meats such as sausages, lukanka, salami and ham; they are linked to heart disease and contain a lot of salt.
+Good sources: fish (especially oily fish such as mackerel, sardines and salmon, twice a week), chicken and turkey, eggs, plain yogurt and kefir, cottage cheese, white cheese in moderation, beans, lentils, chickpeas and tofu. Limit processed meats such as sausages, lukanka, salami and ham; they are linked to heart disease and contain a lot of salt (see “Meat” below).
 
 ### Fish: farmed or wild?
 
 Many people worry that farmed fish is bad for health. The worry comes mostly from a large 2004 study that found more PCBs and dioxins in farmed salmon than in wild salmon, especially from some European farms. Since then, limits on contaminants in fish feed have been tightened and levels in farmed fish have fallen. Salmon, farmed or wild, is also among the fish lowest in mercury. Risk–benefit analyses agree that for people at raised heart risk, which includes most people with diabetes, the benefits of eating fish far outweigh the risks from pollutants.
 
-Farmed salmon is fattier than wild salmon, with more saturated fat and a less favourable balance of omega-3 to omega-6 fats. Because it is fattier, a fillet still gives about as much omega-3.
+Farmed salmon is fattier than wild salmon, with more saturated fat and a less favourable balance of omega-3 to omega-6 fats. Because it is fattier, though, a fillet of farmed salmon gives about as much omega-3 as a wild one.
 
 - **Make small oily fish your main fish.** Mackerel, sardines, sprats and herring are almost always wild-caught, cheap, rich in omega-3 and low in contaminants.
 - **Vary the fish you eat,** rather than eating the same one every week.
@@ -76,14 +76,14 @@ Farmed salmon is fattier than wild salmon, with more saturated fat and a less fa
 
 ### Meat: lean, fresh and not too often
 
-- **Lean fresh pork is fine.** Tenderloin, loin and lean chops are good protein, comparable to chicken, and rich in B vitamins, including B12, which matters if you take metformin long-term.
+- **Lean fresh pork is fine.** Tenderloin, loin and lean chops are good protein, comparable to chicken. Pork is rich in B vitamins and a source of B12, which matters if you take metformin long-term.
 - **Cut down on fatty cuts:** pork belly, neck (vrat), ribs, lard and crackling. They are high in saturated fat, which raises LDL cholesterol.
-- **Chicken leg is fine without the skin.** Skinless leg meat has two to three times the fat of breast, which is still moderate, and more iron and zinc. The skin roughly doubles the fat. One leg, about 120–150 g of meat, fills the protein quarter of the plate.
+- **Chicken leg is fine without the skin.** Skinless leg meat has two to three times the fat of breast, which is still moderate, and more iron and zinc. The skin adds much more fat, much of it saturated. One leg (thigh and drumstick), about 120–150 g of meat, fills the protein quarter of the plate.
 - **Count pork, beef, lamb and veal as red meat,** and keep to about 2–3 portions a week in total. Fill the other days with fish, poultry, eggs and legumes.
-- **Keep processed meat occasional.** The World Health Organization classifies processed meat as a cause of bowel cancer, and it is very salty. This includes sausages, lukanka, salami, ham, bacon and kebapcheta made from mixed minced meat.
+- **Keep processed meat occasional.** This means cured, smoked or salted meat such as sausages, lukanka, salami, ham and bacon. The World Health Organization classifies processed meat as a cause of bowel cancer, and it is also very salty. Shop-bought kebapcheta and kyufteta are often fatty and salty too, so eat them only now and then.
 - **Grill, bake or stew** meat with vegetables rather than frying it or charring it on a barbecue.
 
-**Why lean cuts matter.** Saturated fat raises LDL cholesterol, and heart disease is the main cause of serious illness in diabetes. Fat has more than twice the calories of protein (9 kcal per gram against 4), so a fatty cut can have twice the calories of a lean one of the same size. Diets high in saturated fat also worsen insulin resistance and encourage liver fat.
+**Why lean cuts matter.** Saturated fat raises LDL cholesterol, and heart disease is the leading cause of death in people with diabetes. Fat has more than twice the calories of protein (9 kcal per gram against 4), so a fatty cut can have twice the calories of a lean one of the same size, or more. Diets high in saturated fat also tend to worsen insulin resistance and encourage liver fat.
 
 ## Fats
 
@@ -97,7 +97,7 @@ The goal is to replace animal fat with these better fats, not to avoid fat compl
 
 ### Cooking oils
 
-**Extra virgin olive oil** has the strongest evidence of any oil. In PREDIMED it was part of the diet that reduced heart attacks and strokes, and it also lowered the risk of developing diabetes. It is mostly monounsaturated fat, contains protective polyphenols and stays stable when heated, so it suits everyday cooking such as sautéing, stewing and baking, not just salads.
+**Extra virgin olive oil** has the strongest evidence of any oil. In PREDIMED, the Mediterranean diet with extra olive oil reduced heart attacks and strokes, and among participants who did not have diabetes it also lowered the risk of developing it. Olive oil is mostly monounsaturated fat, contains protective polyphenols and is more stable than seed oils when heated, so it suits everyday cooking such as sautéing, stewing and baking, not just salads.
 
 **Sunflower oil** is fine to use, and much better than butter, lard or palm oil. It is mostly polyunsaturated fat, which lowers LDL cholesterol when it replaces animal fat. Claims online that seed oils are “toxic” are not supported by good evidence. Its weak point is high heat: it oxidises more easily than olive oil when frying, especially when the oil is reheated. “High oleic” sunflower oil is more heat-stable.
 

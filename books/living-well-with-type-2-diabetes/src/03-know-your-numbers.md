@@ -4,7 +4,7 @@ You cannot manage what you do not measure. This chapter lists the numbers that m
 
 ## HbA1c: your three-month average
 
-HbA1c (glycated haemoglobin) measures how much glucose is stuck to your red blood cells. Because red blood cells live about three months, HbA1c reflects your average blood sugar over the last 2–3 months. It is the main number your doctor uses to judge diabetes control.
+HbA1c (glycated haemoglobin) measures how much glucose is stuck to the haemoglobin in your red blood cells. Because red blood cells live about three months, HbA1c reflects your average blood sugar over the last 2–3 months. It is the main number your doctor uses to judge diabetes control.
 
 | HbA1c (%) | HbA1c (mmol/mol) | Approximate average glucose |
 |-----------|------------------|-----------------------------|
@@ -16,7 +16,7 @@ HbA1c (glycated haemoglobin) measures how much glucose is stuck to your red bloo
 
 **Usual target:** below 7% (53 mmol/mol) for most adults. A lower target, such as below 6.5%, may suit people early in the disease if it can be reached safely without low blood sugar. A higher target, such as below 8%, may suit older people or those with other serious illnesses.
 
-Every 1 percentage point reduction in HbA1c lowers the risk of eye, kidney and nerve complications substantially. Getting from 9% to 8% is worth almost as much as getting from 8% to 7%, so progress at any level counts.
+Every 1 percentage point reduction in HbA1c lowers the risk of eye, kidney and nerve complications substantially. Getting from 9% to 8% is worth at least as much as getting from 8% to 7%, so progress at any level counts.
 
 **How often:** every 3 months when treatment is changing or above target; every 6 months when stable and at target.
 
@@ -60,7 +60,7 @@ Other numbers on the lipid panel are **HDL cholesterol** (higher is better), **t
 
 Two tests together show how your kidneys are doing:
 
-- **eGFR** (estimated glomerular filtration rate), from a blood test of creatinine. It estimates how well your kidneys filter. Above 90 mL/min/1.73 m² is normal; below 60 means chronic kidney disease.
+- **eGFR** (estimated glomerular filtration rate), from a blood test of creatinine. It estimates how well your kidneys filter. Above 90 mL/min/1.73 m² is normal; below 60 for more than 3 months means chronic kidney disease.
 - **Urine albumin-to-creatinine ratio (UACR),** from a urine sample. It detects small amounts of protein leaking into the urine, which is the earliest sign of kidney damage. Normal is below 3 mg/mmol (30 mg/g).
 
 **How often:** at least once a year, more often if either is abnormal. Ask specifically for the urine test: it is often skipped, yet it catches damage years earlier than eGFR.

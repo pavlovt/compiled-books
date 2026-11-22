@@ -16,6 +16,7 @@ This book is based on major clinical guidelines and well-known trials. Figures a
 - UK Prospective Diabetes Study (UKPDS) and its 10-year follow-up. *N Engl J Med* 2008.
 - Steno-2 study. Gæde P et al. *N Engl J Med* 2003 and 2008.
 - PREDIMED trial. Estruch R et al. *N Engl J Med* 2018.
+- Salas-Salvadó J et al. Prevention of diabetes with Mediterranean diets: a subgroup analysis of a randomized trial. *Ann Intern Med* 2014.
 - Hites RA et al. Global assessment of organic contaminants in farmed salmon. *Science* 2004.
 - Mozaffarian D, Rimm EB. Fish intake, contaminants, and human health: evaluating the risks and the benefits. *JAMA* 2006.
 - Bouvard V et al. Carcinogenicity of consumption of red and processed meat. *Lancet Oncol* 2015.

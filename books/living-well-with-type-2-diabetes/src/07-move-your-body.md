@@ -32,11 +32,11 @@ If you cannot walk outside, walk around the house, climb stairs, or use an exerc
 
 ## When to exercise
 
-The most important thing is to exercise at a time you can keep to. For blood sugar, the best moments are right after meals, especially after dinner, which is usually the highest point of the day.
+The most important thing is to exercise at a time you can keep to. For blood sugar, the best moments are the walks after meals described above, especially after dinner, when blood sugar is usually at its highest of the day.
 
 - **Fit longer workouts wherever they suit you.** Brisk walking, cycling or strength training can go in the morning, afternoon or early evening. Late-afternoon or evening sessions may give slightly better blood sugar control, but the difference is small compared with simply exercising regularly.
 - **Finish hard exercise 2–3 hours before bed,** because late, intense workouts can disturb sleep. A gentle walk after dinner is fine.
-- **Avoid hard exercise on an empty stomach** until you know how your body responds.
+- **Avoid hard exercise on an empty stomach** until you know how your body responds, especially if you take insulin or a sulfonylurea, which can cause low blood sugar.
 
 A simple routine is a short walk after lunch and dinner every day, plus 2–3 strength sessions a week at whatever time is convenient.
 
@@ -86,7 +86,7 @@ Talk to your doctor before starting high-intensity exercise if you have heart di
 - **Count everything:** stairs, cycling to work, gardening, playing with grandchildren.
 - **Use a step counter.** If you currently walk 4,000 steps a day, aim for 6,000, then 8,000. Benefits continue to rise up to about 8,000–10,000 steps a day.
 - **Have a bad-weather plan:** an exercise bike, a home routine, or a mall walk.
-- **Use an app if it helps.** Your phone’s built-in health app (Samsung Health, Google Fit or Apple Health) counts steps and active minutes, which is enough to track after-meal walks and the 150-minute target. For home strength training, Nike Training Club has free beginner and low-impact workouts you can filter by length; FitOn suits people who prefer following a class. Hevy is a free log for your own routine if you want to track sets and progress. Start at the easiest level and build up gradually. Apps and their free features change, so pick one you actually use.
+- **Use an app if it helps.** Your phone’s built-in health app (Samsung Health, Google Fit or Apple Health) counts steps and active minutes, which is enough to track after-meal walks and the 150-minute target. For home strength training, Nike Training Club has free beginner and low-impact workouts you can filter by length; FitOn has free video classes for people who prefer following an instructor. Hevy is a free log for your own routine if you want to track sets and progress. Start at the easiest level and build up gradually. Apps and their free features change, so pick one you actually use.
 
 > **What to do**
 >
