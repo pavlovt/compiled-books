@@ -7,6 +7,7 @@ Markdown sources for books compiled with Claude, and the script that builds them
 | `books/svelte-5-in-depth/` | *Svelte 5 in Depth*: runes, the compiler and reactivity internals | `Svelte-5-in-Depth.epub` |
 | `books/sveltekit-3-in-depth/` | *SvelteKit 3 in Depth*: routing, data, remote functions and deployment | `SvelteKit-3-in-Depth.epub` |
 | `books/astro-7-in-depth/` | *Astro 7 in Depth*: islands, content and the server with Svelte 5 | `Astro-7-in-Depth-with-Svelte.epub` |
+| `books/living-well-with-type-2-diabetes/` | *Living Well with Type 2 Diabetes*: a practical guide to the things that matter most | `Living-Well-with-Type-2-Diabetes.epub` |
 
 Each Svelte-family book has 20 chapters, a preface, answers to the chapter review questions, six final tests and their answer key.
 
