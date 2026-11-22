@@ -16,7 +16,7 @@ Each Svelte-family book has 20 chapters, a preface, answers to the chapter revie
 ```
 build.py                 builds the EPUBs into dist/
 style.css                shared stylesheet for every book
-fonts/                   Charis, embedded in every EPUB (SIL OFL, see fonts/LICENSE.txt)
+fonts/                   Source Sans 3, embedded in every EPUB (SIL OFL, see fonts/LICENSE.txt)
 books/<name>/meta.yaml   title page, EPUB metadata, output file name
 books/<name>/cover.png   cover image (optional)
 books/<name>/src/NN-*.md one file per chapter, test or answer key
