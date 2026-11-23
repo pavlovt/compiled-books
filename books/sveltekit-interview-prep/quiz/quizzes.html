@@ -1,0 +1,737 @@
+<title>SvelteKit Prep Quizzes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: exam sheet. Quiz picker on top, sticky quiz bar, a question map beside one question card. */
+:root {
+  --ink: #1d2230;
+  --ink-soft: #545c70;
+  --paper: #f6f7fa;
+  --sheet: #ffffff;
+  --rule: #dde1ea;
+  --accent: #e0461b;
+  --accent-ink: #ffffff;
+  --accent-soft: #fde9e2;
+  --good: #1f7a4d;
+  --good-soft: #e1f3e9;
+  --warn: #9a6400;
+  --warn-soft: #fbf0d6;
+  --bad: #b3261e;
+  --bad-soft: #fbe4e2;
+  --code-bg: #f0f2f7;
+  --font-display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink: #e7e9f0; --ink-soft: #a3aabb; --paper: #12151d; --sheet: #1a1e29; --rule: #2d3342;
+    --accent: #ff6a3d; --accent-ink: #1a0d07; --accent-soft: #3a2018;
+    --good: #5fd39a; --good-soft: #15301f; --warn: #f0bd5a; --warn-soft: #342a12;
+    --bad: #ff8a80; --bad-soft: #3a1b1b; --code-bg: #232836;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e7e9f0; --ink-soft: #a3aabb; --paper: #12151d; --sheet: #1a1e29; --rule: #2d3342;
+  --accent: #ff6a3d; --accent-ink: #1a0d07; --accent-soft: #3a2018;
+  --good: #5fd39a; --good-soft: #15301f; --warn: #f0bd5a; --warn-soft: #342a12;
+  --bad: #ff8a80; --bad-soft: #3a1b1b; --code-bg: #232836;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--paper);
+}
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+
+/* Header */
+.masthead { padding-block: 28px 18px; }
+.masthead h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4vw, 34px); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.masthead p { margin: 6px 0 0; color: var(--ink-soft); max-width: 66ch; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+
+/* Quiz picker */
+.picker { display: grid; gap: 14px; }
+.group h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; font-weight: 600; }
+.cards { display: grid; gap: 8px; }
+.cards.daily { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cards.final { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.qcard {
+  text-align: left; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 10px 12px; display: grid; gap: 2px; align-content: start; min-width: 0;
+}
+.qcard:hover { border-color: var(--ink-soft); }
+.qcard[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.qcard .c-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.qcard .c-topic { color: var(--ink-soft); font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.qcard .c-score { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); flex: none; }
+.dot.good { background: var(--good); }
+.dot.ok { background: var(--warn); }
+.dot.low { background: var(--bad); }
+.dot.started { background: var(--ink-soft); }
+.picker-select { display: none; }
+.picker-select label { font-size: 13px; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+.picker-select select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet); }
+
+.current-title { padding-block: 20px 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.current-title h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; text-wrap: balance; }
+.current-title span { color: var(--ink-soft); font-size: 14px; }
+
+/* Sticky bar */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--rule);
+  margin-top: 12px;
+}
+.bar-inner { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-block: 10px; }
+.timer { display: flex; align-items: center; gap: 8px; }
+.clock { font-family: var(--font-mono); font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; min-width: 5ch; }
+.clock.low { color: var(--warn); }
+.clock.out { color: var(--bad); }
+.btn {
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 6px 12px; font-size: 14px; font-weight: 500;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.05); border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.progress { flex: 1 1 220px; display: grid; gap: 4px; min-width: 180px; }
+.progress-label { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; display: flex; justify-content: space-between; gap: 8px; }
+.progress-track { height: 6px; background: var(--rule); border-radius: 99px; overflow: hidden; display: flex; }
+.progress-track span { display: block; height: 100%; }
+.seg-good { background: var(--good); }
+.seg-part { background: var(--warn); }
+.seg-bad { background: var(--bad); }
+.bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; padding-block: 22px 48px; align-items: start; }
+.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); display: grid; gap: 14px; }
+.side h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 0; font-weight: 600; }
+.map { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cell {
+  aspect-ratio: 1; border-radius: 7px; border: 1px solid var(--rule); background: var(--sheet);
+  font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0;
+}
+.cell.s-good { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+.cell.s-part { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.cell.s-bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+.cell.s-seen { border-color: var(--ink-soft); }
+.cell.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cell.dim { opacity: .3; }
+.legend { display: grid; gap: 4px; font-size: 12px; color: var(--ink-soft); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; border: 1px solid; display: inline-block; }
+.filter { display: flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.filter button { flex: 1; border: 0; background: var(--sheet); padding: 6px 8px; font-size: 13px; }
+.filter button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* Question card */
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: clamp(18px, 3vw, 30px); display: grid; gap: 18px; }
+.q-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.q-num { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.chip.open { background: var(--code-bg); color: var(--ink-soft); }
+.prose { font-size: 16px; max-width: 72ch; }
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+.prose p { margin: 0 0 .7em; }
+.prose ol, .prose ul { padding-left: 1.3em; margin: 0 0 .7em; }
+.prose code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 5px; }
+.prose pre { background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 0 0 .8em; line-height: 1.5; tab-size: 4; }
+.prose pre code { background: none; padding: 0; font-size: 13.5px; }
+.q-stem { font-size: 17px; }
+
+.options { display: grid; gap: 8px; }
+.opt {
+  width: 100%; text-align: left; display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: center;
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 10px; padding: 10px 12px;
+}
+.opt:hover:not(:disabled) { border-color: var(--ink-soft); }
+.opt .letter {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px;
+  border: 1px solid var(--rule); font-weight: 600; font-size: 13px; text-transform: uppercase;
+}
+.opt.multi .letter { border-radius: 5px; }
+.opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.opt[aria-checked="true"] .letter { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.opt.is-right { border-color: var(--good); background: var(--good-soft); }
+.opt.is-right .letter { background: var(--good); border-color: var(--good); color: var(--sheet); }
+.opt.is-wrong { border-color: var(--bad); background: var(--bad-soft); }
+.opt.is-wrong .letter { background: var(--bad); border-color: var(--bad); color: var(--sheet); }
+.opt:disabled { opacity: 1; cursor: default; }
+.opt .tag { font-size: 12px; font-weight: 600; }
+.opt.is-right .tag { color: var(--good); }
+.opt.is-wrong .tag { color: var(--bad); }
+
+.notes { display: grid; gap: 6px; }
+.notes label { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.notes textarea {
+  width: 100%; min-height: 120px; resize: vertical; border: 1px solid var(--rule); border-radius: 10px;
+  padding: 10px 12px; font: 14px/1.5 var(--font-body); background: var(--paper); color: var(--ink);
+}
+
+.answer { border: 1px solid var(--rule); border-left: 4px solid var(--good); border-radius: 10px; padding: 14px 16px; background: var(--paper); display: grid; gap: 8px; }
+.answer h3 { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--good); }
+.verdict { font-weight: 600; margin: 0; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+
+.selfmark { display: grid; gap: 8px; }
+.selfmark p { margin: 0; font-size: 14px; font-weight: 600; }
+.marks { display: flex; flex-wrap: wrap; gap: 8px; }
+.mark { border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 7px 14px; font-weight: 500; }
+.mark[aria-pressed="true"].m-good { background: var(--good); border-color: var(--good); color: var(--sheet); }
+.mark[aria-pressed="true"].m-part { background: var(--warn); border-color: var(--warn); color: var(--sheet); }
+.mark[aria-pressed="true"].m-bad { background: var(--bad); border-color: var(--bad); color: var(--sheet); }
+
+.q-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--rule); padding-top: 16px; }
+.q-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.kbd { font-size: 12px; color: var(--ink-soft); align-self: center; }
+
+/* Results */
+.results { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: clamp(18px, 3vw, 28px); display: grid; gap: 16px; margin-bottom: 18px; }
+.results-top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+.big { font-family: var(--font-display); font-weight: 800; font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
+.big small { font-size: 20px; color: var(--ink-soft); font-weight: 600; }
+.results h2 { margin: 0; font-family: var(--font-display); font-size: 20px; }
+.results p { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+.missed { display: flex; flex-wrap: wrap; gap: 6px; }
+.missed button { border: 1px solid var(--rule); background: var(--paper); border-radius: 7px; padding: 4px 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.missed button.part { border-color: var(--warn); color: var(--warn); }
+.missed button.bad { border-color: var(--bad); color: var(--bad); }
+
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; padding: 8px 12px; margin-bottom: 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
+
+@media (max-width: 960px) {
+  .cards.daily { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
+  .main { grid-template-columns: 1fr; }
+  .side { position: static; }
+  .map { grid-template-columns: repeat(10, 1fr); }
+  .legend { grid-auto-flow: column; justify-content: start; gap: 4px 14px; }
+}
+@media (max-width: 560px) {
+  .group { display: none; }
+  .picker-select { display: block; }
+  .map { gap: 4px; }
+  .cell { aspect-ratio: auto; height: 30px; font-size: 12px; border-radius: 6px; }
+  .kbd { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: rise .18s ease-out; }
+  @keyframes rise { from { transform: translateY(4px); } to { transform: none; } }
+}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">SvelteKit Interview Prep</div>
+    <h1>Quizzes</h1>
+    <p>Every quiz in the course: the seven daily quizzes and the three final tests. Pick one below. Multiple-choice questions are graded for you; for open questions, write your answer, reveal the model answer and mark yourself honestly. Your progress is saved in this browser.</p>
+  </header>
+  <nav class="picker" aria-label="Choose a quiz">
+    <div class="group">
+      <h2>Daily quizzes · 15 questions, 15 minutes</h2>
+      <div class="cards daily" id="cards-daily"></div>
+    </div>
+    <div class="group">
+      <h2>Final tests · 25 questions, 30 minutes</h2>
+      <div class="cards final" id="cards-final"></div>
+    </div>
+    <div class="picker-select">
+      <label for="quiz-select">Quiz</label>
+      <select id="quiz-select"></select>
+    </div>
+  </nav>
+  <div class="current-title"><h2 id="quiz-title"></h2><span id="quiz-sub"></span></div>
+</div>
+
+<div class="bar">
+  <div class="wrap bar-inner">
+    <div class="timer">
+      <span class="clock" id="clock">15:00</span>
+      <button class="btn" id="timer-toggle" type="button">Start timer</button>
+    </div>
+    <div class="progress">
+      <div class="progress-label"><span id="progress-text"></span><span id="score-text"></span></div>
+      <div class="progress-track" id="progress-track" aria-hidden="true"></div>
+    </div>
+    <div class="bar-actions">
+      <button class="btn" id="show-results" type="button">Results</button>
+      <button class="btn ghost" id="reset" type="button">Reset quiz</button>
+    </div>
+  </div>
+  <div class="wrap" id="confirm-slot"></div>
+</div>
+
+<div class="wrap main">
+  <aside class="side">
+    <h2>Questions</h2>
+    <div class="filter" role="group" aria-label="Show">
+      <button type="button" id="f-all" aria-pressed="true">All</button>
+      <button type="button" id="f-missed" aria-pressed="false">Missed</button>
+      <button type="button" id="f-todo" aria-pressed="false">Unmarked</button>
+    </div>
+    <div class="map" id="map"></div>
+    <div class="legend">
+      <span><i style="border-color:var(--good);background:var(--good-soft)"></i>Right</span>
+      <span><i style="border-color:var(--warn);background:var(--warn-soft)"></i>Partly</span>
+      <span><i style="border-color:var(--bad);background:var(--bad-soft)"></i>Missed</span>
+    </div>
+  </aside>
+  <section id="stage" aria-live="polite"></section>
+</div>
+
+<script type="application/json" id="quiz-data">[{"id": "day-1", "group": "Daily quizzes", "label": "Day 1", "topic": "Svelte 5 Core", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 1 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>In one sentence each: what does Svelte do at compile time, and what\ndoes it do at run time?<\/p>", "a": "<p>At compile time, Svelte turns each component into JavaScript that\ncreates the DOM and wires reactive expressions to signals. At run time,\na small signals runtime tracks dependencies and re-runs only the effects\nwhose dependencies changed. (Svelte 1, 2)<\/p>"}, {"n": 2, "type": "open", "q": "<p>What is the difference between <code>$state([])<\/code> and\n<code>$state.raw([])<\/code>? When would you choose <code>raw<\/code>?<\/p>", "a": "<p><code>$state([])<\/code> creates a deep proxy: mutations such as\n<code>push<\/code> or <code>arr[0].x = 1<\/code> are reactive.\n<code>$state.raw([])<\/code> is not proxied: only reassignment\n(<code>arr = [...]<\/code>) triggers updates. Choose <code>raw<\/code> for\nlarge data that you replace wholesale, such as API responses. (Svelte\n3)<\/p>"}, {"n": 3, "type": "open", "q": "<p>You write\n<code>let user = $state(fetchedUser); console.log(user === fetchedUser);<\/code>.\nWhat is logged, and why?<\/p>", "a": "<p><code>false<\/code>. <code>$state<\/code> wraps a plain object in a\nproxy; the proxy is a different object from the original. (Svelte 3)<\/p>"}, {"n": 4, "type": "open", "q": "<p>Why does this component not update <code>doubled<\/code> when the\nparent changes <code>count<\/code>? Fix it.<\/p>\n<pre class=\"ts\"><code>let { count } = $props();\nlet doubled = $state(count * 2);<\/code><\/pre>", "a": "<p><code>$state(count * 2)<\/code> captures the initial value only. Use\n<code>let doubled = $derived(count * 2);<\/code>. (Svelte 7)<\/p>"}, {"n": 5, "type": "open", "q": "<p>Name three things you should <em>not<\/em> use <code>$effect<\/code>\nfor, with the alternative for each.<\/p>", "a": "<p>Computing values from state → <code>$derived<\/code>. Reacting to a\nclick or submit → the event handler. Syncing a prop into local state →\n<code>$derived<\/code> (or a writable derived). Synchronising two inputs\n→ a function binding. (Svelte 4)<\/p>"}, {"n": 6, "type": "open", "q": "<p>When does an <code>$effect<\/code> run relative to the DOM update?\nDoes it run during SSR?<\/p>", "a": "<p>After the DOM has been updated, batched in a microtask. Never during\nSSR. (Svelte 4)<\/p>"}, {"n": 7, "type": "open", "q": "<p>What does the function returned from an <code>$effect<\/code> do, and\nwhen is it called?<\/p>", "a": "<p>It is the teardown: it runs before the effect re-runs and when the\ncomponent is destroyed. Use it to clear timers and remove listeners.\n(Svelte 4)<\/p>"}, {"n": 8, "type": "open", "q": "<p><strong>What happens?<\/strong><\/p>\n<pre class=\"ts\"><code>let n = $state(0);\n$effect(() =&gt; { n = n + 1; });<\/code><\/pre>", "a": "<p>The effect reads and writes <code>n<\/code>, so it re-triggers itself\nuntil Svelte throws <code>effect_update_depth_exceeded<\/code>. (Svelte\n4)<\/p>"}, {"n": 9, "type": "open", "q": "<p>How do you emit a “change” event from a Svelte 5 component to its\nparent?<\/p>", "a": "<p>Accept a callback prop, for example <code>onchange<\/code>, and call\nit: <code>onchange?.(value)<\/code>. (Svelte 7)<\/p>"}, {"n": 10, "type": "open", "q": "<p>A module <code>counter.svelte.ts<\/code> contains\n<code>export let count = $state(0); export function inc() { count++; }<\/code>.\nWhat error do you get, and what are two ways to fix it?<\/p>", "a": "<p><code>state_invalid_export<\/code>: a reassigned <code>$state<\/code>\ncannot be exported. Fixes: export an object and mutate a property\n(<code>export const counter = $state({ count: 0 })<\/code>), export\ngetter/setter functions, or use a class instance. (Svelte 3)<\/p>"}, {"n": 11, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: which file can use <code>$state<\/code>?<\/p>", "options": ["<code>utils.ts<\/code>", "<code>store.svelte.ts<\/code>", "<code>+page.server.ts<\/code>", "<code>vite.config.ts<\/code>"], "a": "<ol start=\"2\" type=\"a\">\n<li>Only <code>.svelte<\/code> and\n<code>.svelte.js<\/code>/<code>.svelte.ts<\/code> files can use runes.\n(Svelte 1)<\/li>\n<\/ol>"}, {"n": 12, "type": "open", "q": "<p>What is the difference between <code>$derived(expr)<\/code> and\n<code>$derived.by(fn)<\/code>?<\/p>", "a": "<p><code>$derived(expr)<\/code> takes an expression;\n<code>$derived.by(fn)<\/code> takes a function, for logic that needs\nstatements. They are otherwise the same. (Svelte 4)<\/p>"}, {"n": 13, "type": "open", "q": "<p>Is <code>$derived<\/code> eager or lazy? What does “equality cut-off”\nmean?<\/p>", "a": "<p>Lazy: it recomputes only when read after a dependency changed.\nEquality cut-off: if the recomputed value is identical\n(<code>===<\/code>) to the previous one, dependents are not updated.\n(Svelte 4, 5)<\/p>"}, {"n": 14, "type": "open", "q": "<p>You pass <code>onclick={cart.add}<\/code> where <code>cart<\/code> is a\nclass instance with an <code>add()<\/code> method that uses\n<code>this<\/code>. It breaks. Why, and what is the idiomatic fix?<\/p>", "a": "<p>The method is detached from the instance, so <code>this<\/code> is\n<code>undefined<\/code>. Define it as an arrow-function field\n(<code>add = () =&gt; {…}<\/code>) or use\n<code>onclick={() =&gt; cart.add()}<\/code>. (Svelte 3)<\/p>"}, {"n": 15, "type": "open", "q": "<p>Translate to Svelte 5:\n<code>export let name; $: greeting = 'Hi ' + name; &lt;button on:click={() =&gt; dispatch('greet', greeting)}&gt;<\/code>.<\/p>", "a": "<pre class=\"html\"><code>&lt;script lang=&quot;ts&quot;&gt;\n    let { name, ongreet }: { name: string; ongreet?: (g: string) =&gt; void } = $props();\n    let greeting = $derived(&#39;Hi &#39; + name);\n&lt;/script&gt;\n&lt;button onclick={() =&gt; ongreet?.(greeting)}&gt;Greet&lt;/button&gt;<\/code><\/pre>"}]}, {"id": "day-2", "group": "Daily quizzes", "label": "Day 2", "topic": "Svelte 5 Components", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 2 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>Why should each blocks be keyed, and why is the index a bad key?<\/p>", "a": "<p>Keys let Svelte match DOM nodes and state to items by identity. With\nthe index (or no key), deleting or reordering items makes nodes, input\nvalues and component state stay at a position and attach to the wrong\nitem. (Svelte 6, 18)<\/p>"}, {"n": 2, "type": "open", "q": "<p>What replaced slots in Svelte 5? Show the markup for rendering an\noptional <code>footer<\/code> that receives one string argument.<\/p>", "a": "<p>Snippets. <code>{@render footer?.(title)}<\/code> in the child, with\n<code>footer?: Snippet&lt;[string]&gt;<\/code> in the props; the parent\nwrites <code>{#snippet footer(t)}…{/snippet}<\/code> inside the component\ntags. (Svelte 7)<\/p>"}, {"n": 3, "type": "open", "q": "<p>What does <code>$bindable()<\/code> do, and what happens if a parent\nuses <code>bind:value<\/code> on a prop that is not bindable?<\/p>", "a": "<p>It marks the prop as two-way bindable, so the parent can write\n<code>bind:value<\/code>. Binding to a prop that was not declared with\n<code>$bindable<\/code> is an error: Svelte refuses to bind to a\nnon-bindable prop. (Svelte 7, 8)<\/p>"}, {"n": 4, "type": "open", "q": "<p>You put\n<code>let theme = $state('light'); setContext('theme', theme);<\/code> in\na layout, then later write <code>theme = 'dark'<\/code>. Children do not\nupdate. Why? Fix it.<\/p>", "a": "<p>Context stores the value that was passed; reassigning the local\nvariable creates a new value that context never sees (for primitives, a\ncopy was passed). Put an object in context and mutate it:\n<code>const theme = $state({ current: 'light' }); setContext('theme', theme); theme.current = 'dark';<\/code>.\n(Svelte 12)<\/p>"}, {"n": 5, "type": "open", "q": "<p>List four things that never run during SSR.<\/p>", "a": "<p>Any four of: <code>$effect<\/code>, <code>onMount<\/code>, actions,\nattachments, event handlers, transitions. (Svelte 14)<\/p>"}, {"n": 6, "type": "open", "q": "<p><strong>Find the bug<\/strong> (SvelteKit app, runs on a Node\nserver):<\/p>\n<pre class=\"ts\"><code>// src/lib/user.svelte.ts\nexport const current = $state({ user: null as User | null });\n// set in a layout during SSR from data.user<\/code><\/pre>", "a": "<p>Module-level state is shared by every request on the server, so one\nuser’s data can be rendered for another user. Use context set in the\nlayout (or <code>data<\/code>), not a module singleton. (Svelte 12, 14;\nKit 12)<\/p>"}, {"n": 7, "type": "open", "q": "<p>What causes a hydration mismatch? Give two examples.<\/p>", "a": "<p>The client renders different markup from the server:\n<code>Date.now()<\/code>, <code>Math.random()<\/code>, reading\n<code>window<\/code>/<code>localStorage<\/code> during render, or invalid\nHTML that the browser repairs. (Svelte 14)<\/p>"}, {"n": 8, "type": "open", "q": "<p>Why is <code>{@html}<\/code> dangerous, and what would you do before\nusing it?<\/p>", "a": "<p>It inserts raw HTML without sanitising: stored user content can run\nscripts (XSS). Sanitise on the server with an allow-list sanitiser, or\nrender text instead. (Svelte 6; Kit 15)<\/p>"}, {"n": 9, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: what is the Svelte 5 replacement for\n<code>on:click|preventDefault={submit}<\/code>?<\/p>", "options": ["<code>onclick|preventDefault={submit}<\/code>", "<code>onclick={(e) =&gt; { e.preventDefault(); submit(); }}<\/code>", "<code>on:click={submit} preventDefault<\/code>", "<code>use:preventDefault={submit}<\/code>"], "a": "<ol start=\"2\" type=\"a\">\n<li>Svelte 5 has no event modifiers. (Svelte 6)<\/li>\n<\/ol>"}, {"n": 10, "type": "open", "q": "<p>What is the difference between an action (<code>use:<\/code>) and an\nattachment (<code>{@attach}<\/code>)?<\/p>", "a": "<p>An action runs once after mount, untracked; its parameter is not\nreactive by default; it cannot be used on components. An attachment runs\nin an effect, re-runs when the state it reads changes, and can be passed\nthrough components as a prop. (Svelte 9)<\/p>"}, {"n": 11, "type": "open", "q": "<p>With <code>bind:group<\/code>, what value type do you get for radios\nversus checkboxes?<\/p>", "a": "<p>Radios: the single selected value. Checkboxes: an array of the\nchecked values. (Svelte 8)<\/p>"}, {"n": 12, "type": "open", "q": "<p>When do you choose context over a module-level singleton?<\/p>", "a": "<p>When the state is per component tree or per request (SSR), or when\nyou want different instances in different subtrees (and easy test\ninjection). A singleton is acceptable only for browser-only global\nstate. (Svelte 12)<\/p>"}, {"n": 13, "type": "open", "q": "<p>What does <code>createContext<\/code> return, and what happens if\n<code>get<\/code> is called when no ancestor called <code>set<\/code>?<\/p>", "a": "<p>A <code>[get, set]<\/code> pair (plus <code>has<\/code> since 5.57)\nbound to a private key. Calling <code>get<\/code> with no value set\nthrows <code>missing_context<\/code>. (Svelte 12)<\/p>"}, {"n": 14, "type": "open", "q": "<p>In a test or a library, how do you make reactive state testable\nwithout mounting a component?<\/p>", "a": "<p>Put the logic in a <code>.svelte.ts<\/code> module (a class with\n<code>$state<\/code>/<code>$derived<\/code> fields, or functions taking\ngetters) and unit test it directly; deriveds can be read synchronously.\n(Svelte 16)<\/p>"}, {"n": 15, "type": "open", "q": "<p>What does <code>{#key value}<\/code> do, and when is it the right\ntool?<\/p>", "a": "<p>It destroys and recreates its content whenever the value changes. Use\nit to reset a component’s internal state (for example an editor when the\nselected id changes) or to replay a transition. (Svelte 6)<\/p>"}]}, {"id": "day-3", "group": "Daily quizzes", "label": "Day 3", "topic": "SvelteKit Foundations and Routing", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 3 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>Name the three layers of a SvelteKit app and what each one does.<\/p>", "a": "<p>Svelte compiles components; the Vite plugin generates the route\nmanifest and types and builds the bundles; the adapter turns the build\ninto a deployable artifact for a platform. (Kit 1)<\/p>"}, {"n": 2, "type": "open", "q": "<p>What happens on the first request to a SvelteKit app, and what\nhappens on the next client-side navigation?<\/p>", "a": "<p>The server runs the loads, renders HTML and sends it with the data;\nthe browser hydrates it. On the next navigation the client router\nfetches only the code and data (<code>__data.json<\/code>) and updates\nthe page without a full reload. (Kit 1, 2)<\/p>"}, {"n": 3, "type": "open", "q": "<p>Where does configuration live in SvelteKit 3? What happened to\n<code>$lib<\/code>?<\/p>", "a": "<p>In the options passed to <code>sveltekit({...})<\/code> in\n<code>vite.config.ts<\/code>. <code>$lib<\/code> became <code>#lib<\/code>,\na Node subpath import declared in <code>package.json<\/code>\n<code>\"imports\"<\/code>, used with file extensions. (Kit 1)<\/p>"}, {"n": 4, "type": "open", "q": "<p>Which files in a route directory run only on the server?<\/p>", "a": "<p><code>+page.server.ts<\/code>, <code>+layout.server.ts<\/code>,\n<code>+server.ts<\/code> (and hooks). (Kit 3)<\/p>"}, {"n": 5, "type": "open", "q": "<p>What URL(s) does each match: <code>[[lang]]/about<\/code>,\n<code>docs/[...path]<\/code>, <code>(shop)/cart<\/code>?<\/p>", "a": "<p><code>[[lang]]/about<\/code>: <code>/about<\/code> and\n<code>/en/about<\/code> (any single segment).\n<code>docs/[...path]<\/code>: <code>/docs<\/code>, <code>/docs/a<\/code>,\n<code>/docs/a/b/c<\/code>. <code>(shop)/cart<\/code>: <code>/cart<\/code>;\nthe group does not appear in the URL. (Kit 3)<\/p>"}, {"n": 6, "type": "open", "q": "<p>Write a matcher that accepts only positive integers and makes\n<code>params.id<\/code> a number.<\/p>", "a": "<p>In <code>src/params.ts<\/code>:\n<code>export const params = defineParams({ id: (p) =&gt; (/^[1-9]\\d*$/.test(p) ? Number(p) : undefined) });<\/code>\nand a directory <code>[id=id]<\/code>. (Kit 3)<\/p>"}, {"n": 7, "type": "open", "q": "<p>A <code>[id=number]<\/code> matcher rejects <code>/items/abc<\/code>.\nDoes the user get a 404 immediately? Explain.<\/p>", "a": "<p>No: the route simply does not match, and the router tries the next\nroute. Only if nothing matches is it a 404. (Kit 3)<\/p>"}, {"n": 8, "type": "open", "q": "<p>Both <code>src/routes/blog/new/+page.svelte<\/code> and\n<code>src/routes/blog/[slug]/+page.svelte<\/code> exist. Which renders\nfor <code>/blog/new<\/code>?<\/p>", "a": "<p><code>blog/new<\/code>: static segments are more specific than\nparameters. (Kit 3)<\/p>"}, {"n": 9, "type": "open", "q": "<p>What is a layout group, and why would you use one?<\/p>", "a": "<p>A directory in parentheses: routes inside share a layout without the\ngroup name appearing in the URL. For example <code>(marketing)<\/code>\nand <code>(app)<\/code> areas with different layouts. (Kit 3)<\/p>"}, {"n": 10, "type": "open", "q": "<p>You have <code>+page.svelte<\/code> and <code>+server.ts<\/code> in the\nsame directory. Where does a browser <code>GET<\/code> go? Where does a\n<code>DELETE<\/code> go?<\/p>", "a": "<p>A browser <code>GET<\/code> (with <code>Accept: text/html<\/code>) goes\nto the page; <code>DELETE<\/code> always goes to the endpoint. (Kit\n3)<\/p>"}, {"n": 11, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: in SvelteKit 3, which import gives you the current\npage’s URL and params in a component?<\/p>", "options": ["<code>import { page } from '$app/stores'<\/code>", "<code>import { page } from '$app/state'<\/code>", "<code>import { page } from '$app/navigation'<\/code>", "<code>import { getPage } from '@sveltejs/kit'<\/code>"], "a": "<ol start=\"2\" type=\"a\">\n<li>(Kit 12)<\/li>\n<\/ol>"}, {"n": 12, "type": "open", "q": "<p>What does <code>resolve()<\/code> from <code>$app/paths<\/code> do, and\nwhat two SvelteKit 2 exports did it replace?<\/p>", "a": "<p>It builds a URL from a typed route ID and params (prefixing the base\npath), and errors at type-check time for unknown routes or wrong params.\nIt replaced <code>base<\/code> (and <code>assets<\/code>, via\n<code>asset()<\/code>) and <code>resolveRoute<\/code>. (Kit 3)<\/p>"}, {"n": 13, "type": "open", "q": "<p>Name three changes between SvelteKit 2 and 3 that would show up in a\ncode review of old code.<\/p>", "a": "<p>Any three of: <code>$lib<\/code> → <code>#lib<\/code>;\n<code>$app/stores<\/code>/<code>$page<\/code> →\n<code>$app/state<\/code>/<code>page<\/code>; <code>svelte.config.js<\/code>\ngone; <code>$env/*<\/code> → <code>src/env.ts<\/code> and\n<code>$app/env/*<\/code>; <code>invalidateAll<\/code> →\n<code>refreshAll<\/code>;\n<code>pushState<\/code>/<code>replaceState<\/code> → <code>goto<\/code>\nwith <code>shallow<\/code>; <code>base<\/code> → <code>resolve()<\/code>;\n<code>src/params/*.js<\/code> → <code>src/params.ts<\/code>. (Kit 1,\n20)<\/p>"}, {"n": 14, "type": "open", "q": "<p>Why does SvelteKit generate a <code>./$types<\/code> module per route,\nand what makes it appear?<\/p>", "a": "<p>It types <code>params<\/code>, <code>data<\/code>, <code>form<\/code>\nand the load/action signatures for that specific route. It is generated\nby <code>svelte-kit sync<\/code> (run by <code>prepare<\/code>,\n<code>check<\/code>, <code>dev<\/code> and <code>build<\/code>). (Kit\n1)<\/p>"}, {"n": 15, "type": "open", "q": "<p>What does <code>+page@.svelte<\/code> do?<\/p>", "a": "<p>It makes the page break out of its intermediate layouts and use only\nthe root layout. (Kit 3)<\/p>"}]}, {"id": "day-4", "group": "Daily quizzes", "label": "Day 4", "topic": "Data Loading and Form Actions", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 4 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>Give three reasons to choose a server <code>load<\/code> and two\nreasons to choose a universal <code>load<\/code>.<\/p>", "a": "<p>Server: database or filesystem access, secrets/private env, cookies\nand <code>locals<\/code>, batching several dependencies into one request.\nUniversal: calling a public API directly from the browser on navigation;\nreturning non-serialisable values (components, class instances). (Kit\n4)<\/p>"}, {"n": 2, "type": "open", "q": "<p>Why must you be careful about what a server <code>load<\/code>\nreturns? Show the safe pattern.<\/p>", "a": "<p>Everything it returns is serialised into the page and visible in the\nbrowser. Return an explicit projection:\n<code>return { user: { id: u.id, name: u.name } }<\/code>. (Kit 4,\n15)<\/p>"}, {"n": 3, "type": "open", "q": "<p>A page has both <code>+page.server.ts<\/code> and\n<code>+page.ts<\/code>. What does the component’s <code>data<\/code> prop\ncontain?<\/p>", "a": "<p>Only what the universal load returned. The server result is available\nto it as <code>event.data<\/code>, and it must forward any fields it\nwants to keep. (Kit 4)<\/p>"}, {"n": 4, "type": "open", "q": "<p><strong>Find the bug:<\/strong><\/p>\n<pre class=\"ts\"><code>let { data } = $props();\nlet title = $state(data.post.title);<\/code><\/pre>\n<p>The user navigates from <code>/blog/a<\/code> to <code>/blog/b<\/code>\nand the title does not change. Why? Fix it.<\/p>", "a": "<p>The component is reused between <code>/blog/a<\/code> and\n<code>/blog/b<\/code>, and <code>$state(data.post.title)<\/code> only\ncaptured the first value. Use\n<code>let title = $derived(data.post.title);<\/code>. (Kit 4, 12)<\/p>"}, {"n": 5, "type": "open", "q": "<p>Name four ways a <code>load<\/code> function can be made to\nre-run.<\/p>", "a": "<p>Any four of: a param it read changed; the pathname or a search param\nit read changed; it awaited <code>parent()<\/code> and the parent re-ran;\na dependency it declared or fetched was invalidated;\n<code>refreshAll()<\/code> was called (including by\n<code>use:enhance<\/code>). (Kit 5)<\/p>"}, {"n": 6, "type": "open", "q": "<p>Why should you use the <code>fetch<\/code> passed to <code>load<\/code>\ninstead of the global <code>fetch<\/code>? Give three reasons.<\/p>", "a": "<p>It forwards cookies and authorisation headers same-origin; it accepts\nrelative URLs on the server; internal requests skip HTTP; responses from\nuniversal loads are inlined into the HTML and not refetched during\nhydration; it goes through <code>handleFetch<\/code>. (Kit 4)<\/p>"}, {"n": 7, "type": "open", "q": "<p>Your layout <code>load<\/code> redirects anonymous users to\n<code>/login<\/code>. Is the page’s server <code>load<\/code> (which reads\nprivate data) protected? Explain.<\/p>", "a": "<p>No. Loads run in parallel and a client navigation may not re-run the\nlayout load, so the page load can run and return data. Check\n<code>locals.user<\/code> in the page load (and/or in\n<code>handle<\/code>). (Kit 4, 14)<\/p>"}, {"n": 8, "type": "open", "q": "<p><strong>Find the bug:<\/strong><\/p>\n<pre class=\"ts\"><code>try {\n    const user = await getUser();\n    if (!user) redirect(303, &#39;/login&#39;);\n} catch (e) {\n    console.error(e);\n    error(500, &#39;Failed&#39;);\n}<\/code><\/pre>", "a": "<p><code>redirect()<\/code> throws, and the catch-all swallows it and\nturns it into a 500. Rethrow with\n<code>if (isRedirect(e)) throw e;<\/code> or move the redirect outside\nthe <code>try<\/code>. (Kit 4, 10)<\/p>"}, {"n": 9, "type": "open", "q": "<p>How do you stream a slow, non-essential part of the page? What can no\nlonger change once streaming has started?<\/p>", "a": "<p>Return an un-awaited promise from a <strong>server<\/strong> load and\nrender it with <code>{#await}<\/code>. After streaming starts, the status\ncode, headers, cookies and redirects can no longer change. (Kit 5)<\/p>"}, {"n": 10, "type": "open", "q": "<p>In what order do the action, the <code>load<\/code> functions and the\nrender happen when a form posts to a page?<\/p>", "a": "<p>The action runs first, then the load functions, then the page renders\nwith the action’s result as <code>form<\/code>. (Kit 6)<\/p>"}, {"n": 11, "type": "open", "q": "<p>What is the difference between <code>return fail(400, {...})<\/code>\nand <code>error(400, ...)<\/code> in an action?<\/p>", "a": "<p><code>fail<\/code> returns data to the page with a status, and the\nform re-renders with <code>form<\/code> populated (a validation error).\n<code>error<\/code> throws and renders the error page\n(<code>+error.svelte<\/code>). (Kit 6)<\/p>"}, {"n": 12, "type": "open", "q": "<p>What does <code>use:enhance<\/code> do with no arguments? Name four\nbehaviours.<\/p>", "a": "<p>It submits with <code>fetch<\/code> without reloading; updates\n<code>form<\/code> and <code>page.status<\/code>; resets the form on\nsuccess; calls <code>refreshAll()<\/code> to re-run loads; follows\nredirects; renders the error boundary on errors. (Kit 6)<\/p>"}, {"n": 13, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: which is true in SvelteKit 3?<\/p>", "options": ["<code>invalidateAll()<\/code> is the recommended way to refresh all\ndata", "An enhanced form posting to another page now navigates to it", "Enhanced failures always return HTTP 200", "<code>fail<\/code> must be thrown"], "a": "<ol start=\"2\" type=\"a\">\n<li>(Kit 6)<\/li>\n<\/ol>"}, {"n": 14, "type": "open", "q": "<p>When should a form use <code>method=\"GET\"<\/code> instead of an\naction?<\/p>", "a": "<p>For read-only operations whose result should be in the URL: search,\nfilters, pagination. (Kit 6)<\/p>"}, {"n": 15, "type": "open", "q": "<p>What is progressive enhancement, and how would you prove in a test\nthat a form has it?<\/p>", "a": "<p>The feature works with plain HTML (a form that posts and a server\nthat renders the result), and JavaScript only improves it. Prove it with\na Playwright test using\n<code>test.use({ javaScriptEnabled: false })<\/code>. (Kit 6, 19)<\/p>"}]}, {"id": "day-5", "group": "Daily quizzes", "label": "Day 5", "topic": "Hooks, Errors, Rendering, State and Environment", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 5 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>Which requests pass through <code>handle<\/code>, and which never\ndo?<\/p>", "a": "<p>All dynamic requests: page renders, <code>__data.json<\/code> data\nrequests, actions, <code>+server<\/code> endpoints, remote calls and\ninternal <code>event.fetch<\/code> sub-requests. Not: static files, built\nassets and prerendered pages (served before SvelteKit runs). (Kit 9)<\/p>"}, {"n": 2, "type": "open", "q": "<p>What is <code>event.locals<\/code>, where is it typed, and what is the\nstandard auth pattern built on it?<\/p>", "a": "<p>A per-request, server-only object, typed as <code>App.Locals<\/code>\nin <code>app.d.ts<\/code>. Pattern: <code>handle<\/code> validates the\nsession cookie and sets <code>locals.user<\/code>; loads, actions and\nendpoints read it. (Kit 9, 14)<\/p>"}, {"n": 3, "type": "open", "q": "<p>With <code>sequence(a, b)<\/code>, in what order do the parts before\nand after <code>resolve<\/code> run?<\/p>", "a": "<p>Before <code>resolve<\/code>: a then b. After <code>resolve<\/code>: b\nthen a. (Kit 9)<\/p>"}, {"n": 4, "type": "open", "q": "<p>What is the difference between an expected and an unexpected error\nfrom the user’s point of view?<\/p>", "a": "<p>An expected error (<code>error(404, 'Not found')<\/code>) shows its\nmessage to the user. An unexpected error shows a generic message;\ndetails are only logged through <code>handleError<\/code>. (Kit 10)<\/p>"}, {"n": 5, "type": "open", "q": "<p>A <code>+layout.server.ts<\/code> at the root throws. Which error page\nrenders?<\/p>", "a": "<p>The static <code>src/error.html<\/code> page (the root layout cannot\nrender <code>+error.svelte<\/code>, which lives inside it). (Kit 10)<\/p>"}, {"n": 6, "type": "open", "q": "<p>What changed about <code>handleError<\/code> in SvelteKit 3?<\/p>", "a": "<p>It receives every error, including <code>error()<\/code> ones, with a\n<code>kind<\/code>; it can return a status; omitted properties are\ninherited; it must not throw. (Kit 10)<\/p>"}, {"n": 7, "type": "open", "q": "<p>Explain <code>prerender<\/code>, <code>ssr<\/code> and\n<code>csr<\/code>. What does a route with <code>csr = false<\/code>\nlose?<\/p>", "a": "<p><code>prerender<\/code>: build-time static HTML.\n<code>ssr = false<\/code>: no server rendering, the page renders only in\nthe browser. <code>csr = false<\/code>: no JavaScript is shipped. With\n<code>csr = false<\/code> you lose hydration, interactivity, client-side\nnavigation and <code>use:enhance<\/code>. (Kit 11)<\/p>"}, {"n": 8, "type": "open", "q": "<p>Why can’t a page with form actions be prerendered?<\/p>", "a": "<p>Prerendered pages are static files; a POST to them cannot run an\naction at request time. (Kit 11)<\/p>"}, {"n": 9, "type": "open", "q": "<p><strong>Find the bug<\/strong> (adapter-node, many users):<\/p>\n<pre class=\"ts\"><code>// src/lib/server/current-user.ts\nlet currentUser: User | null = null;\nexport const setUser = (u: User | null) =&gt; (currentUser = u);\nexport const getUser = () =&gt; currentUser;\n// hooks.server.ts calls setUser(...) on every request<\/code><\/pre>", "a": "<p>Module-level variable on a shared server: concurrent requests\noverwrite each other, so one user can see another’s identity. Use\n<code>event.locals<\/code> (and <code>getRequestEvent()<\/code>). (Kit\n12)<\/p>"}, {"n": 10, "type": "open", "q": "<p>Where should the state of a product list’s filters and sort order\nlive, and why?<\/p>", "a": "<p>In the URL search params: shareable, reload-safe, visible to SSR and\nloads, and Back works. (Kit 12)<\/p>"}, {"n": 11, "type": "open", "q": "<p>How do you open a modal that closes when the user presses Back, in\nSvelteKit 3?<\/p>", "a": "<p><code>goto('', { shallow: true, state: { showModal: true } })<\/code>\nand render on <code>page.state.showModal<\/code>; close with\n<code>history.back()<\/code>. (Kit 12)<\/p>"}, {"n": 12, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: in a SvelteKit 3 component, how do you show a\nspinner during navigation?<\/p>", "options": ["<code>{#if $navigating}<\/code>", "<code>{#if navigating.to}<\/code> with <code>navigating<\/code> from\n<code>$app/state<\/code>", "<code>{#if page.loading}<\/code>", "<code>{#if $page.navigating}<\/code>"], "a": "<ol start=\"2\" type=\"a\">\n<li>(Kit 12)<\/li>\n<\/ol>"}, {"n": 13, "type": "open", "q": "<p>What is the difference between a static and a dynamic environment\nvariable, and which should a database password be?<\/p>", "a": "<p>Static values are inlined into the build; dynamic ones are read when\nthe server starts. A database password should be private and dynamic.\n(Kit 13)<\/p>"}, {"n": 14, "type": "open", "q": "<p>You import <code>#lib/server/db.js<\/code> from a\n<code>+page.svelte<\/code>. What happens, and why might your unit tests\nnot notice?<\/p>", "a": "<p>The build fails, because server-only modules cannot be imported from\nclient code. Vitest disables this check (<code>process.env.TEST<\/code>),\nso unit tests do not notice. (Kit 13, 19)<\/p>"}, {"n": 15, "type": "open", "q": "<p>In SvelteKit 3, how do you declare a public environment variable, and\nhow is that different from SvelteKit 2?<\/p>", "a": "<p>In <code>src/env.ts<\/code> with <code>public: true<\/code> (and\n<code>static: true<\/code> for build-time), then import it from\n<code>$app/env/public<\/code>. In SvelteKit 2, exposure was decided by\nthe <code>PUBLIC_<\/code> prefix and read from\n<code>$env/static/public<\/code> or <code>$env/dynamic/public<\/code>.\n(Kit 13)<\/p>"}]}, {"id": "day-6", "group": "Daily quizzes", "label": "Day 6", "topic": "Testing", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 6 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>Name the three test levels, the tool for each and what each\nproves.<\/p>", "a": "<p>Unit (Vitest in Node): logic, loads, actions, endpoints. Component\n(Vitest browser mode with <code>vitest-browser-svelte<\/code>): a\ncomponent renders and behaves correctly in a real browser. End to end\n(Playwright on the production build): the whole app works for a user,\nincluding routing, SSR, hydration and forms. (Kit 19)<\/p>"}, {"n": 2, "type": "open", "q": "<p>In the scaffolded config, how does Vitest decide whether\n<code>Foo.svelte.spec.ts<\/code> runs in Node or in the browser?<\/p>", "a": "<p>By file name: <code>*.svelte.spec.ts<\/code> runs in the\n<code>client<\/code> project (browser); other <code>*.spec.ts<\/code>\nfiles run in the <code>server<\/code> project (Node). (Kit 19)<\/p>"}, {"n": 3, "type": "open", "q": "<p>Why must a test file that uses <code>$state<\/code> have\n<code>.svelte<\/code> in its name?<\/p>", "a": "<p>Runes are compiled only in files with <code>.svelte<\/code> in the\nname; otherwise <code>$state<\/code> throws\n<code>rune_outside_svelte<\/code>. (Svelte 16)<\/p>"}, {"n": 4, "type": "open", "q": "<p>What does <code>expect.requireAssertions: true<\/code> protect\nagainst?<\/p>", "a": "<p>Tests that never assert anything (for example an <code>expect<\/code>\nin a callback that never runs) would pass silently; with the option they\nfail. (Kit 19)<\/p>"}, {"n": 5, "type": "open", "q": "<p>What is the difference between <code>expect(x)<\/code> and\n<code>await expect.element(locator)<\/code> in a browser-mode test?<\/p>", "a": "<p><code>expect(value)<\/code> checks a value once.\n<code>await expect.element(locator)<\/code> retries the assertion against\nthe page until it passes or times out, which absorbs rendering timing.\n(Kit 19)<\/p>"}, {"n": 6, "type": "open", "q": "<p>How do you test that a component calls its <code>onchange<\/code>\ncallback with the new value?<\/p>", "a": "<p>Pass <code>onchange: vi.fn()<\/code> as a prop, interact, then\n<code>expect(onchange).toHaveBeenCalledWith(newValue)<\/code>. (Kit\n19)<\/p>"}, {"n": 7, "type": "open", "q": "<p>How do you pass a <code>children<\/code> snippet to a component in a\ntest? Give two ways.<\/p>", "a": "<p><code>createRawSnippet(() =&gt; ({ render: () =&gt; '&lt;span&gt;text&lt;/span&gt;' }))<\/code>,\nor a small harness component that renders the component with real\nsnippet markup. (Svelte 16)<\/p>"}, {"n": 8, "type": "open", "q": "<p>A component reads <code>page.url<\/code> from <code>$app/state<\/code>.\nHow do you test it?<\/p>", "a": "<p>Mock the module:\n<code>vi.mock('$app/state', () =&gt; ({ page: { url: new URL('http://localhost/x') } }))<\/code>,\nor refactor the component to take the value as a prop. (Kit 19)<\/p>"}, {"n": 9, "type": "open", "q": "<p>How do you test an <code>$effect<\/code> in a <code>.svelte.ts<\/code>\nmodule? Name the two functions you need.<\/p>", "a": "<p>Create the effect inside <code>$effect.root(...)<\/code>, call\n<code>flushSync()<\/code> after each change, assert, then call the\nreturned cleanup. (Svelte 16)<\/p>"}, {"n": 10, "type": "open", "q": "<p><strong>What is wrong with this test?<\/strong>\n<code>expect(() =&gt; load(event)).toThrow()<\/code> where\n<code>load<\/code> is async and calls <code>error(404)<\/code>.<\/p>", "a": "<p><code>load<\/code> is async, so it returns a rejected promise instead\nof throwing synchronously; <code>toThrow<\/code> on the function does not\nsee it. Use\n<code>await expect(load(event)).rejects.toSatisfy((e) =&gt; isHttpError(e, 404))<\/code>.\n(Kit 19)<\/p>"}, {"n": 11, "type": "open", "q": "<p>Why does the Playwright add-on run against\n<code>npm run build &amp;&amp; npm run preview<\/code> instead of\n<code>npm run dev<\/code>?<\/p>", "a": "<p>To test what ships: the bundled build, real SSR and hydration,\nproduction behaviour (CSRF, preloading). The dev server differs. (Kit\n19)<\/p>"}, {"n": 12, "type": "open", "q": "<p>Your Playwright test fails with “strict mode violation: resolved to 2\nelements”. What does it mean, and how do you fix it?<\/p>", "a": "<p>The locator matched more than one element, and Playwright requires\nexactly one for actions and many assertions. Scope it (a parent locator,\nan accessible name) or use a more specific role. (Playwright docs;\nplaybook)<\/p>"}, {"n": 13, "type": "open", "q": "<p>Describe the hydration race in SvelteKit e2e tests and one way to\navoid it.<\/p>", "a": "<p>Server HTML can be interactive-looking before JavaScript attaches\nhandlers; an early click does a native submit or nothing. Use retrying\nassertions on outcomes, or wait for a hydration marker set in\n<code>onMount<\/code>. (Kit 19)<\/p>"}, {"n": 14, "type": "open", "q": "<p>How would you prove a form works without JavaScript?<\/p>", "a": "<p>A Playwright test with\n<code>test.use({ javaScriptEnabled: false })<\/code> that submits the\nform and checks the result. (Kit 19)<\/p>"}, {"n": 15, "type": "open", "q": "<p>You mock an API with <code>page.route(...)<\/code> in Playwright, but\nthe page still shows real data. Why?<\/p>", "a": "<p><code>page.route<\/code> only intercepts requests made by the browser.\nThe data was fetched on the server during SSR. Stub the upstream on the\nserver side (environment variable, <code>handleFetch<\/code>). (Kit\n19)<\/p>"}]}, {"id": "day-7", "group": "Daily quizzes", "label": "Day 7", "topic": "Remote Functions and Production Breadth", "minutes": 15, "good": 12, "ok": 9, "review": "the Day 7 core notes", "questions": [{"n": 1, "type": "open", "q": "<p>What are remote functions, and what four kinds are there?<\/p>", "a": "<p>Type-safe server functions in <code>*.remote.ts<\/code> files that you\ncall from components; SvelteKit generates the endpoints. Kinds:\n<code>query<\/code>, <code>form<\/code>, <code>command<\/code>,\n<code>prerender<\/code> (plus <code>query.batch<\/code> and\n<code>query.live<\/code>). (Kit 7, 8)<\/p>"}, {"n": 2, "type": "open", "q": "<p>Why must every remote function validate its argument?<\/p>", "a": "<p>Every argument arrives over HTTP and can be forged; a Standard Schema\nvalidates and types it. (Kit 7)<\/p>"}, {"n": 3, "type": "open", "q": "<p>A <code>handle<\/code> hook redirects anonymous users away from\n<code>/admin/*<\/code>. Is an <code>admin.remote.ts<\/code> query called\nfrom <code>/admin/users<\/code> protected? Why?<\/p>", "a": "<p>No. A query request goes to the remote endpoint URL, not\n<code>/admin/users<\/code>, so a path-prefix guard does not see it.\nAuthorise inside the function. (Kit 14)<\/p>"}, {"n": 4, "type": "open", "q": "<p>What flags do remote functions need in SvelteKit 3?<\/p>", "a": "<p><code>experimental: { remoteFunctions: true }<\/code> and\n<code>compilerOptions: { experimental: { async: true } }<\/code>, both\ninside <code>sveltekit({...})<\/code>. (Kit 7)<\/p>"}, {"n": 5, "type": "open", "q": "<p>Why is a guard in <code>+layout.server.ts<\/code> not enough to\nprotect a page’s data?<\/p>", "a": "<p>Page loads run in parallel with layout loads and a navigation may not\nre-run the layout load; the page’s data can be returned anyway. (Kit\n14)<\/p>"}, {"n": 6, "type": "open", "q": "<p>Which cookie attributes would you use for a session cookie, and\nwhy?<\/p>", "a": "<p><code>httpOnly<\/code> (no JavaScript access), <code>secure<\/code>\n(HTTPS only), <code>sameSite: 'lax'<\/code> (CSRF protection), an\nexplicit <code>path: '/'<\/code>, and an expiry. (Kit 14)<\/p>"}, {"n": 7, "type": "open", "q": "<p>What does SvelteKit check to block CSRF, and in which\nenvironments?<\/p>", "a": "<p>The <code>Origin<\/code> header of form-encoded POST/PUT/PATCH/DELETE\nrequests must match the app’s origin (or <code>trustedOrigins<\/code>).\nProduction only; not in <code>vite dev<\/code>. (Kit 15)<\/p>"}, {"n": 8, "type": "open", "q": "<p>Name three sources of XSS in a Svelte app.<\/p>", "a": "<p><code>{@html}<\/code> with untrusted content, <code>javascript:<\/code>\nURLs in <code>href<\/code>, third-party scripts (and verbatim template\nsubstitution). (Kit 15)<\/p>"}, {"n": 9, "type": "open", "q": "<p>What is a waterfall in a SvelteKit app, and how do you fix one?<\/p>", "a": "<p>Requests that wait on each other unnecessarily, for example awaiting\n<code>parent()<\/code> before starting independent work. Start\nindependent promises first, then await; move work to the server and\nbatch. (Kit 16)<\/p>"}, {"n": 10, "type": "open", "q": "<p>Why are <code>__data.json<\/code> responses not cached, and how do you\ncache a public page?<\/p>", "a": "<p>They are private and depend on the user; SvelteKit marks them\n<code>private, no-store<\/code>. Cache a public page with\n<code>setHeaders({ 'cache-control': 'public, max-age=…' })<\/code> in its\nload, or prerender it. (Kit 16)<\/p>"}, {"n": 11, "type": "open", "q": "<p>Which adapter would you use for a Docker deployment, and what must\nyou configure behind a reverse proxy in SvelteKit 3?<\/p>", "a": "<p><code>adapter-node<\/code>. Behind a proxy, set\n<code>paths.origin<\/code> or the\n<code>PROTOCOL_HEADER<\/code>/<code>HOST_HEADER<\/code> (and\n<code>ADDRESS_HEADER<\/code>) variables; <code>ORIGIN<\/code> was removed\nin 3. (Kit 18)<\/p>"}, {"n": 12, "type": "open", "q": "<p>What does <code>npx sv migrate sveltekit-3<\/code> do, and what does\nit leave for you?<\/p>", "a": "<p>It runs migration tasks (config, <code>#lib<\/code>,\n<code>$app/state<\/code>, env, paths, params, shallow routing, imports)\nand writes what it cannot do to <code>MIGRATION_TASKS.md<\/code>.\nBehavioural changes remain for you. (Kit 20)<\/p>"}, {"n": 13, "type": "choice", "correct": ["c"], "q": "<p>Multiple choice: which statement is true?<\/p>", "options": ["Remote functions are stable in SvelteKit 3", "<code>command<\/code> refreshes all queries automatically after it\nruns", "A remote <code>form<\/code> works without JavaScript", "Remote functions can be defined in <code>src/lib/server/<\/code>"], "a": "<ol start=\"3\" type=\"a\">\n<li>(Kit 8)<\/li>\n<\/ol>"}, {"n": 14, "type": "open", "q": "<p>Name two SvelteKit 3 behaviour changes the migration codemod cannot\nfix for you.<\/p>", "a": "<p>Any two of: <code>handleError<\/code> now sees all errors; enhanced\nform failures return real status codes; enhanced cross-page forms\nnavigate; external redirects need <code>{ external: true }<\/code>; CSRF\nalways on in production; <code>ORIGIN<\/code> removed. (Kit 20)<\/p>"}, {"n": 15, "type": "open", "q": "<p>When would you choose form actions over remote forms today?<\/p>", "a": "<p>When you want stable APIs (remote functions are experimental), or\npage-bound forms that are already working; or when a team policy avoids\nexperimental features. (Kit 6)<\/p>"}]}, {"id": "final-1", "group": "Final tests", "label": "Final Test 1", "topic": "Svelte 5", "minutes": 30, "good": 20, "ok": 15, "review": "the core notes for Days 1 and 2", "questions": [{"n": 1, "type": "choice", "correct": ["c"], "q": "<p>Multiple choice: in Svelte 5, when the value of a <code>$state<\/code>\nvariable changes…<\/p>", "options": ["the whole component function runs again", "a virtual DOM diff decides what to patch", "only the effects and template expressions that read it are\nupdated", "nothing happens until <code>tick()<\/code> is called"], "a": "<ol start=\"3\" type=\"a\">\n<li><\/li>\n<\/ol>"}, {"n": 2, "type": "multi", "correct": ["a", "b", "d"], "q": "<p>Which of these files can use <code>$state<\/code>? (Choose all that\napply.)<\/p>", "options": ["<code>Button.svelte<\/code>", "<code>cart.svelte.ts<\/code>", "<code>cart.ts<\/code>", "<code>cart.svelte.spec.ts<\/code>"], "a": "<p>a, b and d. Runes need <code>.svelte<\/code> in the file name.<\/p>"}, {"n": 3, "type": "open", "q": "<p><strong>What does this log after the button is clicked\nonce?<\/strong><\/p>\n<pre class=\"html\"><code>&lt;script lang=&quot;ts&quot;&gt;\n    let count = $state(1);\n    let double = $derived(count * 2);\n    function click() {\n        count++;\n        console.log(double);\n    }\n&lt;/script&gt;\n&lt;button onclick={click}&gt;+&lt;/button&gt;<\/code><\/pre>", "a": "<p><code>4<\/code>. Deriveds are pull-based: reading <code>double<\/code>\nafter <code>count++<\/code> recomputes it synchronously.<\/p>"}, {"n": 4, "type": "open", "q": "<p><strong>Find the bug:<\/strong><\/p>\n<pre class=\"html\"><code>&lt;script lang=&quot;ts&quot;&gt;\n    let { items } = $props();\n    let total = $state(0);\n    $effect(() =&gt; {\n        total = items.reduce((s, i) =&gt; s + i.price, 0);\n    });\n&lt;/script&gt;\n&lt;p&gt;Total: {total}&lt;/p&gt;<\/code><\/pre>", "a": "<p>A value computed from props is written in an effect: it renders once\nwith <code>0<\/code> (and on the server stays <code>0<\/code>), costs an\nextra update, and is the classic effect misuse. Use\n<code>let total = $derived(items.reduce((s, i) =&gt; s + i.price, 0));<\/code>.<\/p>"}, {"n": 5, "type": "open", "q": "<p>Why is <code>$state.raw<\/code> a better choice than\n<code>$state<\/code> for a list of 10,000 rows that you replace after\nevery fetch?<\/p>", "a": "<p><code>$state<\/code> proxies every object and property lazily as it is\nread, which costs memory and time for data you never mutate in place;\n<code>$state.raw<\/code> stores the array as is, and reassignment after\neach fetch is all you need.<\/p>"}, {"n": 6, "type": "open", "q": "<p>A class has <code>count = $state(0)<\/code> and\n<code>inc() { this.count++; }<\/code>. The template uses\n<code>&lt;button onclick={counter.inc}&gt;<\/code>. What goes wrong, and\nwhat is the fix?<\/p>", "a": "<p>The method is passed detached, so <code>this<\/code> is\n<code>undefined<\/code> when it runs. Use an arrow-function field\n<code>inc = () =&gt; { this.count++; }<\/code>, or\n<code>onclick={() =&gt; counter.inc()}<\/code>.<\/p>"}, {"n": 7, "type": "open", "q": "<p>Write the Svelte 5 equivalent of a Svelte 4 component with\n<code>export let label;<\/code> and\n<code>dispatch('select', id)<\/code>.<\/p>", "a": "<pre class=\"html\"><code>&lt;script lang=&quot;ts&quot;&gt;\n    let { label, onselect }: { label: string; onselect?: (id: string) =&gt; void } = $props();\n&lt;/script&gt;\n&lt;button onclick={() =&gt; onselect?.(id)}&gt;{label}&lt;/button&gt;<\/code><\/pre>\n<p>(with <code>id<\/code> coming from a prop or local state).<\/p>"}, {"n": 8, "type": "open", "q": "<p>What does <code>$bindable()<\/code> mean for a prop, and how does a\nparent use it?<\/p>", "a": "<p>The parent may bind to it\n(<code>&lt;Input bind:value={name} /&gt;<\/code>), so changes in the\nchild flow back up. Without <code>$bindable<\/code>, the prop is\none-way.<\/p>"}, {"n": 9, "type": "open", "q": "<p>Show how a <code>List<\/code> component can let its parent decide how\neach item is rendered.<\/p>", "a": "<p>A snippet prop with arguments:<\/p>\n<pre class=\"html\"><code>&lt;!-- List.svelte --&gt;\n&lt;script lang=&quot;ts&quot; generics=&quot;T&quot;&gt;\n    import type { Snippet } from &#39;svelte&#39;;\n    let { items, row }: { items: T[]; row: Snippet&lt;[T]&gt; } = $props();\n&lt;/script&gt;\n&lt;ul&gt;{#each items as item}&lt;li&gt;{@render row(item)}&lt;/li&gt;{/each}&lt;/ul&gt;\n\n&lt;!-- parent --&gt;\n&lt;List {items}&gt;{#snippet row(item)}&lt;b&gt;{item.name}&lt;/b&gt;{/snippet}&lt;/List&gt;<\/code><\/pre>\n<p>(Key the each block when items have ids.)<\/p>"}, {"n": 10, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: which is <strong>not<\/strong> a valid reason to use\n<code>$effect<\/code>?<\/p>", "options": ["Drawing on a <code>&lt;canvas&gt;<\/code> when data changes", "Computing a filtered list from a search query", "Subscribing to a WebSocket and unsubscribing on destroy", "Sending an analytics event when a value changes"], "a": "<ol start=\"2\" type=\"a\">\n<li>Filtering is a <code>$derived<\/code>.<\/li>\n<\/ol>"}, {"n": 11, "type": "open", "q": "<p>What does the function returned from an <code>$effect<\/code> callback\ndo, and when does it run?<\/p>", "a": "<p>It is the cleanup: it runs before the effect re-runs and when the\ncomponent is destroyed.<\/p>"}, {"n": 12, "type": "open", "q": "<p><strong>What is wrong?<\/strong>\n<code>{#each todos as todo, i (i)}<\/code><\/p>", "a": "<p>Keying by the index is the same as not keying: identity follows\npositions, not items. Use <code>(todo.id)<\/code>.<\/p>"}, {"n": 13, "type": "open", "q": "<p>A child component does <code>props.user.name = 'x'<\/code> on an\nobject passed by the parent. What does Svelte do in development, and\nwhat is the right pattern?<\/p>", "a": "<p>In development Svelte warns\n(<code>ownership_invalid_mutation<\/code>): the child mutates state it\ndoes not own. Call a callback prop so the parent changes it, or make the\nprop <code>$bindable<\/code> and have the parent bind it.<\/p>"}, {"n": 14, "type": "open", "q": "<p>Which of these run during SSR? <code>onMount<\/code>,\n<code>$derived<\/code>, <code>$effect<\/code>, <code>onDestroy<\/code>, an\n<code>onclick<\/code> handler, the <code>&lt;script&gt;<\/code> body.<\/p>", "a": "<p><code>$derived<\/code> (when read), <code>onDestroy<\/code> and the\n<code>&lt;script&gt;<\/code> body. Not <code>onMount<\/code>,\n<code>$effect<\/code> or <code>onclick<\/code>.<\/p>"}, {"n": 15, "type": "open", "q": "<p>Give two causes of a hydration mismatch.<\/p>", "a": "<p>Any two of: <code>Date.now()<\/code>/<code>new Date()<\/code> in\nrender; <code>Math.random()<\/code>; reading <code>window<\/code>,\n<code>localStorage<\/code> or <code>matchMedia<\/code> during render;\ninvalid HTML nesting that the browser repairs.<\/p>"}, {"n": 16, "type": "open", "q": "<p>Why can a module <code>export let theme = $state('light')<\/code> that\nis reassigned elsewhere not work, and what are two alternatives?<\/p>", "a": "<p>Importers get a binding, not a live signal, and the compiler forbids\nexporting reassigned state (<code>state_invalid_export<\/code>). Export\nan object and mutate its property, or export getter and setter functions\n(or a class instance).<\/p>"}, {"n": 17, "type": "open", "q": "<p>You put a <code>$state<\/code> object in context in a layout and later\nreassign the variable to a new object. Children keep showing the old\nvalues. Why?<\/p>", "a": "<p>Context holds the object that was set; reassigning the variable makes\nit point to a new object that the children never received. Mutate the\nexisting object’s properties instead.<\/p>"}, {"n": 18, "type": "open", "q": "<p>Why is <code>{@html userBio}<\/code> dangerous, and what would you do\ninstead or in addition?<\/p>", "a": "<p>It renders unsanitised HTML, so stored content can execute scripts\n(XSS). Sanitise on the server with an allow-list sanitiser, render text\nwhere possible, and add a CSP.<\/p>"}, {"n": 19, "type": "open", "q": "<p>Name two differences between an action (<code>use:<\/code>) and an\nattachment (<code>{@attach}<\/code>).<\/p>", "a": "<p>Any two: actions run once and do not re-run when their argument\nchanges, attachments re-run in an effect; attachments can be put on\ncomponents and passed through as props, actions cannot; attachments\ncompose with <code>{@attach}<\/code> and can be created inline.<\/p>"}, {"n": 20, "type": "open", "q": "<p>With <code>bind:group<\/code>, what do radio buttons and checkboxes\nproduce?<\/p>", "a": "<p>Radios: the selected value. Checkboxes: an array of the selected\nvalues.<\/p>"}, {"n": 21, "type": "open", "q": "<p>In runes mode, why should you bind to <code>todo.done<\/code> rather\nthan to the each-block variable itself?<\/p>", "a": "<p>In runes mode the each variable is not assignable through a binding;\nbinding to a property of the item (<code>todo.done<\/code>) updates the\nunderlying state.<\/p>"}, {"n": 22, "type": "open", "q": "<p>What does <code>$props.id()<\/code> give you, and why is it useful for\naccessibility?<\/p>", "a": "<p>A unique id per component instance that is identical on the server\nand the client, so <code>for<\/code>, <code>aria-labelledby<\/code>,\n<code>aria-describedby<\/code> and <code>aria-controls<\/code>\nrelationships survive hydration.<\/p>"}, {"n": 23, "type": "choice", "correct": ["a"], "q": "<p>Multiple choice: which replaces\n<code>&lt;slot name=\"footer\" {title} /&gt;<\/code>?<\/p>", "options": ["<code>{@render footer?.(title)}<\/code>", "<code>&lt;svelte:slot name=\"footer\" /&gt;<\/code>", "<code>{#slot footer}<\/code>", "<code>{@html footer(title)}<\/code>"], "a": "<ol type=\"a\">\n<li><\/li>\n<\/ol>"}, {"n": 24, "type": "open", "q": "<p>What is the <code>effect_update_depth_exceeded<\/code> error, and what\ntypically causes it?<\/p>", "a": "<p>An effect (or chain of effects) keeps invalidating itself more than\nabout 1000 times in one flush; typically an effect that reads and writes\nthe same state.<\/p>"}, {"n": 25, "type": "open", "q": "<p><strong>Design:<\/strong> you need a “shopping cart” shared by the\nheader and the product pages in a SvelteKit app with SSR. Where does the\nstate live, and why not in a plain module singleton?<\/p>", "a": "<p>Create it per request and per tree: for example, a <code>Cart<\/code>\nclass instantiated in the root layout and provided through context\n(<code>createContext<\/code>), initialised from <code>data<\/code>\nreturned by a server load (which reads the cart from the session or a\ncookie). A module singleton is shared by all requests on the server, so\ncarts would leak between users during SSR.<\/p>"}]}, {"id": "final-2", "group": "Final tests", "label": "Final Test 2", "topic": "SvelteKit", "minutes": 30, "good": 20, "ok": 15, "review": "the core notes for Days 3, 4 and 5", "questions": [{"n": 1, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: what happens on the first request to a page in a\ndefault SvelteKit app?<\/p>", "options": ["An empty shell is sent and the browser renders everything", "The server renders HTML, the browser hydrates it, and later\nnavigations are client-side", "The page is always prerendered at build time", "Every navigation is a full server round trip"], "a": "<ol start=\"2\" type=\"a\">\n<li><\/li>\n<\/ol>"}, {"n": 2, "type": "open", "q": "<p>Name each file’s role: <code>+page.ts<\/code>,\n<code>+page.server.ts<\/code>, <code>+layout.svelte<\/code>,\n<code>+server.ts<\/code>, <code>+error.svelte<\/code>.<\/p>", "a": "<p><code>+page.ts<\/code>: universal load. <code>+page.server.ts<\/code>:\nserver load and form actions. <code>+layout.svelte<\/code>: layout\nwrapping child routes. <code>+server.ts<\/code>: API endpoint (HTTP verb\nhandlers returning <code>Response<\/code>). <code>+error.svelte<\/code>:\nerror boundary for the subtree.<\/p>"}, {"n": 3, "type": "open", "q": "<p>Which URL does\n<code>src/routes/(app)/docs/[...path]/+page.svelte<\/code> serve, and\nwhat is <code>params.path<\/code> for <code>/docs/a/b<\/code>?<\/p>", "a": "<p><code>/docs<\/code>, <code>/docs/…<\/code> (any depth); the group\n<code>(app)<\/code> is not in the URL. <code>params.path<\/code> is\n<code>'a/b'<\/code>.<\/p>"}, {"n": 4, "type": "open", "q": "<p>A matcher rejects a segment. What happens next in the routing?<\/p>", "a": "<p>The route does not match, and routing continues with the next route\nin sort order; if none matches, a 404.<\/p>"}, {"n": 5, "type": "open", "q": "<p>Give the rule for choosing between a server and a universal\n<code>load<\/code>, with one example of each.<\/p>", "a": "<p>Server for anything that needs secrets, the database, cookies or\n<code>locals<\/code> (loading the current user’s orders). Universal for\npublic APIs callable from the browser, or non-serialisable return values\n(loading a public weather API on navigation).<\/p>"}, {"n": 6, "type": "open", "q": "<p><strong>Find the bug:<\/strong><\/p>\n<pre class=\"ts\"><code>// +page.server.ts\nexport const load = async ({ params }) =&gt; {\n    const user = await db.users.find(params.id);\n    return { user };\n};<\/code><\/pre>", "a": "<p>It returns the whole database row (including fields such as a\npassword hash) to the browser; it also does not handle a missing user or\ncheck authorisation. Return an explicit projection,\n<code>error(404)<\/code> when missing, and check\n<code>locals.user<\/code>.<\/p>"}, {"n": 7, "type": "open", "q": "<p>A route has <code>+page.server.ts<\/code> returning\n<code>{ a: 1 }<\/code> and <code>+page.ts<\/code> returning\n<code>{ b: 2 }<\/code>. What is <code>data<\/code> in the page?<\/p>", "a": "<p><code>{ b: 2 }<\/code> only, unless <code>+page.ts<\/code> forwards\n<code>data.a<\/code>.<\/p>"}, {"n": 8, "type": "open", "q": "<p>When does a <code>load<\/code> function that reads\n<code>url.searchParams.get('page')<\/code> re-run?<\/p>", "a": "<p>When the <code>page<\/code> search parameter changes (it is tracked\nper key), plus the other triggers: params, <code>depends<\/code>\ninvalidations, <code>refreshAll<\/code>, a parent re-run if it awaited\n<code>parent()<\/code>.<\/p>"}, {"n": 9, "type": "open", "q": "<p>What is a waterfall in <code>load<\/code>, and how do you avoid one\nwhen you need <code>parent()<\/code>?<\/p>", "a": "<p>Sequential awaits that could have run in parallel. Start independent\npromises first, then <code>await parent()<\/code>, then await the rest;\nor avoid <code>parent()<\/code> by having each load fetch what it\nneeds.<\/p>"}, {"n": 10, "type": "open", "q": "<p><strong>What is wrong?<\/strong> A layout server load redirects\nanonymous users, and the page server load returns private data without\nany check.<\/p>", "a": "<p>The page load still runs (in parallel, and on navigations without the\nlayout re-running), so the private data is returned to anonymous users.\nCheck <code>locals.user<\/code> in the page load (and guard in\n<code>handle<\/code>).<\/p>"}, {"n": 11, "type": "open", "q": "<p>Write a form action that validates a required <code>email<\/code>\nfield and returns a 400 failure with the submitted value.<\/p>", "a": "<pre class=\"ts\"><code>import { fail } from &#39;@sveltejs/kit&#39;;\nimport type { Actions } from &#39;./$types&#39;;\n\nexport const actions = {\n    default: async ({ request }) =&gt; {\n        const data = await request.formData();\n        const email = String(data.get(&#39;email&#39;) ?? &#39;&#39;).trim();\n        if (!email) return fail(400, { email, missing: true });\n        // …save…\n        return { success: true };\n    }\n} satisfies Actions;<\/code><\/pre>"}, {"n": 12, "type": "open", "q": "<p>List what <code>use:enhance<\/code> does by default after a successful\nsubmission.<\/p>", "a": "<p>Submit via <code>fetch<\/code> without reloading; set\n<code>form<\/code>/<code>page.status<\/code>; reset the form;\n<code>refreshAll()<\/code>; follow redirects; render the error boundary\non errors (and manage focus).<\/p>"}, {"n": 13, "type": "open", "q": "<p>In which order do action, loads and render happen when a form is\nposted to a page?<\/p>", "a": "<p>Action, then loads, then render.<\/p>"}, {"n": 14, "type": "open", "q": "<p>What does <code>fail()<\/code> return versus what <code>error()<\/code>\ndoes?<\/p>", "a": "<p><code>fail(status, data)<\/code> is returned and re-renders the page\nwith <code>form<\/code> = <code>data<\/code>.\n<code>error(status, message)<\/code> throws and renders the nearest\n<code>+error.svelte<\/code>.<\/p>"}, {"n": 15, "type": "open", "q": "<p>Which requests pass through <code>handle<\/code>? Which do not?<\/p>", "a": "<p>Through <code>handle<\/code>: page requests, data requests, actions,\n<code>+server<\/code> endpoints, remote calls and internal\n<code>event.fetch<\/code> sub-requests. Not: static files, built assets\nand prerendered pages.<\/p>"}, {"n": 16, "type": "open", "q": "<p><strong>Write<\/strong> a <code>handle<\/code> that sets\n<code>event.locals.user<\/code> from a <code>sid<\/code> cookie using a\nfunction <code>getUser(sid)<\/code>.<\/p>", "a": "<pre class=\"ts\"><code>import type { Handle } from &#39;@sveltejs/kit/hooks&#39;;\n\nexport const handle: Handle = async ({ event, resolve }) =&gt; {\n    const sid = event.cookies.get(&#39;sid&#39;);\n    event.locals.user = sid ? await getUser(sid) : null;\n    return resolve(event);\n};<\/code><\/pre>"}, {"n": 17, "type": "open", "q": "<p>With <code>sequence(a, b, c)<\/code>, what is the order of the code\nafter <code>await resolve(event)<\/code>?<\/p>", "a": "<p>c, then b, then a.<\/p>"}, {"n": 18, "type": "open", "q": "<p>Where is <code>+error.svelte<\/code> not used, and what is shown\ninstead?<\/p>", "a": "<p>For errors in the root layout’s load, in <code>handle<\/code>, and\n(for non-HTML requests) in <code>+server<\/code> endpoints:\n<code>src/error.html<\/code> (or a JSON error body) is used.<\/p>"}, {"n": 19, "type": "open", "q": "<p>What do <code>prerender<\/code>, <code>ssr = false<\/code> and\n<code>csr = false<\/code> each do? Give a use case for each.<\/p>", "a": "<p><code>prerender = true<\/code>: static HTML at build time (docs,\nmarketing). <code>ssr = false<\/code>: client-only rendering (a dashboard\nusing browser-only libraries). <code>csr = false<\/code>: no JavaScript\n(a static legal page).<\/p>"}, {"n": 20, "type": "open", "q": "<p>Why can’t a page with actions be prerendered?<\/p>", "a": "<p>A prerendered page is a static file; there is no server to run an\naction when the form is posted.<\/p>"}, {"n": 21, "type": "open", "q": "<p><strong>Find the bug<\/strong> (Node server, many users):\n<code>// src/lib/server/state.ts  export let lastSearch = '';<\/code>\nwritten in a load and read in the page.<\/p>", "a": "<p>A module-level variable is shared by all requests, so concurrent\nusers overwrite and read each other’s searches. Return it from\n<code>load<\/code> as data (or keep it in the URL).<\/p>"}, {"n": 22, "type": "open", "q": "<p>Where should the current sort order of a product table live, and how\ndo you update it?<\/p>", "a": "<p>In the URL (<code>?sort=price<\/code>). Update it with links or a GET\nform, or <code>goto(url, { replace: true, reset: false })<\/code>, and\nread it in the load from <code>url.searchParams<\/code>.<\/p>"}, {"n": 23, "type": "open", "q": "<p>How do you show a loading indicator during client-side navigation in\nSvelteKit 3?<\/p>", "a": "<p><code>import { navigating } from '$app/state'<\/code> and\n<code>{#if navigating.to}&lt;Spinner /&gt;{/if}<\/code>.<\/p>"}, {"n": 24, "type": "open", "q": "<p>Why can’t <code>src/routes/+page.svelte<\/code> import\n<code>#lib/server/db.js<\/code>, and when is that detected?<\/p>", "a": "<p>It is a server-only module (<code>server<\/code> directory). The build\nfails (<code>vite build<\/code>, and <code>vite dev<\/code> when the page\nloads). Vitest does not check it.<\/p>"}, {"n": 25, "type": "open", "q": "<p><strong>Design:<\/strong> a product page needs the product (essential,\nSEO-relevant) and reviews (slow, secondary). Sketch the\n<code>load<\/code> and the markup.<\/p>", "a": "<pre class=\"ts\"><code>// +page.server.ts\nexport const load: PageServerLoad = async ({ params }) =&gt; {\n    const reviews = getReviews(params.id).catch(() =&gt; []); // streamed\n    const product = await getProduct(params.id);            // awaited\n    if (!product) error(404, &#39;Product not found&#39;);\n    return { product, reviews };\n};<\/code><\/pre>\n<pre class=\"html\"><code>&lt;h1&gt;{data.product.name}&lt;/h1&gt;\n{#await data.reviews}&lt;p&gt;Loading reviews…&lt;/p&gt;{:then reviews}…{/await}<\/code><\/pre>"}]}, {"id": "final-3", "group": "Final tests", "label": "Final Test 3", "topic": "Testing, SvelteKit 3 and Live Coding", "minutes": 30, "good": 20, "ok": 15, "review": "the core notes for Days 6 and 7 and the playbook", "questions": [{"n": 1, "type": "open", "q": "<p>Name the three test levels, a tool for each, and what each one\nproves.<\/p>", "a": "<p>Unit: Vitest in Node, proves logic and server functions. Component:\nVitest browser mode with <code>vitest-browser-svelte<\/code>, proves a\ncomponent’s behaviour in a real browser. E2E: Playwright on the\nproduction build, proves user journeys through the whole app.<\/p>"}, {"n": 2, "type": "open", "q": "<p>In the scaffolded Vitest config, which project runs\n<code>src/lib/Foo.svelte.spec.ts<\/code>, and in what environment? And\n<code>src/lib/foo.spec.ts<\/code>?<\/p>", "a": "<p><code>Foo.svelte.spec.ts<\/code>: the <code>client<\/code> project, in\nChromium (browser mode). <code>foo.spec.ts<\/code>: the\n<code>server<\/code> project, in Node.<\/p>"}, {"n": 3, "type": "open", "q": "<p>What error do you get if a test file without <code>.svelte<\/code> in\nits name uses <code>$state<\/code>?<\/p>", "a": "<p><code>rune_outside_svelte<\/code>.<\/p>"}, {"n": 4, "type": "open", "q": "<p>Write a component test for a <code>Toggle.svelte<\/code> that renders\na button labelled by its <code>label<\/code> prop, with\n<code>aria-pressed<\/code> that flips on click and an\n<code>onchange(pressed)<\/code> callback.<\/p>", "a": "<pre class=\"ts\"><code>import { page } from &#39;vitest/browser&#39;;\nimport { expect, it, vi } from &#39;vitest&#39;;\nimport { render } from &#39;vitest-browser-svelte&#39;;\nimport Toggle from &#39;./Toggle.svelte&#39;;\n\nit(&#39;toggles and reports the state&#39;, async () =&gt; {\n    const onchange = vi.fn();\n    render(Toggle, { label: &#39;Dark mode&#39;, onchange });\n    const button = page.getByRole(&#39;button&#39;, { name: &#39;Dark mode&#39; });\n\n    await expect.element(button).toHaveAttribute(&#39;aria-pressed&#39;, &#39;false&#39;);\n    await button.click();\n    await expect.element(button).toHaveAttribute(&#39;aria-pressed&#39;, &#39;true&#39;);\n    expect(onchange).toHaveBeenCalledWith(true);\n});<\/code><\/pre>"}, {"n": 5, "type": "open", "q": "<p>What is the difference between <code>expect(...)<\/code> and\n<code>await expect.element(...)<\/code> in Vitest browser mode?<\/p>", "a": "<p><code>expect<\/code> checks a value once;\n<code>await expect.element(locator)<\/code> retries a DOM assertion until\nit passes or times out.<\/p>"}, {"n": 6, "type": "open", "q": "<p>How do you pass a <code>children<\/code> snippet to a component from a\ntest?<\/p>", "a": "<p><code>createRawSnippet(() =&gt; ({ render: () =&gt; '&lt;p&gt;content&lt;/p&gt;' }))<\/code>,\nor a harness <code>.svelte<\/code> component.<\/p>"}, {"n": 7, "type": "open", "q": "<p>How do you test a component that imports <code>page<\/code> from\n<code>$app/state<\/code>?<\/p>", "a": "<p><code>vi.mock('$app/state', () =&gt; ({ page: { url: new URL('http://localhost/path') } }))<\/code>,\nor pass the value as a prop.<\/p>"}, {"n": 8, "type": "open", "q": "<p>Write the assertion that an async <code>load<\/code> threw\n<code>error(404)<\/code>.<\/p>", "a": "<p><code>await expect(load(event)).rejects.toSatisfy((e) =&gt; isHttpError(e, 404));<\/code><\/p>"}, {"n": 9, "type": "open", "q": "<p>How do you call a form action from a unit test? Sketch the code.<\/p>", "a": "<pre class=\"ts\"><code>const body = new FormData();\nbody.set(&#39;email&#39;, &#39;&#39;);\nconst request = new Request(&#39;http://localhost/x&#39;, { method: &#39;POST&#39;, body });\nconst result = await actions.default({ request } as Parameters&lt;typeof actions.default&gt;[0]);\nexpect(isActionFailure(result)).toBe(true);<\/code><\/pre>"}, {"n": 10, "type": "open", "q": "<p>How do you unit test a helper that calls\n<code>getRequestEvent()<\/code>?<\/p>", "a": "<p><code>vi.mock('$app/server', () =&gt; ({ getRequestEvent: () =&gt; fakeEvent }))<\/code>,\nthen import the helper and call it.<\/p>"}, {"n": 11, "type": "open", "q": "<p><strong>What is wrong with this e2e test?<\/strong><\/p>\n<pre class=\"ts\"><code>await page.goto(&#39;/todos&#39;);\nawait page.waitForTimeout(1000);\nawait page.locator(&#39;.btn-primary&#39;).click();\nexpect(await page.locator(&#39;li&#39;).count()).toBe(1);<\/code><\/pre>", "a": "<p>A fixed <code>waitForTimeout<\/code> (slow and flaky); a CSS-class\nlocator instead of role and name; a non-retrying <code>count()<\/code>\nread instead of <code>await expect(locator).toHaveCount(1)<\/code>;\n<code>li<\/code> may match list items from the layout (strict mode and\nscoping).<\/p>"}, {"n": 12, "type": "open", "q": "<p>Why does Playwright run against\n<code>npm run build &amp;&amp; npm run preview<\/code>?<\/p>", "a": "<p>To test the production build: bundling, real SSR plus hydration and\nproduction-only behaviour.<\/p>"}, {"n": 13, "type": "open", "q": "<p>Write a Playwright test (or describe block) that proves the guestbook\nform works without JavaScript.<\/p>", "a": "<pre class=\"ts\"><code>test.describe(&#39;without JavaScript&#39;, () =&gt; {\n    test.use({ javaScriptEnabled: false });\n    test(&#39;signs the guestbook&#39;, async ({ page }) =&gt; {\n        await page.goto(&#39;/guestbook&#39;);\n        await page.getByLabel(&#39;Name&#39;).fill(&#39;NoJS&#39;);\n        await page.getByLabel(&#39;Message&#39;).fill(&#39;Still works&#39;);\n        await page.getByRole(&#39;button&#39;, { name: &#39;Sign&#39; }).click();\n        await expect(page.getByText(&#39;NoJS: Still works&#39;)).toBeVisible();\n    });\n});<\/code><\/pre>"}, {"n": 14, "type": "open", "q": "<p>What is the hydration race, and what are two ways to deal with\nit?<\/p>", "a": "<p>Server-rendered HTML is visible before JavaScript attaches handlers,\nso an early click can submit natively or do nothing. Use retrying\nassertions on outcomes, and wait for a hydration marker set in the root\nlayout’s <code>onMount<\/code> if needed.<\/p>"}, {"n": 15, "type": "open", "q": "<p>Why might <code>page.route()<\/code> not affect the data shown on a\nserver-rendered page?<\/p>", "a": "<p>The data was fetched on the server during SSR;\n<code>page.route<\/code> only intercepts browser requests.<\/p>"}, {"n": 16, "type": "open", "q": "<p>Name five things you check when reviewing code generated by Claude\nCode for a Svelte 5 / SvelteKit 3 project.<\/p>", "a": "<p>Any five: no Svelte 4 syntax (<code>export let<\/code>,\n<code>$:<\/code>, <code>on:<\/code>, slots, dispatchers); no\n<code>$lib<\/code>/<code>$app/stores<\/code>; <code>$derived<\/code>\ninstead of effect-assignments; keyed each blocks; no browser APIs at\nmodule or render level; accessible markup; tests use roles and names,\nawait interactions, have no sleeps, and fail when the feature breaks;\nfile names match the test projects.<\/p>"}, {"n": 17, "type": "open", "q": "<p>What would you put in a <code>CLAUDE.md<\/code> before the live-coding\nexercise, and why?<\/p>", "a": "<p>Svelte 5/SvelteKit 3 conventions (runes only, callback props,\n<code>#lib<\/code>, <code>$app/state<\/code>), test file naming and tools,\nand the commands to run. It steers the model away from older syntax it\nhas seen more often, and saves repeating constraints in each prompt.<\/p>"}, {"n": 18, "type": "open", "q": "<p>How do you show the interviewer that a test is meaningful?<\/p>", "a": "<p>Break the component on purpose (for example remove the\n<code>disabled<\/code> condition), show the test failing, and restore\nit.<\/p>"}, {"n": 19, "type": "open", "q": "<p>Name five SvelteKit 2 → 3 changes that appear directly in code.<\/p>", "a": "<p>Any five: <code>svelte.config.js<\/code> →\n<code>sveltekit({...})<\/code> in <code>vite.config.ts<\/code>;\n<code>$lib<\/code> → <code>#lib<\/code>; <code>$app/stores<\/code> →\n<code>$app/state<\/code>; <code>$env/*<\/code> → <code>src/env.ts<\/code>\nplus <code>$app/env/*<\/code>; <code>$app/environment<\/code> →\n<code>$app/env<\/code>; <code>base<\/code> → <code>resolve()<\/code>;\n<code>src/params/*<\/code> → <code>src/params.ts<\/code>;\n<code>pushState<\/code>/<code>replaceState<\/code> →\n<code>goto({ shallow })<\/code>; <code>invalidateAll<\/code> →\n<code>refreshAll<\/code>; hook types from\n<code>@sveltejs/kit/hooks<\/code>.<\/p>"}, {"n": 20, "type": "open", "q": "<p>In SvelteKit 3, how do you declare a public, build-time environment\nvariable and read it in a component?<\/p>", "a": "<p>In <code>src/env.ts<\/code>:\n<code>NAME: { public: true, static: true }<\/code> inside\n<code>defineEnvVars<\/code>; in the component:\n<code>import { NAME } from '$app/env/public';<\/code>.<\/p>"}, {"n": 21, "type": "open", "q": "<p>What are remote functions, what is their status in SvelteKit 3, and\nwhich two flags enable them?<\/p>", "a": "<p>Type-safe server functions in <code>*.remote.ts<\/code>\n(<code>query<\/code>, <code>form<\/code>, <code>command<\/code>,\n<code>prerender<\/code>); experimental in 3.x;\n<code>experimental.remoteFunctions: true<\/code> and\n<code>compilerOptions.experimental.async: true<\/code> in\n<code>sveltekit({...})<\/code>.<\/p>"}, {"n": 22, "type": "open", "q": "<p>Why doesn’t a path guard in <code>handle<\/code> protect a remote\n<code>query<\/code>?<\/p>", "a": "<p>Remote query calls are sent to the remote endpoint URL, not the page\npath, so a page-path guard never sees them. Check authorisation inside\nthe function.<\/p>"}, {"n": 23, "type": "open", "q": "<p>What changed about the HTTP status of enhanced form failures in\nSvelteKit 3, and why might a test break?<\/p>", "a": "<p>They now return the real <code>fail<\/code> status (for example 400)\ninstead of 200. Tests or monitoring that expected 200 for enhanced\nfailures break.<\/p>"}, {"n": 24, "type": "choice", "correct": ["b"], "q": "<p>Multiple choice: which is the SvelteKit 3 way to open a modal that\ncloses on Back?<\/p>", "options": ["<code>pushState('', { showModal: true })<\/code>", "<code>goto('', { shallow: true, state: { showModal: true } })<\/code>", "<code>history.pushState({ showModal: true }, '')<\/code>", "<code>replaceState('', { showModal: true })<\/code>"], "a": "<ol start=\"2\" type=\"a\">\n<li><\/li>\n<\/ol>"}, {"n": 25, "type": "open", "q": "<p><strong>Live-coding plan:<\/strong> you are asked for a\n<code>Tabs<\/code> component with a unit test and an e2e test in 45\nminutes. List your steps with rough timings and name the acceptance\ncriteria you would write.<\/p>", "a": "<p>0–5 min: clarify and write criteria (renders a tab per item; first\ntab selected by default; clicking selects; ArrowLeft/Right move\nselection;\n<code>role=\"tablist\"<\/code>/<code>tab<\/code>/<code>tabpanel<\/code> with\n<code>aria-selected<\/code> and <code>aria-controls<\/code>; only the\nselected panel visible; <code>onchange<\/code> called). 5–8: read the\nsetup, add <code>CLAUDE.md<\/code>. 8–18: component, review, try it on a\nroute. 18–28: component test covering the criteria; break the code once.\n28–38: e2e test on the route. 38–43: run Vitest, Playwright and\n<code>npm run check<\/code>. 43–45: summarise and list what you would\nadd.<\/p>"}]}]</script>
+<script>
+(function () {
+  const QUIZZES = JSON.parse(document.getElementById('quiz-data').textContent);
+  const BY_ID = Object.fromEntries(QUIZZES.map((q) => [q.id, q]));
+  const STORE_KEY = 'sk-prep-quizzes-v1';
+  const OLD_FINALS_KEY = 'sk-prep-final-tests-v1';
+  const LETTERS = ['a', 'b', 'c', 'd'];
+
+  function freshQuiz(quiz) {
+    return { answers: {}, current: 0, remaining: quiz.minutes * 60 };
+  }
+  function load() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { s = null; }
+    if (!s || typeof s !== 'object' || !s.quizzes) {
+      s = { active: QUIZZES[0].id, filter: 'all', quizzes: {} };
+      // carry over progress from the earlier final-tests-only page
+      try {
+        const old = JSON.parse(localStorage.getItem(OLD_FINALS_KEY) || 'null');
+        if (old && Array.isArray(old.tests)) {
+          old.tests.forEach((t, i) => { if (BY_ID['final-' + (i + 1)] && t) s.quizzes['final-' + (i + 1)] = t; });
+        }
+      } catch (e) { /* ignore */ }
+    }
+    if (!BY_ID[s.active]) s.active = QUIZZES[0].id;
+    QUIZZES.forEach((q) => { if (!s.quizzes[q.id]) s.quizzes[q.id] = freshQuiz(q); });
+    return s;
+  }
+  let state = load();
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  const Q = () => BY_ID[state.active];
+  const S = () => state.quizzes[state.active];
+  function ans(i) {
+    const n = Q().questions[i].n;
+    const s = S();
+    if (!s.answers[n]) s.answers[n] = { sel: [], checked: false, note: '', revealed: false, mark: null };
+    return s.answers[n];
+  }
+  function markOf(id, n) {
+    const a = state.quizzes[id].answers[n];
+    return a && a.mark !== null && a.mark !== undefined ? a.mark : null;
+  }
+  function tally(id) {
+    let marked = 0, score = 0, good = 0, part = 0, bad = 0;
+    for (const q of BY_ID[id].questions) {
+      const m = markOf(id, q.n);
+      if (m === null) continue;
+      marked++; score += m;
+      if (m === 1) good++; else if (m === 0.5) part++; else bad++;
+    }
+    return { marked, score, good, part, bad, total: BY_ID[id].questions.length };
+  }
+  const fmt = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
+
+  // ---------- timer ----------
+  let ticking = null;
+  function renderClock() {
+    const r = S().remaining;
+    const el = document.getElementById('clock');
+    const m = Math.floor(Math.max(r, 0) / 60), sec = Math.max(r, 0) % 60;
+    el.textContent = r <= 0 ? "Time's up" : String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    el.className = 'clock' + (r <= 0 ? ' out' : r <= 120 ? ' low' : '');
+    const full = Q().minutes * 60;
+    document.getElementById('timer-toggle').textContent =
+      ticking ? 'Pause' : r <= 0 ? 'Restart timer' : r < full ? 'Resume' : 'Start timer';
+  }
+  function stopTimer() { if (ticking) { clearInterval(ticking); ticking = null; } }
+  function toggleTimer() {
+    if (ticking) { stopTimer(); save(); renderClock(); return; }
+    if (S().remaining <= 0) S().remaining = Q().minutes * 60;
+    ticking = setInterval(() => {
+      S().remaining -= 1;
+      if (S().remaining <= 0) { S().remaining = 0; stopTimer(); }
+      if (S().remaining % 5 === 0) save();
+      renderClock();
+    }, 1000);
+    renderClock();
+  }
+
+  // ---------- picker ----------
+  function status(id) {
+    const t = tally(id), quiz = BY_ID[id];
+    if (!t.marked) return { cls: '', text: 'Not started' };
+    if (t.marked < t.total) return { cls: 'started', text: t.marked + ' of ' + t.total + ' marked' };
+    const cls = t.score >= quiz.good ? 'good' : t.score >= quiz.ok ? 'ok' : 'low';
+    return { cls, text: fmt(t.score) + ' / ' + t.total };
+  }
+  function selectQuiz(id) {
+    if (id === state.active) return;
+    stopTimer();
+    state.active = id; state.filter = 'all'; showResults = false;
+    document.getElementById('confirm-slot').innerHTML = '';
+    save(); renderAll();
+  }
+  function renderPicker() {
+    const daily = document.getElementById('cards-daily');
+    const final = document.getElementById('cards-final');
+    const select = document.getElementById('quiz-select');
+    daily.innerHTML = ''; final.innerHTML = ''; select.innerHTML = '';
+    const groups = {};
+    QUIZZES.forEach((quiz) => {
+      const st = status(quiz.id);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'qcard';
+      b.setAttribute('aria-current', String(quiz.id === state.active));
+      b.innerHTML = '<span class="c-name">' + quiz.label + '</span><span class="c-topic">' + quiz.topic +
+        '</span><span class="c-score"><span class="dot ' + st.cls + '"></span>' + st.text + '</span>';
+      b.addEventListener('click', () => selectQuiz(quiz.id));
+      (quiz.group === 'Final tests' ? final : daily).appendChild(b);
+
+      if (!groups[quiz.group]) {
+        groups[quiz.group] = document.createElement('optgroup');
+        groups[quiz.group].label = quiz.group;
+        select.appendChild(groups[quiz.group]);
+      }
+      const o = document.createElement('option');
+      o.value = quiz.id;
+      o.textContent = quiz.label + ': ' + quiz.topic + ' (' + st.text + ')';
+      o.selected = quiz.id === state.active;
+      groups[quiz.group].appendChild(o);
+    });
+    document.getElementById('quiz-title').textContent = Q().label + ': ' + Q().topic;
+    document.getElementById('quiz-sub').textContent = Q().questions.length + ' questions · ' + Q().minutes + ' minutes';
+  }
+  document.getElementById('quiz-select').addEventListener('change', (e) => selectQuiz(e.target.value));
+
+  // ---------- quiz rendering ----------
+  let showResults = false;
+
+  function renderProgress() {
+    const t = tally(state.active);
+    document.getElementById('progress-text').textContent = t.marked + ' of ' + t.total + ' marked';
+    document.getElementById('score-text').textContent = 'Score ' + fmt(t.score) + (t.marked ? ' of ' + t.marked : '');
+    const track = document.getElementById('progress-track');
+    track.innerHTML = '';
+    [['seg-good', t.good], ['seg-part', t.part], ['seg-bad', t.bad]].forEach(([c, n]) => {
+      if (!n) return;
+      const s = document.createElement('span'); s.className = c; s.style.width = (n / t.total * 100) + '%'; track.appendChild(s);
+    });
+  }
+
+  function visible(i) {
+    const m = markOf(state.active, Q().questions[i].n);
+    if (state.filter === 'missed') return m !== null && m < 1;
+    if (state.filter === 'todo') return m === null;
+    return true;
+  }
+
+  function renderMap() {
+    const el = document.getElementById('map');
+    el.innerHTML = '';
+    Q().questions.forEach((q, i) => {
+      const a = S().answers[q.n];
+      const m = markOf(state.active, q.n);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell' + (m === 1 ? ' s-good' : m === 0.5 ? ' s-part' : m === 0 ? ' s-bad' : a && (a.note || a.sel.length || a.revealed) ? ' s-seen' : '') +
+        (i === S().current && !showResults ? ' current' : '') + (visible(i) ? '' : ' dim');
+      b.textContent = q.n;
+      const label = m === 1 ? 'right' : m === 0.5 ? 'partly right' : m === 0 ? 'missed' : 'not marked';
+      b.setAttribute('aria-label', 'Question ' + q.n + ', ' + label);
+      if (i === S().current && !showResults) b.setAttribute('aria-current', 'step');
+      b.addEventListener('click', () => go(i));
+      el.appendChild(b);
+    });
+    ['all', 'missed', 'todo'].forEach((f) => document.getElementById('f-' + f).setAttribute('aria-pressed', String(state.filter === f)));
+  }
+
+  function renderStage() {
+    const stage = document.getElementById('stage');
+    stage.innerHTML = '';
+    const t = tally(state.active);
+    if (showResults || t.marked === t.total) stage.appendChild(resultsPanel());
+    if (!showResults) stage.appendChild(questionCard(S().current));
+  }
+
+  function resultsPanel() {
+    const quiz = Q(), t = tally(state.active);
+    const box = document.createElement('div');
+    box.className = 'results';
+    let verdict;
+    if (t.marked < t.total) verdict = (t.total - t.marked) + ' questions are not marked yet. The score so far counts only marked questions.';
+    else if (t.score >= quiz.good) verdict = 'Interview-ready on this topic. Retry anything you missed tomorrow, then move on.';
+    else if (t.score >= quiz.ok) verdict = 'Close. Re-read ' + quiz.review + ', then retry the missed questions.';
+    else verdict = 'Re-read ' + quiz.review + ' before retrying this quiz.';
+    box.innerHTML =
+      '<div class="results-top"><div class="big">' + fmt(t.score) + '<small> / ' + t.total + '</small></div>' +
+      '<div><h2>' + quiz.label + ' results</h2><p>' + verdict + '</p></div></div>';
+    const missed = quiz.questions.filter((q) => { const m = markOf(state.active, q.n); return m !== null && m < 1; });
+    if (missed.length) {
+      const h = document.createElement('p');
+      h.textContent = 'Missed or partly right (' + missed.length + '):';
+      box.appendChild(h);
+      const list = document.createElement('div');
+      list.className = 'missed';
+      missed.forEach((q) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = markOf(state.active, q.n) === 0 ? 'bad' : 'part';
+        b.textContent = 'Q' + q.n;
+        b.setAttribute('aria-label', 'Go to question ' + q.n);
+        b.addEventListener('click', () => go(quiz.questions.indexOf(q)));
+        list.appendChild(b);
+      });
+      box.appendChild(list);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'q-actions';
+    if (missed.length) {
+      const retry = document.createElement('button');
+      retry.type = 'button'; retry.className = 'btn primary';
+      retry.textContent = 'Retry missed questions';
+      retry.addEventListener('click', () => {
+        missed.forEach((q) => { delete S().answers[q.n]; });
+        state.filter = 'todo';
+        showResults = false;
+        S().current = quiz.questions.indexOf(missed[0]);
+        save(); renderAll();
+      });
+      actions.appendChild(retry);
+    }
+    if (showResults) {
+      const back = document.createElement('button');
+      back.type = 'button'; back.className = 'btn';
+      back.textContent = 'Back to the questions';
+      back.addEventListener('click', () => { showResults = false; renderAll(); });
+      actions.appendChild(back);
+    }
+    if (actions.children.length) box.appendChild(actions);
+    return box;
+  }
+
+  function questionCard(i) {
+    const quiz = Q(), q = quiz.questions[i], a = ans(i);
+    const card = document.createElement('article');
+    card.className = 'card';
+    const typeLabel = q.type === 'choice' ? 'Multiple choice' : q.type === 'multi' ? 'Choose all that apply' : 'Open answer';
+    card.innerHTML =
+      '<div class="q-head"><span class="q-num">Question ' + q.n + ' of ' + quiz.questions.length + '</span>' +
+      '<span class="chip' + (q.type === 'open' ? ' open' : '') + '">' + typeLabel + '</span></div>' +
+      '<div class="prose q-stem">' + q.q + '</div>';
+
+    if (q.type === 'open') {
+      const notes = document.createElement('div');
+      notes.className = 'notes';
+      notes.innerHTML = '<label for="answer-notes">Your answer</label>';
+      const ta = document.createElement('textarea');
+      ta.id = 'answer-notes';
+      ta.value = a.note;
+      ta.placeholder = 'Write your answer before revealing the model answer.';
+      ta.addEventListener('input', () => { a.note = ta.value; save(); });
+      notes.appendChild(ta);
+      card.appendChild(notes);
+
+      if (!a.revealed) {
+        const row = document.createElement('div');
+        row.className = 'q-actions';
+        const reveal = document.createElement('button');
+        reveal.type = 'button'; reveal.className = 'btn primary';
+        reveal.textContent = 'Show model answer';
+        reveal.addEventListener('click', () => { a.revealed = true; save(); renderStage(); renderMap(); focusEl('.selfmark .mark'); });
+        row.appendChild(reveal);
+        card.appendChild(row);
+      } else {
+        card.appendChild(answerBox(q));
+        const sm = document.createElement('div');
+        sm.className = 'selfmark';
+        sm.innerHTML = '<p>How did you do?</p>';
+        const marks = document.createElement('div');
+        marks.className = 'marks';
+        [[1, 'Right', 'm-good'], [0.5, 'Partly', 'm-part'], [0, 'Missed', 'm-bad']].forEach(([v, label, cls]) => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'mark ' + cls; b.textContent = label;
+          b.setAttribute('aria-pressed', String(a.mark === v));
+          b.addEventListener('click', () => { a.mark = v; save(); renderAll(); });
+          marks.appendChild(b);
+        });
+        sm.appendChild(marks);
+        card.appendChild(sm);
+      }
+    } else {
+      const multi = q.type === 'multi';
+      const list = document.createElement('div');
+      list.className = 'options';
+      list.setAttribute('role', multi ? 'group' : 'radiogroup');
+      list.setAttribute('aria-label', 'Options');
+      q.options.forEach((opt, k) => {
+        const letter = LETTERS[k];
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'opt' + (multi ? ' multi' : '');
+        b.setAttribute('role', multi ? 'checkbox' : 'radio');
+        const chosen = a.sel.includes(letter);
+        b.setAttribute('aria-checked', String(chosen));
+        let tag = '';
+        if (a.checked) {
+          const right = q.correct.includes(letter);
+          if (right) { b.classList.add('is-right'); tag = chosen ? 'Correct' : 'Also correct'; }
+          else if (chosen) { b.classList.add('is-wrong'); tag = 'Not this one'; }
+          b.disabled = true;
+        }
+        b.innerHTML = '<span class="letter">' + letter + '</span><span class="prose">' + opt + '</span><span class="tag">' + tag + '</span>';
+        b.addEventListener('click', () => {
+          if (a.checked) return;
+          if (multi) a.sel = chosen ? a.sel.filter((x) => x !== letter) : [...a.sel, letter].sort();
+          else a.sel = [letter];
+          save(); renderStage(); renderMap();
+          focusEl('.opt:nth-child(' + (k + 1) + ')');
+        });
+        list.appendChild(b);
+      });
+      card.appendChild(list);
+
+      if (!a.checked) {
+        const row = document.createElement('div');
+        row.className = 'q-actions';
+        const check = document.createElement('button');
+        check.type = 'button'; check.className = 'btn primary';
+        check.textContent = 'Check answer';
+        check.disabled = a.sel.length === 0;
+        check.addEventListener('click', () => {
+          a.checked = true;
+          const ok = a.sel.length === q.correct.length && a.sel.every((x) => q.correct.includes(x));
+          a.mark = ok ? 1 : 0;
+          save(); renderAll();
+        });
+        row.appendChild(check);
+        card.appendChild(row);
+      } else {
+        const v = document.createElement('p');
+        v.className = 'verdict ' + (a.mark === 1 ? 'good' : 'bad');
+        v.textContent = a.mark === 1 ? 'Correct.' : 'Not quite. The correct answer is ' + q.correct.join(', ') + '.';
+        card.appendChild(v);
+        card.appendChild(answerBox(q));
+      }
+    }
+
+    const foot = document.createElement('div');
+    foot.className = 'q-foot';
+    const target = (dir) => { let j = i + dir; while (j >= 0 && j < quiz.questions.length && !visible(j)) j += dir; return j >= 0 && j < quiz.questions.length ? j : -1; };
+    const pj = target(-1), nj = target(1);
+    const prev = document.createElement('button');
+    prev.type = 'button'; prev.className = 'btn'; prev.textContent = 'Previous';
+    prev.disabled = pj < 0;
+    prev.addEventListener('click', () => go(pj));
+    const next = document.createElement('button');
+    next.type = 'button'; next.className = 'btn primary'; next.textContent = nj < 0 ? 'See results' : 'Next question';
+    next.addEventListener('click', () => { if (nj < 0) { showResults = true; renderAll(); window.scrollTo({ top: 0 }); } else go(nj); });
+    const kbd = document.createElement('span');
+    kbd.className = 'kbd';
+    kbd.textContent = 'Arrow keys: previous / next';
+    foot.append(prev, kbd, next);
+    card.appendChild(foot);
+    return card;
+  }
+
+  function answerBox(q) {
+    const box = document.createElement('div');
+    box.className = 'answer';
+    box.innerHTML = '<h3>Model answer</h3><div class="prose">' + q.a + '</div>';
+    return box;
+  }
+
+  function focusEl(sel) {
+    requestAnimationFrame(() => { const el = document.querySelector('#stage ' + sel); if (el) el.focus(); });
+  }
+
+  function go(i) {
+    if (i < 0) return;
+    S().current = i;
+    showResults = false;
+    save(); renderAll();
+    const stage = document.getElementById('stage');
+    if (stage.getBoundingClientRect().top < 0) stage.scrollIntoView({ block: 'start' });
+  }
+
+  function renderAll() {
+    renderPicker(); renderProgress(); renderMap(); renderStage(); renderClock();
+  }
+
+  // ---------- controls ----------
+  document.getElementById('timer-toggle').addEventListener('click', toggleTimer);
+  document.getElementById('show-results').addEventListener('click', () => { showResults = true; renderAll(); });
+  ['all', 'missed', 'todo'].forEach((f) => document.getElementById('f-' + f).addEventListener('click', () => {
+    state.filter = f; save();
+    if (!visible(S().current)) {
+      const first = Q().questions.findIndex((_, i) => visible(i));
+      if (first >= 0) S().current = first;
+    }
+    renderAll();
+  }));
+  document.getElementById('reset').addEventListener('click', () => {
+    const slot = document.getElementById('confirm-slot');
+    slot.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'confirm';
+    box.innerHTML = '<span>Clear all answers, marks and the timer for ' + Q().label + '?</span>';
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.className = 'btn primary'; yes.textContent = 'Clear ' + Q().label;
+    yes.addEventListener('click', () => {
+      stopTimer(); state.quizzes[state.active] = freshQuiz(Q()); state.filter = 'all'; showResults = false;
+      slot.innerHTML = ''; save(); renderAll();
+    });
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'btn'; no.textContent = 'Keep my answers';
+    no.addEventListener('click', () => { slot.innerHTML = ''; });
+    box.append(yes, no);
+    slot.appendChild(box);
+    no.focus();
+  });
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || e.altKey || e.ctrlKey || e.metaKey || showResults) return;
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const dir = e.key === 'ArrowRight' ? 1 : -1;
+    let j = S().current + dir;
+    while (j >= 0 && j < Q().questions.length && !visible(j)) j += dir;
+    if (j >= 0 && j < Q().questions.length) { e.preventDefault(); go(j); }
+  });
+
+  renderAll();
+})();
+</script>

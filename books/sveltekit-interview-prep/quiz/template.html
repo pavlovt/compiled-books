@@ -1,10 +1,10 @@
-<title>SvelteKit Prep Final Tests</title>
+<title>SvelteKit Prep Quizzes</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: exam sheet. Sticky test bar on top; a 5x5 question map beside one question card. */
+/* Layout: exam sheet. Quiz picker on top, sticky quiz bar, a question map beside one question card. */
 :root {
   --ink: #1d2230;
   --ink-soft: #545c70;
@@ -53,33 +53,51 @@ body {
 }
 body::before {
   content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
-  z-index: 10; background: var(--sheet);
+  z-index: 10; background: var(--paper);
 }
 .wrap {
   max-width: 1080px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-button { font: inherit; color: inherit; cursor: pointer; }
-button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: .45; }
 
 /* Header */
-.masthead { padding-block: 28px 18px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; justify-content: space-between; }
+.masthead { padding-block: 28px 18px; }
 .masthead h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4vw, 34px); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
-.masthead p { margin: 4px 0 0; color: var(--ink-soft); max-width: 60ch; }
+.masthead p { margin: 6px 0 0; color: var(--ink-soft); max-width: 66ch; }
 .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
 
-/* Test tabs */
-.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.tab {
+/* Quiz picker */
+.picker { display: grid; gap: 14px; }
+.group h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; font-weight: 600; }
+.cards { display: grid; gap: 8px; }
+.cards.daily { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cards.final { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.qcard {
   text-align: left; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 12px 14px; display: grid; gap: 2px;
+  padding: 10px 12px; display: grid; gap: 2px; align-content: start; min-width: 0;
 }
-.tab[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.tab .t-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
-.tab .t-topic { color: var(--ink-soft); font-size: 13px; }
-.tab .t-score { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.qcard:hover { border-color: var(--ink-soft); }
+.qcard[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.qcard .c-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.qcard .c-topic { color: var(--ink-soft); font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.qcard .c-score { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); flex: none; }
+.dot.good { background: var(--good); }
+.dot.ok { background: var(--warn); }
+.dot.low { background: var(--bad); }
+.dot.started { background: var(--ink-soft); }
+.picker-select { display: none; }
+.picker-select label { font-size: 13px; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+.picker-select select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet); }
+
+.current-title { padding-block: 20px 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.current-title h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; text-wrap: balance; }
+.current-title span { color: var(--ink-soft); font-size: 14px; }
 
 /* Sticky bar */
 .bar {
@@ -87,7 +105,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--rule);
-  margin-top: 16px;
+  margin-top: 12px;
 }
 .bar-inner { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-block: 10px; }
 .timer { display: flex; align-items: center; gap: 8px; }
@@ -148,7 +166,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .prose pre code { background: none; padding: 0; font-size: 13.5px; }
 .q-stem { font-size: 17px; }
 
-.options { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.options { display: grid; gap: 8px; }
 .opt {
   width: 100%; text-align: left; display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: center;
   border: 1px solid var(--rule); background: var(--sheet); border-radius: 10px; padding: 10px 12px;
@@ -176,7 +194,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   width: 100%; min-height: 120px; resize: vertical; border: 1px solid var(--rule); border-radius: 10px;
   padding: 10px 12px; font: 14px/1.5 var(--font-body); background: var(--paper); color: var(--ink);
 }
-.hint { font-size: 13px; color: var(--ink-soft); margin: 0; }
 
 .answer { border: 1px solid var(--rule); border-left: 4px solid var(--good); border-radius: 10px; padding: 14px 16px; background: var(--paper); display: grid; gap: 8px; }
 .answer h3 { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--good); }
@@ -208,10 +225,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .missed button.part { border-color: var(--warn); color: var(--warn); }
 .missed button.bad { border-color: var(--bad); color: var(--bad); }
 
-.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; padding: 8px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; padding: 8px 12px; margin-bottom: 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
 
-.empty { padding: 26px; text-align: center; color: var(--ink-soft); }
-
+@media (max-width: 960px) {
+  .cards.daily { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (max-width: 820px) {
   .main { grid-template-columns: 1fr; }
   .side { position: static; }
@@ -219,9 +237,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   .legend { grid-auto-flow: column; justify-content: start; gap: 4px 14px; }
 }
 @media (max-width: 560px) {
-  .tabs { grid-template-columns: 1fr; }
-  .tab { grid-template-columns: auto 1fr auto; align-items: baseline; gap: 10px; }
-  .tab .t-score { margin: 0; }
+  .group { display: none; }
+  .picker-select { display: block; }
   .map { gap: 4px; }
   .cell { aspect-ratio: auto; height: 30px; font-size: 12px; border-radius: 6px; }
   .kbd { display: none; }
@@ -234,28 +251,40 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 <div class="wrap">
   <header class="masthead">
-    <div>
-      <div class="eyebrow">SvelteKit Interview Prep</div>
-      <h1>Final Tests</h1>
-      <p>Three tests of 25 questions. Take each one closed book in 30 minutes. Multiple-choice questions are graded for you; for open questions, write your answer, reveal the model answer and mark yourself honestly.</p>
-    </div>
+    <div class="eyebrow">SvelteKit Interview Prep</div>
+    <h1>Quizzes</h1>
+    <p>Every quiz in the course: the seven daily quizzes and the three final tests. Pick one below. Multiple-choice questions are graded for you; for open questions, write your answer, reveal the model answer and mark yourself honestly. Your progress is saved in this browser.</p>
   </header>
-  <div class="tabs" role="tablist" aria-label="Tests" id="tabs"></div>
+  <nav class="picker" aria-label="Choose a quiz">
+    <div class="group">
+      <h2>Daily quizzes · 15 questions, 15 minutes</h2>
+      <div class="cards daily" id="cards-daily"></div>
+    </div>
+    <div class="group">
+      <h2>Final tests · 25 questions, 30 minutes</h2>
+      <div class="cards final" id="cards-final"></div>
+    </div>
+    <div class="picker-select">
+      <label for="quiz-select">Quiz</label>
+      <select id="quiz-select"></select>
+    </div>
+  </nav>
+  <div class="current-title"><h2 id="quiz-title"></h2><span id="quiz-sub"></span></div>
 </div>
 
 <div class="bar">
   <div class="wrap bar-inner">
     <div class="timer">
-      <span class="clock" id="clock" aria-live="off">30:00</span>
+      <span class="clock" id="clock">15:00</span>
       <button class="btn" id="timer-toggle" type="button">Start timer</button>
     </div>
     <div class="progress">
-      <div class="progress-label"><span id="progress-text">0 of 25 marked</span><span id="score-text">Score 0</span></div>
+      <div class="progress-label"><span id="progress-text"></span><span id="score-text"></span></div>
       <div class="progress-track" id="progress-track" aria-hidden="true"></div>
     </div>
     <div class="bar-actions">
       <button class="btn" id="show-results" type="button">Results</button>
-      <button class="btn ghost" id="reset" type="button">Reset test</button>
+      <button class="btn ghost" id="reset" type="button">Reset quiz</button>
     </div>
   </div>
   <div class="wrap" id="confirm-slot"></div>
@@ -282,74 +311,77 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 <script type="application/json" id="quiz-data">__DATA__</script>
 <script>
 (function () {
-  const TESTS = JSON.parse(document.getElementById('quiz-data').textContent);
-  const META = [
-    { topic: 'Svelte 5', review: 'Days 1 and 2' },
-    { topic: 'SvelteKit', review: 'Days 3, 4 and 5' },
-    { topic: 'Testing, SvelteKit 3, live coding', review: 'Days 6 and 7 and the playbook' }
-  ];
-  const DURATION = 30 * 60;
-  const STORE_KEY = 'sk-prep-final-tests-v1';
+  const QUIZZES = JSON.parse(document.getElementById('quiz-data').textContent);
+  const BY_ID = Object.fromEntries(QUIZZES.map((q) => [q.id, q]));
+  const STORE_KEY = 'sk-prep-quizzes-v1';
+  const OLD_FINALS_KEY = 'sk-prep-final-tests-v1';
   const LETTERS = ['a', 'b', 'c', 'd'];
 
-  function freshTest() {
-    return { answers: {}, current: 0, remaining: DURATION };
+  function freshQuiz(quiz) {
+    return { answers: {}, current: 0, remaining: quiz.minutes * 60 };
   }
   function load() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s && Array.isArray(s.tests) && s.tests.length === TESTS.length) return s;
-      }
-    } catch (e) { /* storage unavailable */ }
-    return { active: 0, filter: 'all', tests: TESTS.map(freshTest) };
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { s = null; }
+    if (!s || typeof s !== 'object' || !s.quizzes) {
+      s = { active: QUIZZES[0].id, filter: 'all', quizzes: {} };
+      // carry over progress from the earlier final-tests-only page
+      try {
+        const old = JSON.parse(localStorage.getItem(OLD_FINALS_KEY) || 'null');
+        if (old && Array.isArray(old.tests)) {
+          old.tests.forEach((t, i) => { if (BY_ID['final-' + (i + 1)] && t) s.quizzes['final-' + (i + 1)] = t; });
+        }
+      } catch (e) { /* ignore */ }
+    }
+    if (!BY_ID[s.active]) s.active = QUIZZES[0].id;
+    QUIZZES.forEach((q) => { if (!s.quizzes[q.id]) s.quizzes[q.id] = freshQuiz(q); });
+    return s;
   }
   let state = load();
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
   }
 
-  const T = () => TESTS[state.active];
-  const S = () => state.tests[state.active];
+  const Q = () => BY_ID[state.active];
+  const S = () => state.quizzes[state.active];
   function ans(i) {
+    const n = Q().questions[i].n;
     const s = S();
-    const n = T().questions[i].n;
     if (!s.answers[n]) s.answers[n] = { sel: [], checked: false, note: '', revealed: false, mark: null };
     return s.answers[n];
   }
-  function peek(testIdx, n) { return state.tests[testIdx].answers[n]; }
-
-  function markOf(testIdx, n) {
-    const a = peek(testIdx, n);
+  function markOf(id, n) {
+    const a = state.quizzes[id].answers[n];
     return a && a.mark !== null && a.mark !== undefined ? a.mark : null;
   }
-  function tally(testIdx) {
+  function tally(id) {
     let marked = 0, score = 0, good = 0, part = 0, bad = 0;
-    for (const q of TESTS[testIdx].questions) {
-      const m = markOf(testIdx, q.n);
+    for (const q of BY_ID[id].questions) {
+      const m = markOf(id, q.n);
       if (m === null) continue;
       marked++; score += m;
       if (m === 1) good++; else if (m === 0.5) part++; else bad++;
     }
-    return { marked, score, good, part, bad };
+    return { marked, score, good, part, bad, total: BY_ID[id].questions.length };
   }
-  const fmtScore = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
+  const fmt = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
 
   // ---------- timer ----------
   let ticking = null;
   function renderClock() {
     const r = S().remaining;
     const el = document.getElementById('clock');
-    const m = Math.floor(Math.max(r, 0) / 60), s = Math.max(r, 0) % 60;
-    el.textContent = r <= 0 ? "Time's up" : String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-    el.className = 'clock' + (r <= 0 ? ' out' : r <= 300 ? ' low' : '');
-    document.getElementById('timer-toggle').textContent = ticking ? 'Pause' : (r < DURATION && r > 0 ? 'Resume' : r <= 0 ? 'Restart timer' : 'Start timer');
+    const m = Math.floor(Math.max(r, 0) / 60), sec = Math.max(r, 0) % 60;
+    el.textContent = r <= 0 ? "Time's up" : String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    el.className = 'clock' + (r <= 0 ? ' out' : r <= 120 ? ' low' : '');
+    const full = Q().minutes * 60;
+    document.getElementById('timer-toggle').textContent =
+      ticking ? 'Pause' : r <= 0 ? 'Restart timer' : r < full ? 'Resume' : 'Start timer';
   }
   function stopTimer() { if (ticking) { clearInterval(ticking); ticking = null; } }
   function toggleTimer() {
     if (ticking) { stopTimer(); save(); renderClock(); return; }
-    if (S().remaining <= 0) S().remaining = DURATION;
+    if (S().remaining <= 0) S().remaining = Q().minutes * 60;
     ticking = setInterval(() => {
       S().remaining -= 1;
       if (S().remaining <= 0) { S().remaining = 0; stopTimer(); }
@@ -359,41 +391,70 @@ button:disabled { cursor: not-allowed; opacity: .45; }
     renderClock();
   }
 
-  // ---------- rendering ----------
-  function renderTabs() {
-    const el = document.getElementById('tabs');
-    el.innerHTML = '';
-    TESTS.forEach((t, i) => {
-      const tl = tally(i);
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'tab'; b.setAttribute('role', 'tab');
-      b.id = 'tab-' + i;
-      b.setAttribute('aria-selected', String(i === state.active));
-      b.innerHTML = '<span class="t-name">Test ' + (i + 1) + '</span><span class="t-topic">' + META[i].topic +
-        '</span><span class="t-score">' + (tl.marked ? fmtScore(tl.score) + ' / ' + tl.marked + ' marked' : 'Not started') + '</span>';
-      b.addEventListener('click', () => {
-        if (i === state.active) return;
-        stopTimer(); state.active = i; showResults = false; save(); renderAll();
-      });
-      el.appendChild(b);
-    });
+  // ---------- picker ----------
+  function status(id) {
+    const t = tally(id), quiz = BY_ID[id];
+    if (!t.marked) return { cls: '', text: 'Not started' };
+    if (t.marked < t.total) return { cls: 'started', text: t.marked + ' of ' + t.total + ' marked' };
+    const cls = t.score >= quiz.good ? 'good' : t.score >= quiz.ok ? 'ok' : 'low';
+    return { cls, text: fmt(t.score) + ' / ' + t.total };
   }
+  function selectQuiz(id) {
+    if (id === state.active) return;
+    stopTimer();
+    state.active = id; state.filter = 'all'; showResults = false;
+    document.getElementById('confirm-slot').innerHTML = '';
+    save(); renderAll();
+  }
+  function renderPicker() {
+    const daily = document.getElementById('cards-daily');
+    const final = document.getElementById('cards-final');
+    const select = document.getElementById('quiz-select');
+    daily.innerHTML = ''; final.innerHTML = ''; select.innerHTML = '';
+    const groups = {};
+    QUIZZES.forEach((quiz) => {
+      const st = status(quiz.id);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'qcard';
+      b.setAttribute('aria-current', String(quiz.id === state.active));
+      b.innerHTML = '<span class="c-name">' + quiz.label + '</span><span class="c-topic">' + quiz.topic +
+        '</span><span class="c-score"><span class="dot ' + st.cls + '"></span>' + st.text + '</span>';
+      b.addEventListener('click', () => selectQuiz(quiz.id));
+      (quiz.group === 'Final tests' ? final : daily).appendChild(b);
+
+      if (!groups[quiz.group]) {
+        groups[quiz.group] = document.createElement('optgroup');
+        groups[quiz.group].label = quiz.group;
+        select.appendChild(groups[quiz.group]);
+      }
+      const o = document.createElement('option');
+      o.value = quiz.id;
+      o.textContent = quiz.label + ': ' + quiz.topic + ' (' + st.text + ')';
+      o.selected = quiz.id === state.active;
+      groups[quiz.group].appendChild(o);
+    });
+    document.getElementById('quiz-title').textContent = Q().label + ': ' + Q().topic;
+    document.getElementById('quiz-sub').textContent = Q().questions.length + ' questions · ' + Q().minutes + ' minutes';
+  }
+  document.getElementById('quiz-select').addEventListener('change', (e) => selectQuiz(e.target.value));
+
+  // ---------- quiz rendering ----------
+  let showResults = false;
 
   function renderProgress() {
-    const tl = tally(state.active);
-    const total = T().questions.length;
-    document.getElementById('progress-text').textContent = tl.marked + ' of ' + total + ' marked';
-    document.getElementById('score-text').textContent = 'Score ' + fmtScore(tl.score) + (tl.marked ? ' of ' + tl.marked : '');
+    const t = tally(state.active);
+    document.getElementById('progress-text').textContent = t.marked + ' of ' + t.total + ' marked';
+    document.getElementById('score-text').textContent = 'Score ' + fmt(t.score) + (t.marked ? ' of ' + t.marked : '');
     const track = document.getElementById('progress-track');
     track.innerHTML = '';
-    [['seg-good', tl.good], ['seg-part', tl.part], ['seg-bad', tl.bad]].forEach(([c, n]) => {
+    [['seg-good', t.good], ['seg-part', t.part], ['seg-bad', t.bad]].forEach(([c, n]) => {
       if (!n) return;
-      const s = document.createElement('span'); s.className = c; s.style.width = (n / total * 100) + '%'; track.appendChild(s);
+      const s = document.createElement('span'); s.className = c; s.style.width = (n / t.total * 100) + '%'; track.appendChild(s);
     });
   }
 
   function visible(i) {
-    const m = markOf(state.active, T().questions[i].n);
+    const m = markOf(state.active, Q().questions[i].n);
     if (state.filter === 'missed') return m !== null && m < 1;
     if (state.filter === 'todo') return m === null;
     return true;
@@ -402,16 +463,16 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   function renderMap() {
     const el = document.getElementById('map');
     el.innerHTML = '';
-    T().questions.forEach((q, i) => {
-      const a = peek(state.active, q.n);
+    Q().questions.forEach((q, i) => {
+      const a = S().answers[q.n];
       const m = markOf(state.active, q.n);
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'cell' + (m === 1 ? ' s-good' : m === 0.5 ? ' s-part' : m === 0 ? ' s-bad' : a && (a.note || a.sel.length || a.revealed) ? ' s-seen' : '') +
         (i === S().current && !showResults ? ' current' : '') + (visible(i) ? '' : ' dim');
       b.textContent = q.n;
-      const status = m === 1 ? 'right' : m === 0.5 ? 'partly right' : m === 0 ? 'missed' : 'not marked';
-      b.setAttribute('aria-label', 'Question ' + q.n + ', ' + status);
+      const label = m === 1 ? 'right' : m === 0.5 ? 'partly right' : m === 0 ? 'missed' : 'not marked';
+      b.setAttribute('aria-label', 'Question ' + q.n + ', ' + label);
       if (i === S().current && !showResults) b.setAttribute('aria-current', 'step');
       b.addEventListener('click', () => go(i));
       el.appendChild(b);
@@ -419,30 +480,27 @@ button:disabled { cursor: not-allowed; opacity: .45; }
     ['all', 'missed', 'todo'].forEach((f) => document.getElementById('f-' + f).setAttribute('aria-pressed', String(state.filter === f)));
   }
 
-  let showResults = false;
-
   function renderStage() {
     const stage = document.getElementById('stage');
     stage.innerHTML = '';
-    const tl = tally(state.active);
-    if (showResults || tl.marked === T().questions.length) stage.appendChild(resultsPanel());
+    const t = tally(state.active);
+    if (showResults || t.marked === t.total) stage.appendChild(resultsPanel());
     if (!showResults) stage.appendChild(questionCard(S().current));
   }
 
   function resultsPanel() {
-    const tl = tally(state.active);
-    const total = T().questions.length;
+    const quiz = Q(), t = tally(state.active);
     const box = document.createElement('div');
     box.className = 'results';
     let verdict;
-    if (tl.marked < total) verdict = (total - tl.marked) + ' questions are not marked yet. The score so far counts only marked questions.';
-    else if (tl.score >= 20) verdict = 'A good sign for the interview. Retry the questions you missed tomorrow, then move on.';
-    else if (tl.score >= 15) verdict = 'Close. Re-read the core notes for ' + META[state.active].review + ', then retry the missed questions.';
-    else verdict = 'Re-read the core notes for ' + META[state.active].review + ' before retrying this test.';
+    if (t.marked < t.total) verdict = (t.total - t.marked) + ' questions are not marked yet. The score so far counts only marked questions.';
+    else if (t.score >= quiz.good) verdict = 'Interview-ready on this topic. Retry anything you missed tomorrow, then move on.';
+    else if (t.score >= quiz.ok) verdict = 'Close. Re-read ' + quiz.review + ', then retry the missed questions.';
+    else verdict = 'Re-read ' + quiz.review + ' before retrying this quiz.';
     box.innerHTML =
-      '<div class="results-top"><div class="big">' + fmtScore(tl.score) + '<small> / ' + total + '</small></div>' +
-      '<div><h2>Test ' + (state.active + 1) + ' results</h2><p>' + verdict + '</p></div></div>';
-    const missed = T().questions.filter((q) => { const m = markOf(state.active, q.n); return m !== null && m < 1; });
+      '<div class="results-top"><div class="big">' + fmt(t.score) + '<small> / ' + t.total + '</small></div>' +
+      '<div><h2>' + quiz.label + ' results</h2><p>' + verdict + '</p></div></div>';
+    const missed = quiz.questions.filter((q) => { const m = markOf(state.active, q.n); return m !== null && m < 1; });
     if (missed.length) {
       const h = document.createElement('p');
       h.textContent = 'Missed or partly right (' + missed.length + '):';
@@ -455,7 +513,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
         b.className = markOf(state.active, q.n) === 0 ? 'bad' : 'part';
         b.textContent = 'Q' + q.n;
         b.setAttribute('aria-label', 'Go to question ' + q.n);
-        b.addEventListener('click', () => { go(T().questions.indexOf(q)); });
+        b.addEventListener('click', () => go(quiz.questions.indexOf(q)));
         list.appendChild(b);
       });
       box.appendChild(list);
@@ -470,7 +528,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
         missed.forEach((q) => { delete S().answers[q.n]; });
         state.filter = 'todo';
         showResults = false;
-        S().current = T().questions.indexOf(missed[0]);
+        S().current = quiz.questions.indexOf(missed[0]);
         save(); renderAll();
       });
       actions.appendChild(retry);
@@ -487,13 +545,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   }
 
   function questionCard(i) {
-    const q = T().questions[i];
-    const a = ans(i);
+    const quiz = Q(), q = quiz.questions[i], a = ans(i);
     const card = document.createElement('article');
     card.className = 'card';
     const typeLabel = q.type === 'choice' ? 'Multiple choice' : q.type === 'multi' ? 'Choose all that apply' : 'Open answer';
     card.innerHTML =
-      '<div class="q-head"><span class="q-num">Question ' + q.n + ' of ' + T().questions.length + '</span>' +
+      '<div class="q-head"><span class="q-num">Question ' + q.n + ' of ' + quiz.questions.length + '</span>' +
       '<span class="chip' + (q.type === 'open' ? ' open' : '') + '">' + typeLabel + '</span></div>' +
       '<div class="prose q-stem">' + q.q + '</div>';
 
@@ -513,7 +570,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
         const row = document.createElement('div');
         row.className = 'q-actions';
         const reveal = document.createElement('button');
-        reveal.type = 'button'; reveal.className = 'btn primary'; reveal.id = 'reveal';
+        reveal.type = 'button'; reveal.className = 'btn primary';
         reveal.textContent = 'Show model answer';
         reveal.addEventListener('click', () => { a.revealed = true; save(); renderStage(); renderMap(); focusEl('.selfmark .mark'); });
         row.appendChild(reveal);
@@ -572,7 +629,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
         const row = document.createElement('div');
         row.className = 'q-actions';
         const check = document.createElement('button');
-        check.type = 'button'; check.className = 'btn primary'; check.id = 'check';
+        check.type = 'button'; check.className = 'btn primary';
         check.textContent = 'Check answer';
         check.disabled = a.sel.length === 0;
         check.addEventListener('click', () => {
@@ -594,10 +651,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
     const foot = document.createElement('div');
     foot.className = 'q-foot';
+    const target = (dir) => { let j = i + dir; while (j >= 0 && j < quiz.questions.length && !visible(j)) j += dir; return j >= 0 && j < quiz.questions.length ? j : -1; };
+    const pj = target(-1), nj = target(1);
     const prev = document.createElement('button');
     prev.type = 'button'; prev.className = 'btn'; prev.textContent = 'Previous';
-    const target = (dir) => { let j = i + dir; while (j >= 0 && j < T().questions.length && !visible(j)) j += dir; return j >= 0 && j < T().questions.length ? j : -1; };
-    const pj = target(-1), nj = target(1);
     prev.disabled = pj < 0;
     prev.addEventListener('click', () => go(pj));
     const next = document.createElement('button');
@@ -632,7 +689,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   }
 
   function renderAll() {
-    renderTabs(); renderProgress(); renderMap(); renderStage(); renderClock();
+    renderPicker(); renderProgress(); renderMap(); renderStage(); renderClock();
   }
 
   // ---------- controls ----------
@@ -641,7 +698,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   ['all', 'missed', 'todo'].forEach((f) => document.getElementById('f-' + f).addEventListener('click', () => {
     state.filter = f; save();
     if (!visible(S().current)) {
-      const first = T().questions.findIndex((_, i) => visible(i));
+      const first = Q().questions.findIndex((_, i) => visible(i));
       if (first >= 0) S().current = first;
     }
     renderAll();
@@ -651,11 +708,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
     slot.innerHTML = '';
     const box = document.createElement('div');
     box.className = 'confirm';
-    box.innerHTML = '<span>Clear all answers, marks and the timer for Test ' + (state.active + 1) + '?</span>';
+    box.innerHTML = '<span>Clear all answers, marks and the timer for ' + Q().label + '?</span>';
     const yes = document.createElement('button');
-    yes.type = 'button'; yes.className = 'btn primary'; yes.textContent = 'Clear Test ' + (state.active + 1);
+    yes.type = 'button'; yes.className = 'btn primary'; yes.textContent = 'Clear ' + Q().label;
     yes.addEventListener('click', () => {
-      stopTimer(); state.tests[state.active] = freshTest(); state.filter = 'all'; showResults = false;
+      stopTimer(); state.quizzes[state.active] = freshQuiz(Q()); state.filter = 'all'; showResults = false;
       slot.innerHTML = ''; save(); renderAll();
     });
     const no = document.createElement('button');
@@ -667,12 +724,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   });
   document.addEventListener('keydown', (e) => {
     const tag = (e.target && e.target.tagName) || '';
-    if (tag === 'TEXTAREA' || tag === 'INPUT' || e.altKey || e.ctrlKey || e.metaKey || showResults) return;
+    if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || e.altKey || e.ctrlKey || e.metaKey || showResults) return;
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const dir = e.key === 'ArrowRight' ? 1 : -1;
     let j = S().current + dir;
-    while (j >= 0 && j < T().questions.length && !visible(j)) j += dir;
-    if (j >= 0 && j < T().questions.length) { e.preventDefault(); go(j); }
+    while (j >= 0 && j < Q().questions.length && !visible(j)) j += dir;
+    if (j >= 0 && j < Q().questions.length) { e.preventDefault(); go(j); }
   });
 
   renderAll();
