@@ -1,4 +1,4 @@
-# Compiled books
+<img src=".github/banner.png" alt="Compiled Books: technical books on Svelte, SvelteKit and Astro, built into EPUB" width="100%">
 
 Markdown sources for books compiled with Claude, and the script that builds them into EPUB. Every book lives in its own folder under `books/` and is built the same way, so a new book only needs a new folder.
 
