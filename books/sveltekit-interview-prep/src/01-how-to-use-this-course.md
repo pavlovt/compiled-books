@@ -83,7 +83,7 @@ On Windows, run these in PowerShell or the VS Code terminal; they are the same c
 
 Days 1 to 7 each end with 15 questions: short answers, multiple choice, “what does this code do?” and “find the bug”. Write your answers down, then check them against “Quiz Answer Keys” at the back. Mark the questions you got wrong; before the interview (on Day 10 if you have it, otherwise on the evening before) you retest only those.
 
-The same quizzes, and the three final tests, also exist as an interactive web page that times you, grades multiple-choice answers and keeps track of what you missed. It is `books/sveltekit-interview-prep/quiz/quizzes.html` in the repository this course comes from; open it in any browser.
+The same quizzes, and the three final tests, also exist as an interactive web page that times you, grades multiple-choice answers and keeps track of what you missed. Open it at <https://pavlovt.github.io/compiled-books/books/sveltekit-interview-prep/quiz/quizzes.html> on any device, or open `books/sveltekit-interview-prep/quiz/quizzes.html` from a copy of the repository. Your answers are saved in the browser you use, so each device keeps its own progress.
 
 Scoring guide: 12+ correct out of 15 is interview-ready for that topic. Below 9 means re-read that day’s core notes before the next day starts.
 

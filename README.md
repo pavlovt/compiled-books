@@ -40,7 +40,7 @@ Long code lines are hard-wrapped at 62 characters after pandoc runs, because som
 
 ### The interview-prep quiz page
 
-`books/sveltekit-interview-prep/quiz/` holds one interactive page with every quiz in the course, each selectable on its own: the seven daily quizzes and the three final tests. It has `template.html` (the page), `build_quiz.py` (reads the `## Quiz` section of each day chapter, the Final Tests chapter and both answer-key chapters, renders them with pandoc and fills the template) and the generated `quizzes.html`, which opens directly in a browser. After editing a quiz or an answer key, regenerate it:
+`books/sveltekit-interview-prep/quiz/` holds one interactive page with every quiz in the course, each selectable on its own: the seven daily quizzes and the three final tests. It has `template.html` (the page), `build_quiz.py` (reads the `## Quiz` section of each day chapter, the Final Tests chapter and both answer-key chapters, renders them with pandoc and fills the template) and the generated `quizzes.html`, which opens directly in a browser. It is also served by GitHub Pages at <https://pavlovt.github.io/compiled-books/books/sveltekit-interview-prep/quiz/quizzes.html> (the repository root is published from `main`; `.nojekyll` keeps Pages from processing the files), so a pushed change goes live a minute or two later. After editing a quiz or an answer key, regenerate it:
 
 ```
 python books/sveltekit-interview-prep/quiz/build_quiz.py
