@@ -38,6 +38,16 @@ python build.py --list                # list the books
 
 Long code lines are hard-wrapped at 62 characters after pandoc runs, because some readers (SumatraPDF among them) cut off code that does not fit the page.
 
+### The interview-prep quiz page
+
+`books/sveltekit-interview-prep/quiz/` holds an interactive page for the course's final tests: `template.html` (the page), `build_quiz.py` (reads the Final Tests chapter and its answer key, renders them with pandoc and fills the template) and the generated `final-tests.html`, which opens directly in a browser. After editing the tests or the answer key, regenerate it:
+
+```
+python books/sveltekit-interview-prep/quiz/build_quiz.py
+```
+
+`build.py` ignores this folder; it only reads `meta.yaml` and `src/`.
+
 ## Adding a book
 
 1. Create `books/<name>/` with a `meta.yaml`:
