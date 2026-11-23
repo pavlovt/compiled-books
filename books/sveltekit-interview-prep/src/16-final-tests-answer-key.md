@@ -49,7 +49,7 @@
 
 ## Test 2: SvelteKit
 
-1. b.
+1. a.
 2. `+page.ts`: universal load. `+page.server.ts`: server load and form actions. `+layout.svelte`: layout wrapping child routes. `+server.ts`: API endpoint (HTTP verb handlers returning `Response`). `+error.svelte`: error boundary for the subtree.
 3. `/docs`, `/docs/…` (any depth); the group `(app)` is not in the URL. `params.path` is `'a/b'`.
 4. The route does not match, and routing continues with the next route in sort order; if none matches, a 404.
@@ -95,7 +95,7 @@
 21. A module-level variable is shared by all requests, so concurrent users overwrite and read each other’s searches. Return it from `load` as data (or keep it in the URL).
 22. In the URL (`?sort=price`). Update it with links or a GET form, or `goto(url, { replace: true, reset: false })`, and read it in the load from `url.searchParams`.
 23. `import { navigating } from '$app/state'` and `{#if navigating.to}<Spinner />{/if}`.
-24. It is a server-only module (`server` directory). The build fails (`vite build`, and `vite dev` when the page loads). Vitest does not check it.
+24. It is a server-only module (`server` directory). `vite build` fails with an error that names the import chain. Vitest does not check it.
 25.
     ```ts
     // +page.server.ts
@@ -172,5 +172,5 @@
 21. Type-safe server functions in `*.remote.ts` (`query`, `form`, `command`, `prerender`); experimental in 3.x; `experimental.remoteFunctions: true` and `compilerOptions.experimental.async: true` in `sveltekit({...})`.
 22. Remote query calls are sent to the remote endpoint URL, not the page path, so a page-path guard never sees them. Check authorisation inside the function.
 23. They now return the real `fail` status (for example 400) instead of 200. Tests or monitoring that expected 200 for enhanced failures break.
-24. b.
+24. c.
 25. 0–5 min: clarify and write criteria (renders a tab per item; first tab selected by default; clicking selects; ArrowLeft/Right move selection; `role="tablist"`/`tab`/`tabpanel` with `aria-selected` and `aria-controls`; only the selected panel visible; `onchange` called). 5–8: read the setup, add `CLAUDE.md`. 8–18: component, review, try it on a route. 18–28: component test covering the criteria; break the code once. 28–38: e2e test on the route. 38–43: run Vitest, Playwright and `npm run check`. 43–45: summarise and list what you would add.

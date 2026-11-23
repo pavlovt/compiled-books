@@ -46,13 +46,14 @@ export const handle = sequence(auth, headers);
 - `sequence(a, b, c)`: the “before” parts run a → b → c, the “after” parts run c → b → a.
 - `handleFetch` intercepts `event.fetch` calls on the server (rewrite URLs, add credentials). `reroute` maps a URL to a different route without changing the address bar.
 - `handle` does **not** re-run after an action. If an action logs the user in, update `event.locals` yourself or redirect.
+- Changing headers after `resolve` works for responses SvelteKit renders. A response that a `+server` handler got from `fetch()` and returned as is has read-only headers; copy it first (`new Response(response.body, response)`).
 
 ### Errors
 
 - **Expected errors**: `error(404, 'Not found')`. The message is shown to the user.
 - **Unexpected errors**: anything else thrown. The user sees a generic message (“Internal Error”); the details go to `handleError` only. Never leak stack traces.
 - `handleError({ kind, error, issues, event })` is where you log and report, and it returns the safe `App.Error` the user sees. In SvelteKit 3 it sees **all** errors (in 2.x, `error()` errors skipped it), with a `kind` of `'app'`, `'framework'`, `'validation'` or `'unknown'`, and it may return a custom `status`. It must never throw.
-- Rendering: the nearest `+error.svelte` **above** the failing node renders, reading `page.error` and `page.status` from `$app/state`. An error in the root layout, in `handle` or in a `+server` endpoint cannot use `+error.svelte`: the static `src/error.html` (or JSON for API clients) is used instead.
+- Rendering: the nearest `+error.svelte` **above** the failing node renders, reading `page.error` and `page.status` from `$app/state`. An error in the root layout’s `load`, in `handle` or in a `+server` endpoint cannot use `+error.svelte`: the static `src/error.html` (or JSON for API clients) is used instead.
 - Shape your errors with `App.Error` in `app.d.ts` (for example add `errorId`).
 - Inside a component, `<svelte:boundary>` with a `failed` snippet catches rendering errors for a region.
 
@@ -62,7 +63,7 @@ Export these from `+page.ts`/`+layout.ts` (or the `.server` versions). They inhe
 
 | Option | Effect |
 |---|---|
-| `export const prerender = true` | Render to static HTML at build time. All users must get the same HTML. Pages with actions cannot be prerendered. `'auto'` prerenders but keeps the route dynamic too |
+| `export const prerender = true` | Render to static HTML at build time. All users must get the same HTML. Pages with actions cannot be prerendered. `'auto'` prerenders the page but also keeps the route on the server, so URLs that were not prerendered are rendered on demand |
 | `export const ssr = false` | No server rendering: an empty shell, everything runs in the browser (SPA) |
 | `export const csr = false` | No JavaScript shipped: no hydration, no client router, no `use:enhance` |
 | `export const trailingSlash = 'always'` | URL normalisation |
@@ -77,7 +78,7 @@ Export these from `+page.ts`/`+layout.ts` (or the `.server` versions). They inhe
 - A Node server process serves **many users**. Module-level variables are shared by all of them. `export const user = $state(...)` in a module, written during SSR, **leaks one user’s data to another**.
 - Keep `load` functions pure: return data, never write to globals or stores.
 - Per-request server state: `event.locals`, or `getRequestEvent()` from `$app/server`. Per-tree client state: context. Browser-only singletons: a module, but only if it is written exclusively in the browser.
-- **URL state:** filters, sorting and pagination belong in the URL (`?q=…&page=2`). It survives reloads, can be shared, and is available to SSR. Update it with a GET form, or with `goto(url, { replace: true, reset: false })` in SvelteKit 3: `replace` swaps the history entry (so Back does not step through every keystroke) and `reset: false` keeps scroll and focus. The SvelteKit 2 options `replaceState`, `noScroll` and `keepFocus` were changed or removed in 3.0.
+- **URL state:** filters, sorting and pagination belong in the URL (`?q=…&page=2`). It survives reloads, can be shared, and is available to SSR. Update it with a GET form, or with `goto(url, { replace: true, reset: false })` in SvelteKit 3: `replace` swaps the history entry (so Back does not step through every keystroke) and `reset: false` keeps scroll and focus. (In SvelteKit 2 you would have written `replaceState: true`, `noScroll` and `keepFocus`; `noScroll` and `keepFocus` were removed in 3.0.)
 - **Page state / shallow routing:** `goto('', { shallow: true, state: { showModal: true } })` and `page.state.showModal`, for modals that close on Back. It replaces `pushState`/`replaceState`.
 - `$app/state` exports `page` (url, params, route, data, form, status, error, state), `navigating` (`navigating.to` during a navigation) and `updated`. Use them as plain objects: `page.url.pathname`, no `$`.
 - `beforeNavigate` (can cancel), `onNavigate` (view transitions), `afterNavigate`.
@@ -141,9 +142,9 @@ import { PUBLIC_API_BASE } from '$app/env/public'; // usable anywhere
 12. Multiple choice: in a SvelteKit 3 component, how do you show a spinner during navigation?
 
     a. `{#if $navigating}`
-    b. `{#if navigating.to}` with `navigating` from `$app/state`
-    c. `{#if page.loading}`
-    d. `{#if $page.navigating}`
+    b. `{#if page.loading}`
+    c. `{#if $page.navigating}`
+    d. `{#if navigating.to}` with `navigating` from `$app/state`
 
 13. What is the difference between a static and a dynamic environment variable, and which should a database password be?
 14. You import `#lib/server/db.js` from a `+page.svelte`. What happens, and why might your unit tests not notice?

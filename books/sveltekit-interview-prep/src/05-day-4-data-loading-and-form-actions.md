@@ -18,7 +18,7 @@ This is the day with the most interview questions. Do not skip the quiz.
 |---|---|---|
 | Runs | Server during SSR, then **in the browser** on navigation | **Server only** |
 | Can use | Public APIs, anything the browser could do | Database, secrets, `cookies`, `locals`, `request` |
-| Return value | Anything (even components, classes) | Must be serialisable by `devalue` (Date, Map, Set, BigInt are fine; functions and class instances are not) |
+| Return value | Anything (even components, classes) | Must be serialisable by `devalue`: Date, Map, Set and BigInt are fine; functions are not, and class instances only if registered with the `transport` hook |
 | On client navigation | Calls the API directly from the browser | The browser fetches `__data.json` from your server |
 
 ```ts
@@ -71,7 +71,7 @@ SvelteKit tracks what each `load` **reads**:
 - `params.x` that it read changed;
 - `url.pathname`, or a search param it read with `url.searchParams.get('q')` (tracked per key), changed;
 - it awaited `parent()` and the parent re-ran;
-- it called `depends('app:cart')` (or fetched a URL) and someone called `invalidate('app:cart')` (or that URL);
+- it called `depends('app:cart')` and someone called `invalidate('app:cart')`, or, in a universal load, it fetched a URL and someone called `invalidate` with that URL;
 - someone called `refreshAll()` (SvelteKit 3; `invalidateAll()` is deprecated).
 
 Loads whose inputs did not change are skipped. A re-run updates the component’s `data` prop; it does not recreate the component.
@@ -128,7 +128,7 @@ export const actions = {
 ```
 
 - An action is a **POST to the page URL**. Order: the action runs, then the loads re-run, then the page renders with the action’s return value as the `form` prop.
-- Named actions: `export const actions = { create, delete }` and `<form action="?/create">` or `<button formaction="?/delete">`. A route cannot mix `default` with named actions.
+- Named actions: `export const actions = { create: async (event) => {…}, remove: async (event) => {…} }`, posted to with `<form action="?/create">` or `<button formaction="?/remove">`. A route cannot mix `default` with named actions.
 - `return fail(status, data)` for validation errors (the form re-renders with `form` set). `redirect()` and `error()` are thrown, as in `load`. `satisfies Actions` keeps `form` typed.
 - **It works without JavaScript.** That is progressive enhancement: the browser posts, the server renders the result.
 - `use:enhance` makes it work without a full reload. With no argument it: submits with `fetch`, updates `form`, resets the form on success, calls `refreshAll()`, follows redirects and renders errors. Passing a callback lets you show pending state or keep the inputs. Call `update()` to keep the defaults.
@@ -178,8 +178,8 @@ export const actions = {
 13. Multiple choice: which is true in SvelteKit 3?
 
     a. `invalidateAll()` is the recommended way to refresh all data
-    b. An enhanced form posting to another page now navigates to it
-    c. Enhanced failures always return HTTP 200
+    b. Enhanced failures always return HTTP 200
+    c. An enhanced form posting to another page now navigates to it
     d. `fail` must be thrown
 
 14. When should a form use `method="GET"` instead of an action?

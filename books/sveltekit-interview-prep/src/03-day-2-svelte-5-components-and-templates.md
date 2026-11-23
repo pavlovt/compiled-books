@@ -1,6 +1,6 @@
 # Day 2: Svelte 5 Components: Templates, Snippets, Bindings, Context and SSR
 
-**Goal for today:** build a non-trivial component (a todo list) using each blocks with keys, bindings, snippets and a `.svelte.ts` class, and explain what runs on the server versus in the browser.
+**Goal for today:** build a non-trivial component (a todo list) with a keyed each block, bindings and a `.svelte.ts` class, explain snippets, and explain what runs on the server versus in the browser.
 
 ## Read (45 min)
 
@@ -9,7 +9,7 @@
 3. **Svelte 8**, “How a binding works”, “Input bindings”, “Function bindings”, “Component bindings and ownership”.
 4. **Svelte 12**, “Context”, “Shared state with runes: patterns”, “Anti-patterns”. *Skim* “Stores”.
 5. **Svelte 14**, “What the server build runs, and what it skips”, “Hydration”, “SSR pitfalls”.
-6. *Skim* **Svelte 9** “Actions” and “Attachments”, and **Svelte 17** “Prefer native elements” (the a11y warnings).
+6. *Skim* **Svelte 9** “Actions” and “Attachments”, and **Svelte 17** “Semantic HTML first” (the a11y warnings).
 
 ## Core notes (20 min)
 
@@ -52,7 +52,7 @@
 
 <!-- usage -->
 <Card title="Hi">
-	<p>Body goes into `children`.</p>
+	<p>This paragraph becomes the children snippet.</p>
 	{#snippet footer(t)}<small>{t}</small>{/snippet}
 </Card>
 ```
@@ -63,7 +63,7 @@
 ### Bindings
 
 - `bind:value`, `bind:checked`, `bind:group` (radios give one value, checkboxes give an array), `bind:this`.
-- Number and range inputs give numbers. An empty number input gives `null`.
+- Number and range inputs give numbers. An empty number input gives `null` in Svelte 5.57 (the docs say `undefined`), so type the state as `number | null`.
 - A component prop is bindable only if the child declares it with `$bindable()`. Every component in a chain of bindings must declare it.
 - **Function bindings** (`bind:value={() => get, (v) => set(v)}`) replace the old “write state from an effect” patterns: validation, formatting, unit conversion.
 - In runes mode, bind to `item.done` inside an each block, never to the each variable itself.

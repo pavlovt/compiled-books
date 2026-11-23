@@ -15,7 +15,7 @@ Every configuration and test in this chapter was run on 23 November 2026 against
 
 | Level | Tool | Runs in | What it proves |
 |---|---|---|---|
-| Unit | Vitest, `server` project | Node | Pure logic: validators, `.svelte.ts` classes, loads, actions, `+server` handlers, hooks |
+| Unit | Vitest, mostly the `server` project | Node (browser for `*.svelte.spec.ts` files) | Pure logic: validators, loads, actions, `+server` handlers, hooks, and `.svelte.ts` classes |
 | Component | Vitest browser mode + `vitest-browser-svelte`, `client` project | Real Chromium | A component renders, reacts to clicks and typing, calls its callbacks |
 | End to end | Playwright | Real browser against the **production build** | Routing, SSR plus hydration, forms, the whole app |
 
@@ -133,10 +133,12 @@ render(NavLink, { href: '/about', children });
 vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/about') } }));
 ```
 
-### Unit tests (Node)
+### Unit tests
+
+A `.svelte.ts` class needs no DOM to test. Name its test `*.svelte.spec.ts`, as the course does; the scaffolded config then runs it in the `client` project (in the browser), which is also where runes are available to the test file itself.
 
 ```ts
-// src/lib/todos.svelte.spec.ts : a .svelte.ts class, no DOM needed
+// src/lib/todos.svelte.spec.ts
 const list = new TodoList();
 list.add('a');
 list.toggle(list.items[0].id);
@@ -146,7 +148,7 @@ expect(list.remaining).toBe(0);
 - State and deriveds are **synchronous**: write, then read.
 - Effects are scheduled. To test one, wrap the test in `$effect.root(() => { … })`, call `flushSync()` after each change, and call the returned cleanup at the end. Creating an `$effect` outside a root throws `effect_orphan`.
 
-**Actions, loads and endpoints** are plain functions. Call them with a partial event:
+**Actions, loads and endpoints** are plain functions, tested in Node (the `server` project). Call them with a partial event:
 
 ```ts
 // src/routes/guestbook/page.server.spec.ts
@@ -189,7 +191,7 @@ test.describe('without JavaScript', () => {
 
 - Runs against `vite build` + `vite preview` (port 4173): you test what ships. Locally, add `reuseExistingServer: !process.env.CI` to `webServer` to avoid rebuilding on every run.
 - Web-first assertions retry: `await expect(locator).toHaveText(…)`, `toBeVisible()`, `toHaveCount(n)`, `toHaveURL(…)`. **Never** `waitForTimeout`.
-- **Strict mode:** a locator used in an action or assertion must match exactly one element. Verified gotcha: the scaffold’s root layout renders its own `<li>`, so `page.getByRole('listitem')` matched two elements. Scope it: `page.getByRole('list', { name: 'Todo items' }).getByRole('listitem')`.
+- **Strict mode:** a locator used for an action (`click`, `fill`) or a single-element assertion (`toHaveText`, `toBeVisible`) must match exactly one element; `toHaveCount` is the exception. Verified gotcha: the scaffold’s root layout renders its own `<li>`, so `page.getByRole('listitem')` matched two elements. Scope it: `page.getByRole('list', { name: 'Todo items' }).getByRole('listitem')`.
 - **Hydration race:** the HTML arrives before JavaScript has attached handlers. A click that lands before hydration does a native form submit or does nothing. Mitigations: assert on the *result* with retrying assertions; for flaky cases, set a `data-hydrated` attribute in the root layout’s `onMount` and wait for it after `goto`.
 - `test.use({ javaScriptEnabled: false })` proves progressive enhancement.
 - `page.route` only mocks **browser** requests. Server-side `fetch` during SSR is not affected; stub upstream APIs through environment variables or `handleFetch`.
@@ -197,7 +199,7 @@ test.describe('without JavaScript', () => {
 
 ### What to test, briefly (an interview answer)
 
-“Logic in plain functions and `.svelte.ts` classes with fast Node unit tests. Each component’s behaviour in a real browser: renders from props, reacts to the user, calls its callbacks. Each action’s failure shapes and success path. One Playwright test per critical user journey, including a no-JavaScript run for progressively enhanced forms. Type-check and build in CI, because the build is what catches server-only imports.”
+“Logic in plain functions and `.svelte.ts` classes with fast unit tests. Each component’s behaviour in a real browser: renders from props, reacts to the user, calls its callbacks. Each action’s failure shapes and success path. One Playwright test per critical user journey, including a no-JavaScript run for progressively enhanced forms. Type-check and build in CI, because the build is what catches server-only imports.”
 
 ## Hands-on (40 min)
 

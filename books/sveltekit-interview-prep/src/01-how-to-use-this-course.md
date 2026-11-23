@@ -3,7 +3,7 @@
 This is a nine-day course that prepares you for a live SvelteKit interview with two parts:
 
 1. **Questions.** Conceptual questions on SvelteKit and on Svelte itself (runes, components, reactivity).
-2. **Live coding with Claude Code.** You build a component, a unit (component) test and an end-to-end test while the interviewer watches.
+2. **Live coding with Claude Code.** While the interviewer watches, you build a component, a unit test for it (in a SvelteKit project this is usually a component test that renders it in a browser) and an end-to-end test.
 
 It is built on the two companion books in this collection, *SvelteKit 3 in Depth* (cited as **Kit**) and *Svelte 5 in Depth* (cited as **Svelte**). A reference such as “Kit 4” means Chapter 4 of the SvelteKit book. The course does not replace the books. It tells you which parts to read, condenses what interviewers ask most, and gives you drills and quizzes.
 
@@ -54,9 +54,9 @@ Day 6 is the most important day for the live-coding part, and the live-coding pl
 
 ## Versions, and why they matter in the interview
 
-Everything here targets **SvelteKit 3** (3.0 shipped on 1 October 2026; the practice project in this course was scaffolded with 3.2) and **Svelte 5.57**. The test stack was verified on 23 November 2026 by scaffolding a fresh project with `sv` 1.7.0 and running every test in this course: Vitest 5.1, `vitest-browser-svelte` 3.1, `@vitest/browser-playwright` 5.1 and Playwright 1.65.
+Everything here targets **SvelteKit 3** (3.0 shipped on 1 October 2026; the practice project in this course was scaffolded with 3.2) and **Svelte 5.57**. The test stack was verified on 23 November 2026 by scaffolding a fresh project with `sv` 1.7.0 and running the drill solutions and test examples in Day 6 and the playbook: Vitest 5.1, `vitest-browser-svelte` 3.1, `@vitest/browser-playwright` 5.1 and Playwright 1.65. (The example projects have no reference solutions, so there was nothing to run for them.)
 
-Many companies still run SvelteKit 2 code. Be ready to say what changed, because “what is new in SvelteKit 3?” is a natural opening question and old habits (`$lib`, `$app/stores`, `svelte.config.js`) are what an interviewer will notice in your live code. Day 3 and Day 7 have a 2-versus-3 table for this.
+Many companies still run SvelteKit 2 code. Be ready to say what changed, because “what is new in SvelteKit 3?” is a natural opening question and old habits (`$lib`, `$app/stores`, `svelte.config.js`) are what an interviewer will notice in your live code. Day 3 has a table of the 2-versus-3 changes, and Day 7 covers the migration itself.
 
 ## The practice project
 
@@ -81,7 +81,9 @@ On Windows, run these in PowerShell or the VS Code terminal; they are the same c
 
 ## How to use the quizzes
 
-Each day ends with 12–15 questions: short answers, multiple choice, “what does this code do?” and “find the bug”. Write your answers down, then check them against “Quiz Answer Keys” at the back. Mark the questions you got wrong; on Day 8 you will retest only those.
+Days 1 to 7 each end with 15 questions: short answers, multiple choice, “what does this code do?” and “find the bug”. Write your answers down, then check them against “Quiz Answer Keys” at the back. Mark the questions you got wrong; before the interview (on Day 10 if you have it, otherwise on the evening before) you retest only those.
+
+The same quizzes, and the three final tests, also exist as an interactive web page that times you, grades multiple-choice answers and keeps track of what you missed. It is `books/sveltekit-interview-prep/quiz/quizzes.html` in the repository this course comes from; open it in any browser.
 
 Scoring guide: 12+ correct out of 15 is interview-ready for that topic. Below 9 means re-read that day’s core notes before the next day starts.
 

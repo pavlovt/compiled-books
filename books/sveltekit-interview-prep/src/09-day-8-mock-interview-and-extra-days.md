@@ -44,7 +44,7 @@ Interviewers often ask open “how would you…” questions. A structure keeps 
 
 1. **Clarify** the context in one sentence (“For a logged-in dashboard behind a proxy…”).
 2. **State the default** SvelteKit approach (“I would load it in a server `load`…”).
-3. **Give the reason** (“…because it needs the session cookie and the result is serialised to the page anyway”).
+3. **Give the reason** (“…because it needs the session cookie, and I can return only the fields the page needs”).
 4. **Name the trade-off or pitfall** (“…the catch is that layout loads don’t protect page loads, so I’d also check in `handle`”).
 5. **Say how you would test it** (“…a unit test of the load with a fake `locals`, and an e2e test that an anonymous user is redirected”).
 

@@ -1,6 +1,6 @@
 # The Live-Coding Playbook
 
-The live-coding part asks you to build a component, a unit (component) test and an end-to-end test, using Claude Code, while someone watches. This chapter gives you a fixed routine, a project setup that steers Claude Code towards current syntax, a review checklist, and six drills. The first three come with reference solutions that were run and passed on 23 November 2026; the last three are unseen practice for Day 8.
+The live-coding part asks you to build a component, a component test and an end-to-end test, using Claude Code, while someone watches. This chapter gives you a fixed routine, a project setup that steers Claude Code towards current syntax, a review checklist, and six drills. The first three come with reference solutions that were run and passed on 23 November 2026; the last three are unseen practice for any spare time you have (see Day 8).
 
 ## What the interviewer is actually evaluating
 
@@ -255,7 +255,7 @@ export class TodoList {
 }
 ```
 
-Notes: methods are arrow-function fields so `onclick={list.remove}`-style usage would keep `this`. `remove` reassigns `items` instead of splicing; both are reactive.
+Notes: the methods are arrow-function fields, so they keep `this` even when passed around as callbacks. `remove` reassigns `items` instead of splicing; both are reactive.
 
 **Unit test:** `src/lib/todos.svelte.spec.ts`
 
@@ -644,7 +644,7 @@ describe('effects in a unit test', () => {
 
 ## Drills 4–6: unseen practice
 
-Do these on Day 8 with a timer, using the 45-minute routine and Claude Code. There are no solutions on purpose: judge yourself with the review checklist, and by whether all three commands pass.
+Do these when you have spare time, with a timer, using the 45-minute routine and Claude Code. There are no solutions on purpose: judge yourself with the review checklist, and by whether all three commands pass.
 
 ### Drill 4: Star rating
 
@@ -668,7 +668,7 @@ Do these on Day 8 with a timer, using the 45-minute routine and Claude Code. The
 - Each header is a `<button aria-expanded aria-controls>` (use `$props.id()` for ids) inside a heading; panels are hidden when collapsed.
 - With `multiple = false`, opening one closes the others.
 - Component tests: initial state, toggle, single versus multiple mode, `aria-expanded` values.
-- E2E: open the second section and check that its content is visible and the first one’s is not.
+- E2E (single mode): open the first section, then the second, and check that the second section’s content is visible and the first one’s is hidden again.
 
 ## Things that commonly go wrong live, and the fix
 
@@ -680,6 +680,6 @@ Do these on Day 8 with a timer, using the 45-minute routine and Claude Code. The
 | `toHaveTextContent` fails with extra text | The element’s full text includes child text | Assert on a more specific element |
 | Playwright “strict mode violation” | Locator matches several elements | Scope it with a parent locator or a name |
 | E2E click does nothing, intermittently | Clicked before hydration | Assert on results with retrying assertions; wait for a hydration marker |
-| E2E shows stale behaviour | `webServer` reused an old build | Stop the old preview server, or rerun so it rebuilds |
+| E2E shows stale behaviour | With `reuseExistingServer`, Playwright reused a preview server running an old build | Stop the old preview server so the next run rebuilds |
 | `Cannot find module './$types'` | Types not generated | `npx svelte-kit sync` (or `npm run check`) |
 | Generated code uses `export let` / `on:click` / `$lib` | Model defaulted to old syntax | Point at `CLAUDE.md`, ask it to fix, and say why |

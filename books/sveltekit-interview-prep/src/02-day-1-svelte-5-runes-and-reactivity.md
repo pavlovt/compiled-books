@@ -13,7 +13,7 @@
 
 ### The mental model
 
-- Svelte 5 is a **compiler plus a small signals runtime**. A component is a function that runs **once**. There is no virtual DOM and no component re-render: when state changes, only the specific DOM updates (effects) that read that state re-run.
+- Svelte 5 is a **compiler plus a small signals runtime**. A component is a function that runs **once**. There is no virtual DOM and no component re-render: when state changes, only the effects that read that state re-run, and each of them updates its own small piece of the DOM.
 - Runes (`$state`, `$derived`, `$effect`, `$props`, `$bindable`, `$inspect`, `$host`) are **compiler keywords**, not functions. They work in `.svelte` files and in `.svelte.js`/`.svelte.ts` modules. In a plain `.ts` file you get `rune_outside_svelte`.
 - A `.svelte` file has an instance `<script>` (runs per instance), an optional `<script module>` (runs once per module), markup, and a scoped `<style>`.
 
@@ -47,7 +47,7 @@ let label = $derived.by(() => {
 - **Lazy and memoised.** Recomputed only when read after a dependency changed. If the new value is identical (`===`) to the old one, nothing downstream updates.
 - Dependencies are whatever was **read synchronously** during the last run. Wrap reads in `untrack(() => …)` to exclude them.
 - Must be pure. Writing to state inside a derived throws `state_unsafe_mutation`.
-- Since 5.25 you can **assign** to a derived temporarily (useful for optimistic UI); it snaps back when its dependencies change.
+- Since 5.25 you can **assign** to a derived (useful for optimistic UI). The assigned value holds until a dependency changes; then the derived recomputes from its expression again.
 
 ### `$effect`
 
@@ -62,7 +62,7 @@ $effect(() => {
 - `$effect.pre` runs before DOM updates. `$effect.root` creates a scope you destroy yourself (needed outside components, for instance in tests); creating an `$effect` with no parent throws `effect_orphan`.
 - `onMount` still exists and is fine. `onDestroy` is the only lifecycle function that also runs on the server. `beforeUpdate`/`afterUpdate` are legacy only.
 - **When not to use `$effect`:** to compute a value from other state (use `$derived`), to react to a user action (put the code in the event handler), or to sync two pieces of state (use a function binding or writable derived). An effect that reads and writes the same state loops until `effect_update_depth_exceeded`.
-- This is the single most common Svelte 5 interview question. The short answer: **effects are an escape hatch for talking to the outside world** (DOM APIs, timers, subscriptions, analytics), not for data flow.
+- This is one of the most common Svelte 5 interview questions. The short answer: **effects are an escape hatch for talking to the outside world** (DOM APIs, timers, subscriptions, analytics), not for data flow.
 
 ### `$props` and component events
 
@@ -132,9 +132,9 @@ $effect(() => {
 11. Multiple choice: which file can use `$state`?
 
     a. `utils.ts`
-    b. `store.svelte.ts`
-    c. `+page.server.ts`
-    d. `vite.config.ts`
+    b. `+page.server.ts`
+    c. `vite.config.ts`
+    d. `store.svelte.ts`
 
 12. What is the difference between `$derived(expr)` and `$derived.by(fn)`?
 13. Is `$derived` eager or lazy? What does “equality cut-off” mean?

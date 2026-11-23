@@ -29,7 +29,9 @@ sveltekit({
 ```ts
 // src/routes/todos/todos.remote.ts
 import * as v from 'valibot';
-import { form, query, command } from '$app/server';
+import { form, query } from '$app/server';
+import * as db from '#lib/server/db.js';
+import { requireUser } from '#lib/server/auth.js';
 
 export const getTodos = query(async () => db.todosFor(requireUser().id));
 
@@ -68,7 +70,7 @@ export const addTodo = form(
 Points interviewers like:
 
 - Every argument is **public HTTP input**: validate it with a Standard Schema (Valibot, Zod, ArkType).
-- **Authorise inside each remote function.** A path-based guard in `handle` does not protect them, because query requests go to the remote endpoint URL.
+- **Authorise inside each remote function.** A path-based guard in `handle` does not protect them: query requests go to the remote endpoint’s URL, not the page’s, and for `form` and `command` the page URL is reported by the client, so it cannot be trusted.
 - After a successful `form`, all queries and loads refresh by default; explicit `refresh()`/`set()` calls in the handler replace that and ride back in the same response (“single-flight mutation”).
 - They are still **experimental** in 3.x: say so, and say you would isolate them behind thin wrappers over plain functions (which also makes them testable).
 - Form actions versus remote forms: actions are stable and page-bound; remote forms are reusable anywhere, typed, and avoid wiring `form` props.
@@ -100,7 +102,7 @@ Points interviewers like:
 | Adapter | Use for |
 |---|---|
 | `adapter-auto` | Scaffolding only; detects Vercel, Netlify, Cloudflare |
-| `adapter-node` | Your own server or container. Behind a proxy, set `paths.origin` or the `*_HEADER` variables (the `ORIGIN` variable is gone in 3) |
+| `adapter-node` | Your own server or container. Behind a proxy, set `paths.origin` at build time, or the header variables (`PROTOCOL_HEADER`, `HOST_HEADER`, `ADDRESS_HEADER`) at run time; the `ORIGIN` variable is gone in 3 |
 | `adapter-static` | Fully prerendered sites, or an SPA with a `fallback` page |
 | `adapter-vercel`, `-netlify`, `-cloudflare`, `-bun` | Those platforms |
 

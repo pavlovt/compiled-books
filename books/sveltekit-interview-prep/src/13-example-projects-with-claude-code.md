@@ -81,7 +81,7 @@ src/routes/books/books.e2e.ts
 ### Review hotspots
 
 - Hidden inputs for the id must be inside **each** form, and actions must check that the id exists (return `fail(404)` otherwise).
-- `form?.values` must not leak to other forms on the page: the add form should only show its own errors. Using a field such as `form?.action === 'add'` or separate keys keeps them apart.
+- The `form` prop holds the result of whichever action ran last, so the add form must not show errors from a failed toggle or delete. Return a marker from each action (for example `fail(400, { action: 'add', values, errors })`) and show errors only when `form?.action === 'add'`.
 - The filter must come from `url.searchParams.get('status')` in the **load**, not from client-side state, so it works with SSR and reloads.
 - A route cannot mix a `default` action with named actions.
 - E2E: the same book title on several tests can collide because the in-memory store persists across tests. Use unique titles per test (`` `Book ${Date.now()}` ``).
@@ -169,7 +169,7 @@ A small task board for logged-in users: three columns (To do, Doing, Done), task
 3. **Defence in depth.** The board’s server `load` and its actions also check `locals.user` (a `requireUser()` helper using `getRequestEvent()` from `$app/server`).
 4. **Logout.** A POST form action `?/logout` deletes the session and the cookie and redirects to `/login`.
 5. **Board.** A `TaskBoard.svelte` component receives `tasks` (`{ id, title, column }[]`) and an `onmove(id, column)` callback. Each column is a labelled list (`aria-label`), each task has “Move left”/“Move right” buttons (disabled at the edges) with accessible names including the task title. When a task button has focus, ArrowLeft/ArrowRight also move it.
-6. The board page wires `onmove` to a `?/move` action (submitted programmatically with `fetch` and a `FormData`, or with a hidden form and `requestSubmit()`), then calls `refreshAll()` from `$app/navigation` so the load re-runs. Tasks are per user.
+6. The board page wires `onmove` to a `?/move` action through a hidden `<form method="POST" action="?/move" use:enhance>` with `id` and `column` inputs: `onmove` fills the inputs and calls `form.requestSubmit()`. `use:enhance` re-runs the load afterwards, so the board updates. Tasks are per user.
 7. **Errors.** `handleError` in `hooks.server.ts` logs unexpected errors with a generated `errorId` and returns `{ message: 'Something went wrong', errorId }`; extend `App.Error` with `errorId`. The `+error.svelte` page shows the id.
 
 ### Suggested structure
@@ -221,7 +221,7 @@ src/routes/board/board.e2e.ts
 - Do not return the user’s password hash or the session id from any load.
 - Keyboard handling should be on the task’s buttons (`onkeydown`), not on a `div` with `tabindex` (the a11y warnings will tell you).
 - The `move` action must check that the task belongs to `locals.user`: otherwise any user can move any task by id.
-- `refreshAll` is SvelteKit 3; if the generated code uses `invalidateAll`, it still works but is deprecated: say so and change it.
+- If the generated code posts to the action with a bare `fetch`, reject it: without SvelteKit’s own request headers the response is the page’s HTML, not an action result. The enhanced hidden form is simpler. If it calls `invalidateAll()`, note that it is deprecated in SvelteKit 3 (`refreshAll()`), and unnecessary here because `use:enhance` already refreshes.
 
 ### Stretch goals
 

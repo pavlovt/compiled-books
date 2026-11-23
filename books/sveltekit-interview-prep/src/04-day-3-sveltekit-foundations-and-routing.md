@@ -16,7 +16,7 @@
 2. **A Vite plugin** (`sveltekit()` in `vite.config.ts`) scans `src/routes`, generates the route manifest and types (`./$types`), and builds the server and client bundles.
 3. **An adapter** turns that platform-neutral build into something deployable (Node, Vercel, Netlify, Cloudflare, static files). It maps the platform onto one function: `server.respond(Request) → Response`.
 
-SvelteKit never owns the HTTP server. Everything is web standards: `Request`, `Response`, `Headers`, `FormData`, `URL`.
+SvelteKit never owns the HTTP server (the adapter or platform does). Its server API is built on web standards: `Request`, `Response`, `Headers`, `FormData`, `URL`.
 
 **The default experience:** the first request is server-rendered (SSR), the browser then **hydrates**, and further navigations are client-side: the router fetches only the data (`__data.json`) and code it needs. You can change this per route (Day 5).
 
@@ -33,7 +33,7 @@ SvelteKit never owns the HTTP server. Everything is web standards: `Request`, `R
 | `src/params/*.js`, one matcher per file | One `src/params.ts` with `defineParams` |
 | `pushState`/`replaceState` | `goto(url, { shallow: true, state })` |
 | `invalidateAll()` | `refreshAll()` |
-| Node 18+, Vite 5–7 | Node 22.17+, Vite 8, TypeScript 6, Svelte 5.57+ |
+| Node 18+, Svelte 4 or 5 | Node 22.17+, Vite 8 (required), TypeScript 6, Svelte 5.57+ |
 
 Remote functions (Day 7) remain **experimental** in 3.x and need two flags.
 
@@ -156,12 +156,12 @@ export const POST: RequestHandler = async ({ request }) => {
 10. You have `+page.svelte` and `+server.ts` in the same directory. Where does a browser `GET` go? Where does a `DELETE` go?
 11. Multiple choice: in SvelteKit 3, which import gives you the current page’s URL and params in a component?
 
-    a. `import { page } from '$app/stores'`
-    b. `import { page } from '$app/state'`
+    a. `import { page } from '$app/state'`
+    b. `import { page } from '$app/stores'`
     c. `import { page } from '$app/navigation'`
     d. `import { getPage } from '@sveltejs/kit'`
 
-12. What does `resolve()` from `$app/paths` do, and what two SvelteKit 2 exports did it replace?
+12. What does `resolve()` from `$app/paths` do, and which SvelteKit 2 exports of `$app/paths` did it replace?
 13. Name three changes between SvelteKit 2 and 3 that would show up in a code review of old code.
 14. Why does SvelteKit generate a `./$types` module per route, and what makes it appear?
 15. What does `+page@.svelte` do?

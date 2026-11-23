@@ -1,6 +1,6 @@
 # Final Tests
 
-Three cumulative tests, 25 questions each. Take each one closed book in **30 minutes**, then check “Final Tests: Answer Key”. A score of 20 or more is a good sign for the interview; under 15, re-read the core notes of the days listed next to the questions you missed.
+Three cumulative tests, 25 questions each. Take each one closed book in **30 minutes**, then check “Final Tests: Answer Key”. A score of 20 or more is a good sign for the interview; under 15, re-read the core notes of the days listed for that test below, then retry the questions you missed.
 
 - **Test 1:** Svelte 5 (Days 1–2)
 - **Test 2:** SvelteKit (Days 3–5)
@@ -84,8 +84,8 @@ Three cumulative tests, 25 questions each. Take each one closed book in **30 min
 
 1. Multiple choice: what happens on the first request to a page in a default SvelteKit app?
 
-   a. An empty shell is sent and the browser renders everything
-   b. The server renders HTML, the browser hydrates it, and later navigations are client-side
+   a. The server renders HTML, the browser hydrates it, and later navigations are client-side
+   b. An empty shell is sent and the browser renders everything
    c. The page is always prerendered at build time
    d. Every navigation is a full server round trip
 
@@ -159,8 +159,8 @@ Three cumulative tests, 25 questions each. Take each one closed book in **30 min
 24. Multiple choice: which is the SvelteKit 3 way to open a modal that closes on Back?
 
     a. `pushState('', { showModal: true })`
-    b. `goto('', { shallow: true, state: { showModal: true } })`
-    c. `history.pushState({ showModal: true }, '')`
+    b. `history.pushState({ showModal: true }, '')`
+    c. `goto('', { shallow: true, state: { showModal: true } })`
     d. `replaceState('', { showModal: true })`
 
 25. **Live-coding plan:** you are asked for a `Tabs` component with a unit test and an e2e test in 45 minutes. List your steps with rough timings and name the acceptance criteria you would write.

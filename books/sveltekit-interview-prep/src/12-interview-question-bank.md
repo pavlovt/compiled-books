@@ -49,7 +49,7 @@ The application framework for Svelte: filesystem routing, data loading, form han
 Universal `load` (`+page.ts`) runs on the server for SSR and in the browser for navigations; use it for public APIs and non-serialisable values. Server `load` (`+page.server.ts`) only runs on the server; use it for databases, secrets, cookies and `locals`. Its return value is serialised and sent to the browser, so return only what the page needs.
 
 **15. When does a `load` function re-run?**
-When something it read changes: params, the pathname, a search param it read, its parent’s data if it awaited `parent()`; when a dependency it declared with `depends()` or fetched is invalidated; or when `refreshAll()` runs (after actions with `use:enhance`, for instance).
+When something it read changes: params, the pathname, a search param it read, its parent’s data if it awaited `parent()`; when a dependency it declared with `depends()` is invalidated (or, in a universal load, a URL it fetched); or when `refreshAll()` runs (after actions with `use:enhance`, for instance).
 
 **16. How do form actions work?**
 A `<form method="POST">` posts to the page; the matching action in `+page.server.ts` runs, then the loads re-run and the page renders with the action’s result in the `form` prop. Validation failures use `return fail(400, data)`. It works without JavaScript; `use:enhance` adds a fetch-based submission without reloading.
@@ -67,7 +67,7 @@ A per-request object on the server, typed by `App.Locals`. Typically `handle` va
 Validate the session in `handle` and set `locals.user`. Redirect anonymous users from protected paths in `handle`, and also check authorisation where the data is read (server loads, actions, endpoints, remote functions). A guard only in a layout load is not enough, because page loads run in parallel with it.
 
 **21. How are errors handled?**
-`error(status, message)` throws an expected error whose message is shown; anything else is unexpected and shows a generic message. Both go through `handleError`, where you log and return a safe error object. The nearest `+error.svelte` renders it; errors in the root layout or `handle` fall back to `error.html`.
+`error(status, message)` throws an expected error whose message is shown; anything else is unexpected and shows a generic message. Both go through `handleError`, where you log and return a safe error object. The nearest `+error.svelte` renders it; errors in the root layout’s load or in `handle` fall back to `error.html`.
 
 **22. SSR, CSR, prerendering, SPA: how do you choose?**
 Per route, with page options. Prerender pages that are the same for everyone (marketing, docs). SSR dynamic, personalised or SEO-relevant pages. `ssr = false` (SPA) only for app areas that cannot be server-rendered. `csr = false` for pages that need no JavaScript at all.
@@ -85,7 +85,7 @@ They are declared in `src/env.ts` with `defineEnvVars`, each marked public or pr
 A plugin that turns the build into something a platform can run: a Node server, serverless functions for Vercel or Netlify, a Cloudflare Worker, or static files. It maps the platform’s requests onto SvelteKit’s `server.respond(Request)`.
 
 **27. What is new in SvelteKit 3?**
-Configuration in `vite.config.ts` instead of `svelte.config.js`; `#lib` subpath imports instead of `$lib`; `$app/stores` removed in favour of `$app/state`; explicit environment variables in `src/env.ts`; `resolve()` instead of `base`; one `src/params.ts`; shallow routing through `goto`; `refreshAll`; `handleError` sees every error; stable tracing. It requires Node 22, Vite 8, TypeScript 6 and Svelte 5. Remote functions are still experimental.
+Configuration in `vite.config.ts` instead of `svelte.config.js`; `#lib` subpath imports instead of `$lib`; `$app/stores` removed in favour of `$app/state`; explicit environment variables in `src/env.ts`; `resolve()` instead of `base`; one `src/params.ts`; shallow routing through `goto`; `refreshAll`; `handleError` sees every error; stable tracing. It requires Node 22.17 or later, Vite 8, TypeScript 6 and Svelte 5.57. Remote functions are still experimental.
 
 **28. What are remote functions?**
 Experimental, type-safe server functions defined in `*.remote.ts` files: `query` for reads, `form` for progressively enhanced forms, `command` for programmatic mutations and `prerender` for build-time data. You call them from components like normal functions; SvelteKit generates the HTTP endpoints. Every argument must be validated and every function must do its own authorisation.
@@ -99,7 +99,7 @@ In production it rejects cross-origin form-encoded POST/PUT/PATCH/DELETE request
 ## Testing
 
 **31. How do you test a SvelteKit app?**
-A pyramid: many Vitest unit tests in Node for logic, `.svelte.ts` classes, loads, actions and endpoints; component tests in Vitest browser mode with `vitest-browser-svelte` for behaviour in a real browser; a few Playwright end-to-end tests of critical journeys against the production build, including a no-JavaScript run for forms. Plus `svelte-check` and a build in CI.
+A pyramid: many fast Vitest unit tests for logic, `.svelte.ts` classes, loads, actions and endpoints (most of them in Node); component tests in Vitest browser mode with `vitest-browser-svelte` for behaviour in a real browser; a few Playwright end-to-end tests of critical journeys against the production build, including a no-JavaScript run for forms. Plus `svelte-check` and a build in CI.
 
 **32. How do you test a component?**
 Render it with props, interact like a user (click, type) using role-based locators, and assert what the user sees and which callbacks were called. Avoid testing implementation details or snapshotting markup.
