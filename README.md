@@ -7,10 +7,10 @@ Markdown sources for books compiled with Claude, and the script that builds them
 | `books/svelte-5-in-depth/` | *Svelte 5 in Depth*: runes, the compiler and reactivity internals | `Svelte-5-in-Depth.epub` |
 | `books/sveltekit-3-in-depth/` | *SvelteKit 3 in Depth*: routing, data, remote functions and deployment | `SvelteKit-3-in-Depth.epub` |
 | `books/astro-7-in-depth/` | *Astro 7 in Depth*: islands, content and the server with Svelte 5 | `Astro-7-in-Depth-with-Svelte.epub` |
-| `books/sveltekit-interview-prep/` | *SvelteKit Interview Prep*: an eight-day course in Svelte 5, SvelteKit 3 and testing, two hours a day | `SvelteKit-Interview-Prep.epub` |
+| `books/sveltekit-interview-prep/` | *SvelteKit Interview Prep*: a nine-day course in Svelte 5, SvelteKit 3 and testing, two hours a day | `SvelteKit-Interview-Prep.epub` |
 | `books/living-well-with-type-2-diabetes/` | *Living Well with Type 2 Diabetes*: a practical guide to the things that matter most | `Living-Well-with-Type-2-Diabetes.epub` |
 
-Each of the three *in Depth* books has 20 chapters, a preface, answers to the chapter review questions, six final tests and their answer key. *SvelteKit Interview Prep* is a study course built on the Svelte 5 and SvelteKit 3 books: eight daily lessons with quizzes, a live-coding playbook with tested drills, three example projects to build with Claude Code, three final tests and answer keys.
+Each of the three *in Depth* books has 20 chapters, a preface, answers to the chapter review questions, six final tests and their answer key. *SvelteKit Interview Prep* is a study course built on the Svelte 5 and SvelteKit 3 books: seven daily lessons with quizzes, two mock interviews, a live-coding playbook with tested drills, three example projects to build with Claude Code, three final tests and answer keys.
 
 ## Layout
 

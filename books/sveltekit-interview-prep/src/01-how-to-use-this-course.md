@@ -1,6 +1,6 @@
 # How to Use This Course
 
-This is an eight-day course that prepares you for a live SvelteKit interview with two parts:
+This is a nine-day course that prepares you for a live SvelteKit interview with two parts:
 
 1. **Questions.** Conceptual questions on SvelteKit and on Svelte itself (runes, components, reactivity).
 2. **Live coding with Claude Code.** You build a component, a unit (component) test and an end-to-end test while the interviewer watches.
@@ -22,7 +22,7 @@ If you run short of time, cut the reading first, never the hands-on or the quiz.
 
 ## The schedule
 
-The plan assumes you start on Monday 23 November and the interview is in the first days of December. If it is later, continue with the optional Days 9 and 10, which work through the remaining final tests and example projects.
+The plan assumes you start on Monday 23 November and the interview is in the first days of December. Day 9 is a second mock interview. If the interview is later than that, continue with the optional Days 10 and 11, which work through the remaining final tests and example projects.
 
 | Day | Date | Topic | Main reading |
 |---|---|---|---|
@@ -33,9 +33,12 @@ The plan assumes you start on Monday 23 November and the interview is in the fir
 | 5 | Fri 27 Nov | Hooks, errors, page options, state, environment | Kit 9, 10, 11, 12, 13 |
 | 6 | Sat 28 Nov | **Testing**: Vitest, browser-mode component tests, Playwright | Kit 19 (part 2), Svelte 16 |
 | 7 | Sun 29 Nov | SvelteKit 3 specials and breadth: remote functions, auth, security, performance, deployment, migration | Kit 7, 8, 14–18, 20 (skims) |
-| 8 | Mon 30 Nov | Mock interview: Final Test 1, questions aloud, Example Project 1 with Claude Code | Course chapters at the back |
-| 9 | *optional* | Final Test 2 and Example Project 2 | |
-| 10 | *optional* | Final Test 3 and Example Project 3 | |
+| 8 | Mon 30 Nov | Mock Interview 1: Final Test 1, questions aloud, Example Project 1 with Claude Code | Course chapters at the back |
+| 9 | Tue 1 Dec | Mock Interview 2: questions with follow-ups, a code review, live coding in an existing project with a change request | Day 9 chapter |
+| 10 | *optional* | Final Test 2 and Example Project 2 | |
+| 11 | *optional* | Final Test 3 and Example Project 3 | |
+
+If the interview is on 1 December, do Parts 1 and 2 of Mock Interview 2 (50 minutes) on the evening of Day 8.
 
 Day 6 is the most important day for the live-coding part, and the live-coding playbook (near the back of the course) is the most important chapter. If anything slips, protect those.
 

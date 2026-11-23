@@ -1,6 +1,6 @@
-# Day 8: Mock Interview (and Optional Days 9–10)
+# Day 8: Mock Interview 1 (and Optional Days 10–11)
 
-**Goal for today:** rehearse both halves of the interview under time pressure, and find your remaining weak spots while there is still time to fix them.
+**Goal for today:** rehearse both halves of the interview under time pressure, and find your remaining weak spots while there is still time to fix them. Tomorrow’s Mock Interview 2 (Day 9) uses a different interview style, so do not repeat today’s format there.
 
 ## Day 8 plan (2 hours)
 
@@ -18,14 +18,14 @@ Rules for the mock live coding, to make it realistic:
 - Review every diff before accepting it, using the playbook’s checklist.
 - Do not open the reference solutions in the playbook.
 
-## If the interview is later: optional Days 9 and 10
+## If the interview is later: optional Days 10 and 11
 
-If you have more days before the interview, use the same two-hour shape:
+If you still have days left after Mock Interview 2 (Day 9), use the same two-hour shape:
 
 | Day | Block 1 (30 min) | Block 2 (75 min) | Block 3 (15 min) |
 |---|---|---|---|
-| 9 | Final Test 2 | Example Project 2 | Retest every daily-quiz question you got wrong |
-| 10 | Final Test 3 | Example Project 3 | Re-read the core notes of your two weakest days |
+| 10 | Final Test 2 | Example Project 2 | Retest every daily-quiz question you got wrong |
+| 11 | Final Test 3 | Example Project 3 | Re-read the core notes of your two weakest days |
 
 If you have even more time, do Drills 4–6 from the playbook (45 minutes each, timed), and the final tests in the two companion books: *SvelteKit 3 in Depth*, Tests 1–3, and *Svelte 5 in Depth*, Tests 1–2. They are harder than this course’s tests; aim for 70%.
 
