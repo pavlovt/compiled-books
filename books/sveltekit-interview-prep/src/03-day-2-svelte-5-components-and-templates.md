@@ -9,7 +9,7 @@
 3. **Svelte 8**, “How a binding works”, “Input bindings”, “Function bindings”, “Component bindings and ownership”.
 4. **Svelte 12**, “Context”, “Shared state with runes: patterns”, “Anti-patterns”. *Skim* “Stores”.
 5. **Svelte 14**, “What the server build runs, and what it skips”, “Hydration”, “SSR pitfalls”.
-6. *Skim* **Svelte 9** “Actions” and “Attachments”, and **Svelte 17** “Semantic HTML first” (the a11y warnings).
+6. *Skim* **Svelte 9** “Attachments”, and **Svelte 17** “Semantic HTML first” (the a11y warnings).
 
 ## Core notes (20 min)
 
@@ -337,15 +337,72 @@ How the pieces fit together:
 
 | Runs on the server | Does **not** run on the server |
 |---|---|
-| Instance `<script>`, `$state`, `$derived` (when read), markup, `onDestroy`, `$props.id()` | `$effect`, `onMount`, actions, attachments, event handlers |
+| Instance `<script>`, `$state`, `$derived` (when read), markup, `onDestroy`, `$props.id()` | `$effect`, `onMount`, attachments, event handlers |
 
 - Anything that needs `window`, `document` or `localStorage` goes in `onMount`, an effect, an attachment or an event handler.
 - **Module-level state is shared by every request** on a server process. A `$state` in a module that you write per user during SSR leaks data between users. Use context (or SvelteKit’s `event.locals`) for per-request state.
 - Hydration walks the server HTML using comment markers and attaches behaviour. Text mismatches are repaired; structural mismatches warn `hydration_mismatch` and the tree is re-mounted. Typical causes: `Date.now()`, `Math.random()`, or reading `window` during render.
 
-### Actions and attachments (short)
+### Attachments
 
-- `use:action` runs once per element after mount, never on the server. Svelte 5.29+ adds **attachments**, `{@attach fn}`, which run in an effect, re-run when state they read changes, and can be passed through components. Prefer attachments in new code.
+**Attachments** (Svelte 5.29+) are element-level lifecycle functions. Svelte calls an attachment with the DOM element once the element is mounted, and lets you clean up when the element is removed. Use one whenever code needs the real element: wrapping a third-party DOM library (Chart.js, Tippy.js, GSAP), trapping focus in a modal, handling “click outside”, measuring or focusing an element.
+
+An attachment is a plain function that receives the element and may return a **cleanup** function. It runs inside an effect: if any `$state` it reads changes, Svelte runs the cleanup and then the attachment again.
+
+```html
+<script>
+	let color = $state('lightblue');
+
+	function paint(element) {
+		// runs on mount and whenever `color` changes
+		element.style.backgroundColor = color;
+
+		// cleanup (optional): before a re-run, and on removal
+		return () => {
+			element.style.backgroundColor = '';
+		};
+	}
+</script>
+
+<div {@attach paint}>Hello!</div>
+<button onclick={() => (color = 'pink')}>Pink</button>
+
+<!-- or write it inline -->
+<input {@attach (el) => el.focus()} />
+```
+
+- `paint` runs once the `<div>` is in the DOM. It reads `color`, so clicking “Pink” runs the cleanup and then `paint` again with the new colour. When the `<div>` is removed, the cleanup runs one last time.
+- Like every effect, attachments run **only in the browser**, never during server rendering, so `window`, `document` and third-party DOM libraries are safe to use inside them.
+- **Arguments:** write a function that takes the arguments and *returns* the attachment, then call it in the markup. When an argument changes, the old attachment is cleaned up and a new one runs. Here the chart is destroyed and redrawn whenever `sales` changes:
+
+```html
+<script>
+	import Chart from 'chart.js/auto';
+
+	let { sales } = $props();
+
+	function barChart(rows) {
+		return (canvas) => {
+			const chart = new Chart(canvas, {
+				type: 'bar',
+				data: {
+					labels: rows.map((r) => r.month),
+					datasets: [
+						{ data: rows.map((r) => r.total) }
+					]
+				}
+			});
+			return () => chart.destroy();
+		};
+	}
+</script>
+
+<canvas {@attach barChart(sales)}></canvas>
+```
+
+- An element can have several attachments: `<div {@attach a} {@attach b}>`.
+- **On components:** `<Button {@attach tooltip('Save')}>` hands the attachment to `Button` as part of its props. If `Button` spreads its props onto an element (`let { children, ...rest } = $props();` and `<button {...rest}>`), the attachment lands on that `<button>`. That is how a component library lets you attach behaviour to the element inside its components.
+- **Old `use:` syntax.** Svelte 4 had *actions* (`use:name`), which run once and do not re-run when their argument changes. Do not write new ones. You will still meet the syntax in SvelteKit's `use:enhance` for forms (Day 4), and `fromAction` from `svelte/attachments` turns an old action from a library into an attachment.
 
 ### Accessibility, because it shows in live coding
 
@@ -385,7 +442,7 @@ How the pieces fit together:
    c. `on:click={submit} preventDefault`
    d. `use:preventDefault={submit}`
 
-10. What is the difference between an action (`use:`) and an attachment (`{@attach}`)?
+10. An attachment reads a `$state` variable. What happens when that variable changes, and when does the attachment's cleanup run?
 11. With `bind:group`, what value type do you get for radios versus checkboxes?
 12. When do you choose context over a module-level singleton?
 13. What does `createContext` return, and what happens if `get` is called when no ancestor called `set`?

@@ -39,7 +39,31 @@
 16. Importers get a binding, not a live signal, and the compiler forbids exporting reassigned state (`state_invalid_export`). Export an object and mutate its property, or export getter and setter functions (or a class instance).
 17. Context holds the object that was set; reassigning the variable makes it point to a new object that the children never received. Mutate the existing object’s properties instead.
 18. It renders unsanitised HTML, so stored content can execute scripts (XSS). Sanitise on the server with an allow-list sanitiser, render text where possible, and add a CSP.
-19. Any two: actions run once and do not re-run when their argument changes, attachments re-run in an effect; attachments can be put on components and passed through as props, actions cannot; attachments compose with `{@attach}` and can be created inline.
+19. A function that takes the data and returns the attachment; the cleanup destroys the chart:
+   ```html
+   <script>
+   	import Chart from 'chart.js/auto';
+   	let { sales } = $props();
+
+   	function barChart(rows) {
+   		return (canvas) => {
+   			const chart = new Chart(canvas, {
+   				type: 'bar',
+   				data: {
+   					labels: rows.map((r) => r.month),
+   					datasets: [
+   						{ data: rows.map((r) => r.total) }
+   					]
+   				}
+   			});
+   			return () => chart.destroy();
+   		};
+   	}
+   </script>
+
+   <canvas {@attach barChart(sales)}></canvas>
+   ```
+   When `sales` changes, Svelte runs the cleanup (destroying the old chart) and the new attachment draws a fresh one. It runs only in the browser, so the library never touches the server. (Svelte 9)
 20. Radios: the selected value. Checkboxes: an array of the selected values.
 21. In runes mode the each variable is not assignable through a binding; binding to a property of the item (`todo.done`) updates the underlying state.
 22. A unique id per component instance that is identical on the server and the client, so `for`, `aria-labelledby`, `aria-describedby` and `aria-controls` relationships survive hydration.

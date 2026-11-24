@@ -38,7 +38,7 @@ Answers to the daily quizzes. The reference in brackets points to the companion 
 7. The client renders different markup from the server: `Date.now()`, `Math.random()`, reading `window`/`localStorage` during render, or invalid HTML that the browser repairs. (Svelte 14)
 8. It inserts raw HTML without sanitising: stored user content can run scripts (XSS). Sanitise on the server with an allow-list sanitiser, or render text instead. (Svelte 6; Kit 15)
 9. b. Svelte 5 has no event modifiers. (Svelte 6)
-10. An action runs once after mount, untracked; its parameter is not reactive by default; it cannot be used on components. An attachment runs in an effect, re-runs when the state it reads changes, and can be passed through components as a prop. (Svelte 9)
+10. The attachment runs inside an effect, so Svelte runs its cleanup and then runs the attachment again with the new value. The cleanup runs before every re-run and once more when the element is removed. (Svelte 9)
 11. Radios: the single selected value. Checkboxes: an array of the checked values. (Svelte 8)
 12. When the state is per component tree or per request (SSR), or when you want different instances in different subtrees (and easy test injection). A singleton is acceptable only for browser-only global state. (Svelte 12)
 13. A `[get, set]` pair (plus `has` since 5.57) bound to a private key. Calling `get` with no value set throws `missing_context`. (Svelte 12)

@@ -66,7 +66,7 @@ Three cumulative tests, 25 questions each. Take each one closed book in **30 min
 16. Why can a module `export let theme = $state('light')` that is reassigned elsewhere not work, and what are two alternatives?
 17. You put a `$state` object in context in a layout and later reassign the variable to a new object. Children keep showing the old values. Why?
 18. Why is `{@html userBio}` dangerous, and what would you do instead or in addition?
-19. Name two differences between an action (`use:`) and an attachment (`{@attach}`).
+19. You want to wrap a chart library around a `<canvas>` and redraw the chart when its data prop changes. Write the attachment.
 20. With `bind:group`, what do radio buttons and checkboxes produce?
 21. In runes mode, why should you bind to `todo.done` rather than to the each-block variable itself?
 22. What does `$props.id()` give you, and why is it useful for accessibility?
