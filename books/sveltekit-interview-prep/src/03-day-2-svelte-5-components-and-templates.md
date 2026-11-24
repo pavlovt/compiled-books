@@ -223,14 +223,114 @@ An exported snippet can use only its arguments, module-level declarations and ot
 | Logic you want to unit test | A class with `$state`/`$derived` fields in a `.svelte.ts` file |
 | Truly global, browser-only state | A module-level instance, **never** for per-user data under SSR |
 
+#### Context
+
+Props pass data one level down, from a parent to its direct child. When components several levels deep need the same thing, passing it through every component in between (**prop drilling**) gets tedious, and the middle components end up carrying props they never use. **Context** lets a component *provide* a value once; any component below it in the tree can *read* it directly, however deep it sits.
+
+- **Scoped to the tree.** Only components inside the one that set the context can read it. Two `<Tabs>` on the same page each provide their own value, and their tabs never mix.
+- **Per request on the server.** Each request renders its own component tree, so each request gets its own context. That makes context the safe place for per-user data (the current user, a cart), unlike module-level variables, which every request shares.
+- **Set and read during initialisation only:** at the top level of `<script>`, never in an event handler, an effect or a `setTimeout`. Svelte works out who the parent is from the component being created at that moment, so call `get` once and keep the result in a variable.
+
+`createContext<T>()` (Svelte 5.40+) creates a private key and returns a typed pair of functions, `[get, set]` (plus a third, `has`, since 5.57). `set` provides the value, `get` reads it, and `get` throws `missing_context` when no parent set one (for example, a `<Tab>` used outside `<Tabs>`).
+
+**Example: a tabs component.** `Tabs` provides the state, while `Tab` (a button) and `TabPanel` (the content) read it, wherever they are placed inside `Tabs`.
+
 ```ts
-// context.ts
-import { createContext } from 'svelte';
+// tabs.ts
+
+export interface TabsState {
+	readonly active: string;
+	select(id: string): void;
+}
+
 export const [getTabs, setTabs] = createContext<TabsState>();
 ```
 
-- `createContext<T>()` (Svelte 5.40+) returns typed `[get, set]` (plus `has` since 5.57). `get` throws if nothing was set. Call them during component initialisation only.
-- Context values are not reactive by themselves. Put a `$state` object or a class instance in context and **mutate** it; reassigning the variable breaks the link.
+```html
+<!-- Tabs.svelte -->
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { setTabs } from './tabs';
+
+	let { active, children }: { active: string; children: Snippet } =
+		$props();
+
+	setTabs({
+		get active() {
+			return active;
+		},
+		select(id) {
+			active = id;
+		}
+	});
+</script>
+
+<div class="tabs">{@render children()}</div>
+```
+
+```html
+<!-- Tab.svelte -->
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { getTabs } from './tabs';
+
+	let { id, children }: { id: string; children: Snippet } = $props();
+	const tabs = getTabs();
+</script>
+
+<button
+	role="tab"
+	aria-selected={tabs.active === id}
+	onclick={() => tabs.select(id)}
+>
+	{@render children()}
+</button>
+```
+
+```html
+<!-- TabPanel.svelte -->
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { getTabs } from './tabs';
+
+	let { id, children }: { id: string; children: Snippet } = $props();
+	const tabs = getTabs();
+</script>
+
+{#if tabs.active === id}
+	<div role="tabpanel">{@render children()}</div>
+{/if}
+```
+
+```html
+<!-- Settings.svelte: using it -->
+<script lang="ts">
+	import Tabs from './Tabs.svelte';
+	import Tab from './Tab.svelte';
+	import TabPanel from './TabPanel.svelte';
+</script>
+
+<Tabs active="profile">
+	<div role="tablist">
+		<Tab id="profile">Profile</Tab>
+		<Tab id="billing">Billing</Tab>
+	</div>
+	<TabPanel id="profile">Your name and photo.</TabPanel>
+	<TabPanel id="billing">Your card and invoices.</TabPanel>
+</Tabs>
+```
+
+How the pieces fit together:
+
+1. `tabs.ts` calls `createContext` **once** and exports the pair, so the component that sets and the components that get share the same private key. The names `getTabs` and `setTabs` are yours to choose.
+2. `Tabs` calls `setTabs(...)` while it is being created. The object it provides has the current tab (`active`) and a way to change it (`select`).
+3. `Tab` and `TabPanel` call `getTabs()` and receive **that same object**. `Tab` reads `tabs.active` to mark itself selected and calls `tabs.select(id)` on click; `TabPanel` shows its content only when its `id` is the active one.
+4. `Settings` passes no props between `Tabs` and its tabs; context connects them. Clicking “Billing” calls `select('billing')`, which assigns to `active` inside `Tabs`, and every `Tab` and `TabPanel` that reads `tabs.active` updates. (A component may assign to its own prop; the new value holds until the parent passes a different one.)
+
+**Why `active` is a getter.** Context itself is not reactive: `set` stores the object you give it, once. Had `Tabs` written `setTabs({ active, select })`, the object would hold the string `'profile'` forever, and clicks would change nothing on screen. A getter reads the current `active` each time a child asks, and because the child reads it in its template, Svelte tracks it. Providing a `$state` object, or an instance of a class with `$state` fields, works the same way: change its **properties** and children update. What never works is **reassigning** the variable after `set`: children keep the object they were given and never see the new one.
+
+#### Stores
+
 - Stores (`writable`, `$store`) still work but are no longer needed for most state. `$app/stores` is **removed** in SvelteKit 3 (use `$app/state`).
 
 ### SSR and hydration: what runs where
