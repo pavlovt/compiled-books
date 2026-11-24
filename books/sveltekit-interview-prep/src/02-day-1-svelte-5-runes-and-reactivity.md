@@ -173,7 +173,61 @@ $effect(() => {
 - In both, only **synchronous** reads count: in an `async` callback, nothing read after the first `await` is tracked. An `async` function also returns a promise, not a cleanup function, so keep the callback synchronous and start the async work inside it.
 - `onDestroy` is the only lifecycle function that also runs on the server. `beforeUpdate`/`afterUpdate` are legacy only.
 - **When not to use `$effect`:** to compute a value from other state (use `$derived`), to react to a user action (put the code in the event handler), or to sync two pieces of state (use a function binding or writable derived). An effect that reads and writes the same state loops until `effect_update_depth_exceeded`.
-- This is one of the most common Svelte 5 interview questions. The short answer: **effects are an escape hatch for talking to the outside world** (DOM APIs, timers, subscriptions, analytics), not for data flow.
+
+  **Syncing with effects** (two inputs, Celsius and Fahrenheit). Each effect writes what the other reads, the values lag one tick behind, and rounding can make them chase each other:
+
+  ```ts
+  let celsius = $state(0);
+  let fahrenheit = $state(32);
+  $effect(() => { fahrenheit = celsius * 9 / 5 + 32; }); // ✗
+  $effect(() => { celsius = (fahrenheit - 32) * 5 / 9; }); // ✗
+  ```
+
+  Keep one source of truth, derive the other, and write back through a **function binding** (a getter and a setter, since 5.9):
+
+  ```svelte
+  <script lang="ts">
+  	let celsius = $state(0);
+  	let fahrenheit = $derived(celsius * 9 / 5 + 32);
+  </script>
+
+  <input type="number" bind:value={celsius} />
+  <input type="number" bind:value={
+  	() => fahrenheit,
+  	(f) => (celsius = (f - 32) * 5 / 9)
+  } />
+  ```
+
+  **Copying a prop into local state** that the user may edit:
+
+  ```ts
+  let { value } = $props();
+  let draft = $state(value);
+  $effect(() => { draft = value; }); // ✗ runs after render
+  ```
+
+  A **writable derived** does it without an effect: `let draft = $derived(value);`. The user can assign `draft = 'edited'` (since 5.25), and a new `value` from the parent resets it.
+
+  **The loop.** `push` reads `history.length` before it writes, so this effect depends on `history` and changes it, re-running itself until Svelte stops it with `effect_update_depth_exceeded`:
+
+  ```ts
+  let query = $state('');
+  let history = $state<string[]>([]);
+
+  $effect(() => {
+  	history.push(query); // ✗ reads and writes history
+  });
+  ```
+
+  Wrap the write in `untrack(() => history.push(query))` so only `query` is a dependency, or better, push in the event handler that changes `query`.
+- **"When should you use `$effect`?"** is one of the most common Svelte 5 interview questions. Answer: **only to keep something outside Svelte in step with your state**, that is, for work Svelte cannot do for you through markup, `$derived` or bindings:
+  - drawing on a `<canvas>` when the data changes;
+  - starting a timer, or opening a WebSocket or other subscription, and closing it in the cleanup;
+  - setting `document.title` or writing to `localStorage` when a value changes;
+  - calling a third-party library (a chart, a map) with new options;
+  - sending an analytics event when a page or value changes.
+
+  Do **not** use it to move data between pieces of your own state: computing one value from another, copying a prop into state, or keeping two values in step (see the examples above). Rule of thumb: if the effect's only job is to assign to `$state`, it is the wrong tool.
 
 ### `$props` and component events
 
@@ -190,7 +244,36 @@ $effect(() => {
 ```
 
 - Destructured props stay reactive: reading `count` later reads the current prop. But `let x = $state(count)` captures only the **initial** value (warning `state_referenced_locally`). Use `$derived(count * 2)` to follow the prop.
-- **Events are callback props.** `createEventDispatcher` and `on:click` are Svelte 4. Parents pass `onchange={(n) => …}`; children call `onchange?.(n)`.
+- **Events are callback props.** `createEventDispatcher` and the `on:` directive (`on:click`, `on:change`) are the **old Svelte 4 syntax**. Svelte 5 deprecates them and keeps them only so old components still compile; do not write them in new code, and flag them in generated code. A component event is now an ordinary prop that holds a function: the parent passes it, the child calls it.
+
+  Svelte 4, a child that reports a number to its parent:
+
+  ```svelte
+  <!-- Picker.svelte -->
+  <script>
+  	import { createEventDispatcher } from 'svelte';
+  	const dispatch = createEventDispatcher();
+  </script>
+  <button on:click={() => dispatch('change', 5)}>5</button>
+
+  <!-- parent: the value arrives wrapped in e.detail -->
+  <Picker on:change={(e) => (picked = e.detail)} />
+  ```
+
+  Svelte 5, the same with a callback prop:
+
+  ```svelte
+  <!-- Picker.svelte -->
+  <script lang="ts">
+  	let { onchange }: { onchange?: (n: number) => void } = $props();
+  </script>
+  <button onclick={() => onchange?.(5)}>5</button>
+
+  <!-- parent: the value arrives as a plain argument -->
+  <Picker onchange={(n) => (picked = n)} />
+  ```
+
+  The callback is typed like any other prop, there is no `CustomEvent` or `e.detail`, `?.` handles a parent that passes nothing, and it can be forwarded with `{...rest}` like any prop.
 - DOM events are attributes: `onclick={handler}`. There are no modifiers (`|preventDefault`); call `event.preventDefault()` yourself.
 - A child should not mutate a prop object it does not own (`ownership_invalid_mutation` in dev). Use a callback, or make it `$bindable` so the parent can opt in with `bind:value`.
 - `children` is the reserved prop for the default content (a snippet, Day 2).
