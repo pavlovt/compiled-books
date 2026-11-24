@@ -28,10 +28,53 @@ todos.push({ done: false });           // also reactive
 
 - Plain objects and arrays become **deep proxies**. Class instances, `Map`, `Set` and `Date` are **not** proxied; use `SvelteMap`, `SvelteSet`, `SvelteDate`, `SvelteURL` from `svelte/reactivity`, or `$state` fields in your class.
 - The proxy is not the original object: `===` against the original and `includes(original)` fail.
-- `$state.raw(value)`: no proxy; only **reassignment** triggers updates. Use it for large data you replace wholesale (API responses).
-- `$state.snapshot(proxy)`: a plain deep copy, for `console.log`, `structuredClone` or sending to an API.
+- `$state.raw(value)` **declares** state, like `$state`, but without a proxy. Svelte tracks only the variable, so `items.push(x)` updates nothing; you must **reassign** (`items = [...items, x]`). Use it for large data you replace wholesale (API responses), to skip the cost of proxying it.
+- `$state.snapshot(value)` **reads** state you already have: it returns a plain, non-reactive deep copy of a `$state` proxy as it is at that moment. Use it where the proxy gets in the way outside Svelte: `console.log` prints a `Proxy`, `structuredClone` throws on one, and an API payload or third-party library should get plain data.
+- In short: `raw` chooses how state is **stored** (no proxy from the start); `snapshot` takes a one-off plain **copy out** of deep state that stays proxied.
 - Classes: `count = $state(0)` as a field compiles to a getter/setter pair. Methods lose `this` when passed as callbacks (`onclick={obj.inc}`), so use arrow-function fields.
-- **Sharing across modules:** you cannot export a `$state` variable that you reassign (`state_invalid_export`). Export an object you mutate, a class instance, or getter functions.
+- **Sharing across modules:** you cannot export a `$state` variable that you reassign (`state_invalid_export`); export an object or a class instance instead. The compiler turns `count` into a signal and rewrites `count` to "read the signal" only inside the file that declares it; a file that imports `count` would get the signal itself, not the number, and would never see `count += 1`. This fails:
+
+  ```ts
+  // counter.svelte.ts
+  export let count = $state(0); // ✗ state_invalid_export
+  export function increment() {
+    count += 1;                 // reassignment
+  }
+  ```
+
+  Either of these works. Keep the variable private and export an object with a **getter** for it; the exported binding is never reassigned, and every read goes back to the signal:
+
+  ```ts
+  // counter.svelte.ts
+  let count = $state(0);
+  export const counter = {
+    get count() { return count; },
+    increment() { count += 1; },
+  };
+  ```
+
+  (If the state is already an object, export it directly and **mutate** it: `export const counter = $state({ count: 0 })`, then `counter.count += 1`.)
+
+  Or export a **class instance** whose fields are `$state`:
+
+  ```ts
+  // counter.svelte.ts
+  class Counter {
+    count = $state(0);
+    increment = () => { this.count += 1; };
+  }
+  export const counter = new Counter();
+  ```
+
+  Both expose the same `counter.count` and `counter.increment`, so a component reads them the same way and stays reactive:
+
+  ```svelte
+  <script lang="ts">
+    import { counter } from './counter.svelte';
+  </script>
+
+  <button onclick={counter.increment}>{counter.count}</button>
+  ```
 - Runes are not values. To pass reactivity into a function, pass a **getter** (`() => count`), not `count`.
 
 ### `$derived`
