@@ -210,7 +210,7 @@ test('counter stops at its maximum', async ({ page }) => {
 
 ## Drill 2: Todo list with filters
 
-**Spec.** Add todos with a labelled input (Enter or an “Add” button); blank input is ignored and text is trimmed. Each todo has a checkbox and a delete button named “Delete <text>”. Filter buttons “all”, “active”, “done” with `aria-pressed`. Show “N remaining” and an empty-state row.
+**Spec.** Add todos with a labelled input (Enter or an “Add” button); blank input is ignored and text is trimmed. Each todo has a checkbox and a delete button named “Delete \<text\>”. Filter buttons “all”, “active”, “done” with `aria-pressed`. Show “N remaining” and an empty-state row.
 
 The logic lives in a `.svelte.ts` class, so most of it is unit-testable without a DOM.
 

@@ -35,30 +35,138 @@
 - `{@html}` is **not sanitised**. It is the main XSS vector in Svelte apps.
 - Events: `onclick`, `oninput` and so on are plain attributes. Many are **delegated** to the app root; for manual listeners use `on()` from `svelte/events` so ordering works.
 
-### Snippets replace slots
+### Snippets
+
+A **snippet** is a named piece of markup that can take arguments. You declare it in the template with `{#snippet name(args)}…{/snippet}` and draw it with `{@render name(args)}`. A snippet is to markup what a function is to code: write it once, call it wherever it is needed, with different arguments each time. Snippets replace Svelte 4's slots.
+
+**Why we need them.** Snippets solve two problems that come up in almost every app:
+
+1. **Repeated markup inside one component.** Without snippets, the only way to avoid copying the same ten lines of markup is to make a new component, with a new file and props for everything it needs. A snippet is declared next to where it is used and can read the component's variables directly.
+2. **Letting the parent decide how part of a child looks.** A list, table or dropdown knows *where* each row goes and *which* data it holds; the page that uses it knows *what* a row should look like. The child calls a snippet and passes in the data; the parent writes the markup. Slots did this badly: `let:` directives, named slots and `$$slots`. A snippet is an ordinary value, so you can pass it as a prop, check it with `if` and give it a type.
+
+#### Passing a snippet to a component
 
 ```html
-<!-- Card.svelte -->
-<script lang="ts">
-	import type { Snippet } from 'svelte';
-	let { title, children, footer }: { title: string; children: Snippet; footer?: Snippet<[string]> } = $props();
+<!-- List.svelte -->
+<script>
+	let { items, row } = $props();
 </script>
 
-<section>
-	<h2>{title}</h2>
-	{@render children()}
-	{@render footer?.(title)}
-</section>
+<ul>
+	{#each items as item}
+		<li>
+			{@render row(item)}
+		</li>
+	{/each}
+</ul>
 
-<!-- usage -->
-<Card title="Hi">
-	<p>This paragraph becomes the children snippet.</p>
-	{#snippet footer(t)}<small>{t}</small>{/snippet}
-</Card>
+<!-- App.svelte -->
+<List {items}>
+	{#snippet row(item)}
+		<strong>{item.name}</strong> - ${item.price}
+	{/snippet}
+</List>
 ```
 
-- Snippets are typed with `Snippet<[ArgTypes]>` (a tuple). Optional snippets need `?.()` or `{#if}`; rendering `undefined` throws.
-- Snippets can take arguments, which is how you build headless or “render prop” components (for example a list that lets the parent render each row).
+- `List` owns the structure: the `<ul>`, the loop and the `<li>`. `App` owns how a row looks. `List` knows nothing about names or prices, so the same `List` can show products, users or todos. This is the **render prop** pattern, also called a headless component.
+- A snippet declared **between a component's tags** becomes a prop of the same name, here `row`. `List` calls it with `{@render row(item)}`, so the child chooses the argument and the parent chooses the markup.
+- The `$` in `${item.price}` is plain text: a dollar sign in front of the price.
+- Content between the tags that is **not** inside a `{#snippet}` becomes the `children` snippet, rendered with `{@render children()}`.
+- You can also declare the snippet anywhere in `App`'s template and pass it explicitly: `<List {items} {row} />`.
+
+With TypeScript, a snippet prop is typed with `Snippet<[...]>`, a **tuple** of its argument types. `generics` makes `List` work for any item type:
+
+```html
+<script lang="ts" generics="T">
+	import type { Snippet } from 'svelte';
+	let { items, row }: { items: T[]; row?: Snippet<[T]> } = $props();
+</script>
+
+<ul>
+	{#each items as item}
+		<li>
+			{#if row}{@render row(item)}{:else}{String(item)}{/if}
+		</li>
+	{/each}
+</ul>
+```
+
+Here `row` is optional, and `List` falls back to plain text when the parent passes none. Rendering an `undefined` snippet throws, so an optional snippet needs `{#if}` or `{@render row?.(item)}`. Snippets are not components, so they have no `<script>` and no state of their own; inside one you can use `{@const}`, blocks and components.
+
+#### Reusing a snippet within the same component
+
+```html
+<!-- Cart.svelte -->
+<script>
+	let { items, currency = '$' } = $props();
+	let total = $derived(
+		items.reduce((sum, item) => sum + item.price, 0)
+	);
+</script>
+
+{#snippet money(amount)}
+	<span class="money">{currency}{amount.toFixed(2)}</span>
+{/snippet}
+
+<ul>
+	{#each items as item (item.id)}
+		<li>{item.name}: {@render money(item.price)}</li>
+	{/each}
+</ul>
+<p>Total: {@render money(total)}</p>
+
+<style>
+	.money { font-variant-numeric: tabular-nums; }
+</style>
+```
+
+- `money` is written once and rendered for every row and for the total. Changing the format is a one-line change.
+- A snippet **sees the variables around it**: `money` reads `currency` straight from the component's script without taking it as an argument. When `currency` changes, every place that renders `money` updates.
+- A snippet is visible in the block where it is declared and in that block's children (snippets declared at the top level of the template are visible everywhere in the template). A snippet can render itself, which is how you draw a tree of comments or folders.
+- Styles follow the file that **declares** the snippet: the `.money` rule above applies wherever `money` is rendered, even inside a child component.
+
+#### Sharing a snippet between components
+
+There are two ways to share a snippet:
+
+1. **As a prop**, as with `List` above: the snippet lives in one component and is passed down to another.
+2. **As an export** (Svelte 5.5 and later). A snippet declared at the top level of a `.svelte` file can be exported from its `<script module>` block and imported like a function:
+
+```html
+<!-- format.svelte -->
+<script module>
+	export { money };
+</script>
+
+{#snippet money(amount)}
+	<span class="money">${amount.toFixed(2)}</span>
+{/snippet}
+
+<!-- Cart.svelte, Invoice.svelte, ... -->
+<script>
+	import { money } from './format.svelte';
+	let { total } = $props();
+</script>
+
+<p>Total: {@render money(total)}</p>
+```
+
+An exported snippet can use only its arguments, module-level declarations and other top-level snippets, never the instance `<script>`'s variables, because there is no single component instance to read them from. That is why `currency` from `Cart` became a fixed `$` here: pass it as an argument if it varies.
+
+#### Snippet or component?
+
+| | Snippet | Component |
+|---|---|---|
+| State, effects, lifecycle | None of its own; reads the declaring component's | Its own |
+| Surrounding variables | Visible (lexical scope) | Only through props or context |
+| Styles | The declaring file's `<style>` | Its own `<style>` |
+| Reuse | Same file; elsewhere as a prop or a `<script module>` export | Anywhere, by import |
+| Typical use | Repeated markup; rows, cells, headers and empty states passed into a child | Self-contained UI with behaviour, tested on its own |
+
+- **Use a snippet** when the markup belongs to one component and changes only with a few values, when it needs that component's variables, or when a parent should decide how part of a child renders.
+- **Use a component** when the markup needs its own state, effects or styles, when it should be tested on its own, or when several features in the app need it.
+- A common path: start with a snippet, and turn it into a component once it grows its own state or a second feature needs it.
+- In an interview, the one-liner is: *a component is a unit of behaviour; a snippet is a unit of markup.*
 
 ### Bindings
 
