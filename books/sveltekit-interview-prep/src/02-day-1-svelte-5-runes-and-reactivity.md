@@ -89,6 +89,35 @@ let label = $derived.by(() => {
 
 - **Lazy and memoised.** Recomputed only when read after a dependency changed. If the new value is identical (`===`) to the old one, nothing downstream updates.
 - Dependencies are whatever was **read synchronously** during the last run. Wrap reads in `untrack(() => …)` to exclude them.
+
+  "During the last run" means the dependency list can change from one run to the next:
+
+  ```ts
+  let showEmail = $state(false);
+  let name = $state('Ada');
+  let email = $state('ada@example.com');
+
+  let label = $derived.by(() => {
+  	if (!showEmail) return name; // reads showEmail, name
+  	return `${name} <${email}>`; // also reads email
+  });
+  ```
+
+  While `showEmail` is `false`, the run returns before it reads `email`, so changing `email` does nothing. Once `showEmail` becomes `true`, the next run reads `email` and it becomes a dependency.
+
+  `untrack` reads a value without making it a dependency:
+
+  ```ts
+  import { untrack } from 'svelte';
+
+  let price = $state(10);
+  let qty = $state(2);
+  let rate = $state(1.08); // exchange rate, updated every second
+
+  let total = $derived(price * qty * untrack(() => rate));
+  ```
+
+  `total` recomputes when `price` or `qty` changes, and then uses the current `rate`. A change to `rate` alone does not recompute it.
 - Must be pure. Writing to state inside a derived throws `state_unsafe_mutation`.
 - Since 5.25 you can **assign** to a derived (useful for optimistic UI). The assigned value holds until a dependency changes; then the derived recomputes from its expression again.
 
@@ -103,7 +132,28 @@ $effect(() => {
 
 - Runs **only in the browser**, after the DOM has updated, batched in a microtask. Never on the server.
 - `$effect.pre` runs before DOM updates. `$effect.root` creates a scope you destroy yourself (needed outside components, for instance in tests); creating an `$effect` with no parent throws `effect_orphan`.
-- `onMount` still exists and is fine. `onDestroy` is the only lifecycle function that also runs on the server. `beforeUpdate`/`afterUpdate` are legacy only.
+- **`onMount` vs `$effect`:** both run only in the browser, after the component is in the DOM. The difference is tracking. `onMount` runs **once** and tracks nothing (it is an untracked effect); `$effect` **re-runs** whenever the state it read changes. The cleanup follows the same rule: `onMount`'s runs on destroy only, `$effect`'s before every re-run and on destroy.
+
+  ```ts
+  import { onMount } from 'svelte';
+  let { roomId } = $props();
+
+  onMount(() => {
+  	const socket = connect(roomId); // roomId read once
+  	return () => socket.close();     // on destroy only
+  });
+
+  $effect(() => {
+  	const socket = connect(roomId); // roomId is a dependency
+  	return () => socket.close();     // before re-run, on destroy
+  });
+  ```
+
+  In SvelteKit, going from `/chat/1` to `/chat/2` **reuses** the page component and only changes the props. The `onMount` version stays connected to room 1; the `$effect` version closes that socket and opens room 2.
+
+  Use `onMount` for one-time setup that must not re-run whatever it reads: focusing an input, starting a third-party widget, setting a "hydrated" flag. Use `$effect` when the work depends on state that can change.
+- In both, only **synchronous** reads count: in an `async` callback, nothing read after the first `await` is tracked. An `async` function also returns a promise, not a cleanup function, so keep the callback synchronous and start the async work inside it.
+- `onDestroy` is the only lifecycle function that also runs on the server. `beforeUpdate`/`afterUpdate` are legacy only.
 - **When not to use `$effect`:** to compute a value from other state (use `$derived`), to react to a user action (put the code in the event handler), or to sync two pieces of state (use a function binding or writable derived). An effect that reads and writes the same state loops until `effect_update_depth_exceeded`.
 - This is one of the most common Svelte 5 interview questions. The short answer: **effects are an escape hatch for talking to the outside world** (DOM APIs, timers, subscriptions, analytics), not for data flow.
 
