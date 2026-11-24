@@ -173,8 +173,45 @@ An exported snippet can use only its arguments, module-level declarations and ot
 - `bind:value`, `bind:checked`, `bind:group` (radios give one value, checkboxes give an array), `bind:this`.
 - Number and range inputs give numbers. An empty number input gives `null` in Svelte 5.57 (the docs say `undefined`), so type the state as `number | null`.
 - A component prop is bindable only if the child declares it with `$bindable()`. Every component in a chain of bindings must declare it.
-- **Function bindings** (`bind:value={() => get, (v) => set(v)}`) replace the old “write state from an effect” patterns: validation, formatting, unit conversion.
-- In runes mode, bind to `item.done` inside an each block, never to the each variable itself.
+- **Function bindings** (Svelte 5.9 and later). A normal binding copies the value both ways unchanged: whatever the user types lands in the variable as is. A function binding puts **two functions** in place of the variable, separated by a comma: a **getter**, which returns what the input should show, and a **setter**, which Svelte calls with the new value whenever the user changes it. You decide what is actually stored.
+
+  ```html
+  <script>
+  	let username = $state('');
+  </script>
+
+  <input bind:value={
+  	() => username,
+  	(v) => (username = v.toLowerCase())
+  } />
+  ```
+
+  Type `Alice` and `username` holds `alice`; the input shows `alice` too, because it reads its value back through the getter. The same shape covers validation (refuse or clamp the value in the setter), formatting and unit conversion (store metres, show centimetres). Before function bindings you bound to a second variable and copied it into the real one with an `$effect`. That runs a step late, can loop, and writing state from an effect is an anti-pattern.
+
+- **Runes mode and each blocks.** Svelte 5 compiles each component in one of two modes. **Runes mode** is on as soon as the component uses any rune (`$state`, `$props`, `$derived`, ...) or sets `<svelte:options runes />`; this is the Svelte 5 way, and everything in this course uses it. Otherwise the component is in **legacy mode** and follows the Svelte 4 rules (`let` is reactive by itself, `$:` statements, `export let` props). The mode is chosen per component, so old and new components can live in one app.
+
+  One difference matters for bindings. In an each block, `todo` is just a local name for the current item. Legacy mode quietly rewrote `todo = …` into `todos[i] = …`; runes mode dropped that hidden rewrite, so **assigning or binding to the each variable itself is a compile error**. Bind to a property of the item, or go through the array and index:
+
+  ```html
+  <script>
+  	let todos = $state([
+  		{ text: 'Write tests', done: false }
+  	]);
+  	let tags = $state(['svelte', 'kit']);
+  </script>
+
+  {#each todos as todo}
+  	<!-- works: updates the item in todos -->
+  	<input type="checkbox" bind:checked={todo.done} />
+  {/each}
+
+  {#each tags as tag, i}
+  	<!-- bind:value={tag} does not compile -->
+  	<input bind:value={tags[i]} />
+  {/each}
+  ```
+
+  `bind:checked={todo.done}` works because `todos` is deep `$state`: each `todo` is a reactive proxy, so writing its `done` property changes the item inside the array. Strings and numbers have no property to bind to, so for an array of them you bind through the index.
 
 ### Sharing state: props, context, modules
 
