@@ -78,8 +78,23 @@ def _wrap_line(line, width=CODE_WIDTH):
     return "".join(out)
 
 
+# pandoc wraps every highlighted code line in <span id="cbN-M"> holding an
+# empty <a> anchor. Many readers lay these line spans out badly (blank gaps in
+# the block, lines dropped or drawn without text), so they are removed and
+# only the colour spans for each token are kept.
+_LINE_SPAN = re.compile(
+    r'^(<code\b[^>]*>)?<span id="cb\d+-\d+"><a href="#cb\d+-\d+"[^>]*></a>(.*)</span>(</code>)?$')
+
+
+def _unwrap_line(line):
+    m = _LINE_SPAN.match(line)
+    if not m:
+        return line
+    return (m.group(1) or "") + m.group(2) + (m.group(3) or "")
+
+
 def _wrap_pre(m):
-    body = "\n".join(_wrap_line(l) for l in m.group(2).split("\n"))
+    body = "\n".join(_wrap_line(_unwrap_line(l)) for l in m.group(2).split("\n"))
     return m.group(1) + body + m.group(3)
 
 
