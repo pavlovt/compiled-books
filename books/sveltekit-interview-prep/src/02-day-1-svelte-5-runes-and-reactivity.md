@@ -131,7 +131,25 @@ $effect(() => {
 ```
 
 - Runs **only in the browser**, after the DOM has updated, batched in a microtask. Never on the server.
-- `$effect.pre` runs before DOM updates. `$effect.root` creates a scope you destroy yourself (needed outside components, for instance in tests); creating an `$effect` with no parent throws `effect_orphan`.
+- `$effect.pre` runs before DOM updates.
+- **`$effect.root`:** every effect has an **owner**, the component (or parent effect) that was running when it was created, and is destroyed with it; that is how cleanups run without you calling them. Outside a component's setup there is no owner: at the top level of a module, in a function called from a click handler or a `setTimeout`, or in a test. Creating an `$effect` there throws `effect_orphan`.
+
+  `$effect.root(fn)` creates an owner by hand. It runs `fn` once, untracked; effects created inside belong to the root; it returns a `destroy` function that runs their cleanups. Nothing destroys a root for you, so a root you never destroy leaks.
+
+  ```ts
+  // settings.svelte.ts
+  export function createSettings() {
+  	const settings = $state({ theme: 'light' });
+  	const destroy = $effect.root(() => {
+  		$effect(() => {
+  			localStorage.setItem('theme', settings.theme);
+  		});
+  	});
+  	return { settings, destroy };
+  }
+  ```
+
+  `createSettings()` now works anywhere in the browser, even from a click handler. Setting `settings.theme = 'dark'` re-runs the inner effect, and `destroy()` stops it. Without the root, the same call from a click handler throws `effect_orphan`; from a component's `<script>` it would work, with the component as owner. Day 6 uses the same pattern to test an effect, with `flushSync()` to run it straight away.
 - **`onMount` vs `$effect`:** both run only in the browser, after the component is in the DOM. The difference is tracking. `onMount` runs **once** and tracks nothing (it is an untracked effect); `$effect` **re-runs** whenever the state it read changes. The cleanup follows the same rule: `onMount`'s runs on destroy only, `$effect`'s before every re-run and on destroy.
 
   ```ts
